@@ -48,6 +48,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
+        <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <link rel="canonical" href="https://panemaji.onrender.com" />
       </head>
       <body className="min-h-screen bg-gray-100">
