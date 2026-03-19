@@ -1,8 +1,18 @@
 import { getAreaBySlug, getShopsByArea } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanemajiScore from '@/components/PanemajiScore';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+  const area = getAreaBySlug(params.slug);
+  if (!area) return {};
+  return {
+    title: `${area.name}のデリヘル パネマジ口コミ一覧`,
+    description: `${area.name}エリアのデリヘル店舗のパネマジ度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
+  };
+}
 
 export default function AreaPage({ params }: { params: { slug: string } }) {
   const area = getAreaBySlug(params.slug);

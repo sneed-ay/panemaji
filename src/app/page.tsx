@@ -47,7 +47,7 @@ export default function Home() {
       {/* Areas */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-          エリアから探す（東京）
+          東京デリヘル パネマジチェック - エリアから探す
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {areas.map((area) => (

@@ -2,8 +2,18 @@ import { getShopById, getGirlsByShop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
 import PanemajiScore from '@/components/PanemajiScore';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+export function generateMetadata({ params }: { params: { id: string } }): Metadata {
+  const shop = getShopById(parseInt(params.id));
+  if (!shop) return {};
+  return {
+    title: `${shop.name} パネマジ口コミ・評価`,
+    description: `${shop.name}の女性一覧とパネマジ度チェック。パネル写真と実物が一致しているか口コミで確認。${shop.area_name || '東京'}のデリヘル。`,
+  };
+}
 
 export default function ShopPage({ params, searchParams }: { params: { id: string }; searchParams: { q?: string } }) {
   const shopId = parseInt(params.id);

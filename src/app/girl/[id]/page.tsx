@@ -3,8 +3,18 @@ import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
 import PanemajiScore from '@/components/PanemajiScore';
 import GirlPageClient from './GirlPageClient';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+export function generateMetadata({ params }: { params: { id: string } }): Metadata {
+  const girl = getGirlWithReviewStats(parseInt(params.id));
+  if (!girl) return {};
+  return {
+    title: `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`,
+    description: `${girl.shop_name}の${girl.name}さんはパネル通り？パネマジ度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`,
+  };
+}
 
 export default function GirlPage({ params }: { params: { id: string } }) {
   const girlId = parseInt(params.id);
