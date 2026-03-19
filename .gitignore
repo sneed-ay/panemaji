@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scraping temp
+scrape-progress.json
+panemaji.db-shm
+panemaji.db-wal
+.claude/

@@ -1,0 +1,134 @@
+import Database from 'better-sqlite3';
+import path from 'path';
+
+let _db: Database.Database | null = null;
+
+function getDb(): Database.Database {
+  if (_db) return _db;
+
+  const dbPath = path.join(process.cwd(), 'panemaji.db');
+  _db = new Database(dbPath);
+  _db.pragma('journal_mode = WAL');
+  _db.pragma('busy_timeout = 5000');
+  _db.pragma('foreign_keys = ON');
+
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE
+    );
+    CREATE TABLE IF NOT EXISTS shops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      area_id INTEGER NOT NULL,
+      category TEXT NOT NULL DEFAULT 'デリヘル',
+      description TEXT,
+      source_url TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      last_seen_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (area_id) REFERENCES areas(id)
+    );
+    CREATE TABLE IF NOT EXISTS girls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      shop_id INTEGER NOT NULL,
+      age INTEGER,
+      height INTEGER,
+      bust INTEGER,
+      waist INTEGER,
+      hip INTEGER,
+      cup TEXT,
+      image_url TEXT,
+      source_id TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      last_seen_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (shop_id) REFERENCES shops(id)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_girls_source_id ON girls(source_id) WHERE source_id IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      girl_id INTEGER NOT NULL,
+      visit_date TEXT NOT NULL,
+      panel_rating TEXT NOT NULL CHECK(panel_rating IN ('panel_match', 'panel_diff', 'jirai')),
+      comment TEXT,
+      browser_id TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (girl_id) REFERENCES girls(id)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_unique ON reviews(girl_id, browser_id);
+  `);
+
+  return _db;
+}
+
+const db = new Proxy({} as Database.Database, {
+  get(_target, prop) {
+    const instance = getDb();
+    const value = (instance as unknown as Record<string | symbol, unknown>)[prop];
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+    return value;
+  },
+});
+
+export default db;
+
+export type Area = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
+export type Shop = {
+  id: number;
+  name: string;
+  area_id: number;
+  area_name?: string;
+  category: string;
+  description: string | null;
+  source_url: string | null;
+  is_active: number;
+  last_seen_at: string | null;
+  girl_count?: number;
+  review_count?: number;
+  panel_match_count?: number;
+  panemaji_pct?: number;
+};
+
+export type Girl = {
+  id: number;
+  name: string;
+  shop_id: number;
+  shop_name?: string;
+  area_name?: string;
+  age: number | null;
+  height: number | null;
+  bust: number | null;
+  waist: number | null;
+  hip: number | null;
+  cup: string | null;
+  image_url: string | null;
+  source_id: string | null;
+  is_active: number;
+  last_seen_at: string | null;
+  review_count?: number;
+  panel_match_count?: number;
+  panel_diff_count?: number;
+  jirai_count?: number;
+  panemaji_pct?: number;
+};
+
+export type Review = {
+  id: number;
+  girl_id: number;
+  girl_name?: string;
+  shop_name?: string;
+  visit_date: string;
+  panel_rating: 'panel_match' | 'panel_diff' | 'jirai';
+  comment: string | null;
+  created_at: string;
+};
