@@ -6,7 +6,8 @@ let _db: Database.Database | null = null;
 function getDb(): Database.Database {
   if (_db) return _db;
 
-  const dbPath = path.join(process.cwd(), 'panemaji.db');
+  // Support persistent disk: use DB_PATH env var if set, fallback to cwd
+  const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'panemaji.db');
   _db = new Database(dbPath);
   _db.pragma('journal_mode = WAL');
   _db.pragma('busy_timeout = 5000');

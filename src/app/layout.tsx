@@ -41,6 +41,16 @@ export const metadata: Metadata = {
     description:
       "パネマジ掲示板 - パネル写真と実物が一致しているか口コミでチェック。東京デリヘル607店舗を網羅。",
   },
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon.png', sizes: '64x64', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180' },
+    ],
+  },
   robots: {
     index: true,
     follow: true,
@@ -57,9 +67,11 @@ export default function RootLayout({
       <head>
         <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <link rel="canonical" href="https://panemaji.onrender.com" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="64x64" href="/icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
       </head>
       <body className="min-h-screen bg-gray-100 overflow-x-hidden">
         <header className="bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-lg">
