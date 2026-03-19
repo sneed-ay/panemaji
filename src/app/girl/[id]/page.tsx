@@ -5,7 +5,7 @@ import PanemajiScore from '@/components/PanemajiScore';
 import GirlPageClient from './GirlPageClient';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 900; // ISR: regenerate every 15 minutes (reviews are posted here)
 
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));
@@ -49,6 +49,17 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                 <span className="mx-1">-</span>
                 {girl.area_name}
               </p>
+              {girl.twitter_url && (
+                <a
+                  href={girl.twitter_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-black text-white rounded-full text-xs hover:bg-gray-800 transition-colors no-underline"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  <span>{girl.twitter_url.replace('https://x.com/', '@')}</span>
+                </a>
+              )}
             </div>
             <div className="shrink-0">
               <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} size="lg" />

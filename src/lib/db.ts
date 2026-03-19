@@ -59,7 +59,29 @@ function getDb(): Database.Database {
       FOREIGN KEY (girl_id) REFERENCES girls(id)
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_unique ON reviews(girl_id, browser_id);
+
+    -- Performance indexes
+    CREATE INDEX IF NOT EXISTS idx_girls_shop_id ON girls(shop_id);
+    CREATE INDEX IF NOT EXISTS idx_girls_shop_active ON girls(shop_id, is_active);
+    CREATE INDEX IF NOT EXISTS idx_girls_is_active ON girls(is_active);
+    CREATE INDEX IF NOT EXISTS idx_reviews_girl_id ON reviews(girl_id);
+    CREATE INDEX IF NOT EXISTS idx_reviews_girl_rating ON reviews(girl_id, panel_rating);
+    CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_shops_area_active ON shops(area_id, is_active);
+    CREATE INDEX IF NOT EXISTS idx_shops_is_active ON shops(is_active);
+    CREATE INDEX IF NOT EXISTS idx_shops_name ON shops(name);
+    CREATE INDEX IF NOT EXISTS idx_areas_slug ON areas(slug);
   `);
+
+  // Add twitter_url column if missing
+  const girlCols = (_db.prepare('PRAGMA table_info(girls)').all() as { name: string }[]).map((c) => c.name);
+  if (!girlCols.includes('twitter_url')) {
+    _db.exec('ALTER TABLE girls ADD COLUMN twitter_url TEXT');
+  }
+
+  // Optimize SQLite for read-heavy workload
+  _db.pragma('cache_size = -20000'); // 20MB cache
+  _db.pragma('temp_store = MEMORY');
 
   return _db;
 }
@@ -113,6 +135,7 @@ export type Girl = {
   cup: string | null;
   image_url: string | null;
   source_id: string | null;
+  twitter_url: string | null;
   is_active: number;
   last_seen_at: string | null;
   review_count?: number;

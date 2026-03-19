@@ -1,6 +1,6 @@
 import { searchShops } from '@/lib/queries';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'; // Search must remain dynamic (user-specific query params)
 
 export default function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
   const query = searchParams.q || '';

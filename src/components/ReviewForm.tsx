@@ -21,6 +21,7 @@ function getBrowserId(): string {
 export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   const [panelRating, setPanelRating] = useState('');
   const [comment, setComment] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [alreadyReviewed, setAlreadyReviewed] = useState(false);
@@ -55,6 +56,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
           girl_id: girlId,
           panel_rating: panelRating,
           comment: comment || null,
+          twitter_url: twitterUrl || null,
           browser_id: getBrowserId(),
         }),
       });
@@ -72,6 +74,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
       localStorage.setItem(`reviewed_${girlId}`, '1');
       setPanelRating('');
       setComment('');
+      setTwitterUrl('');
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : '投稿に失敗しました');
@@ -134,6 +137,24 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
         />
         <p className="text-xs text-gray-400 mt-1">{comment.length}/500</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          𝕏 この子のXアカウント（任意）
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400 text-sm shrink-0">@</span>
+          <input
+            type="text"
+            value={twitterUrl}
+            onChange={(e) => setTwitterUrl(e.target.value.replace(/^@/, ''))}
+            placeholder="username"
+            maxLength={15}
+            className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-1">知っていたら教えてください（例: username）</p>
       </div>
 
       <button

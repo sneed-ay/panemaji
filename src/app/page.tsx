@@ -1,7 +1,7 @@
 import { getAllAreas, getStats, getLatestReviews } from '@/lib/queries';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // ISR: regenerate every 1 hour
 
 export default function Home() {
   const areas = getAllAreas();
