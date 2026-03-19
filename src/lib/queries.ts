@@ -1,7 +1,10 @@
 import db, { Area, Shop, Girl, Review } from './db';
 import { seedIfEmpty } from './seed';
 
-seedIfEmpty();
+// Skip seed during build phase
+if (process.env.NEXT_PHASE !== 'phase-production-build') {
+  try { seedIfEmpty(); } catch { /* DB not available during build */ }
+}
 
 // Areas
 export function getAllAreas(): Area[] {

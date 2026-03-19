@@ -4,7 +4,7 @@ import PanelRatingBar from '@/components/PanelRatingBar';
 import PanemajiScore from '@/components/PanemajiScore';
 import type { Metadata } from 'next';
 
-export const revalidate = 1800; // ISR: regenerate every 30 minutes
+export const dynamic = 'force-dynamic';
 
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const shop = getShopById(parseInt(params.id));

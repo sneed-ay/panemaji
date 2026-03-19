@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import PanemajiScore from '@/components/PanemajiScore';
 import type { Metadata } from 'next';
 
-export const revalidate = 3600; // ISR: regenerate every 1 hour
+export const dynamic = 'force-dynamic';
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const area = getAreaBySlug(params.slug);

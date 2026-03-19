@@ -6,6 +6,8 @@ let _db: Database.Database | null = null;
 function getDb(): Database.Database {
   if (_db) return _db;
 
+  // During build on Render, DB file may not exist - try to open, fall through if missing
+
   // Support persistent disk: use DB_PATH env var if set, fallback to cwd
   const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'panemaji.db');
   _db = new Database(dbPath);

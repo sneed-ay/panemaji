@@ -5,7 +5,7 @@ import PanemajiScore from '@/components/PanemajiScore';
 import GirlPageClient from './GirlPageClient';
 import type { Metadata } from 'next';
 
-export const revalidate = 900; // ISR: regenerate every 15 minutes (reviews are posted here)
+export const dynamic = 'force-dynamic';
 
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));
