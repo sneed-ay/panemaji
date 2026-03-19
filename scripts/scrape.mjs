@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * パネマジチェッカー スクレイピングスクリプト
+ * パネマジ掲示板 スクレイピングスクリプト
  *
  * 使い方:
  *   node scripts/scrape.mjs shops              # 店舗一覧を取得
@@ -417,7 +417,7 @@ async function main() {
   const resume = args.includes('--resume');
 
   console.log('╔══════════════════════════════════════╗');
-  console.log('║   パネマジチェッカー スクレイパー    ║');
+  console.log('║     パネマジ掲示板 スクレイパー      ║');
   console.log('╚══════════════════════════════════════╝');
 
   const db = openDb();
