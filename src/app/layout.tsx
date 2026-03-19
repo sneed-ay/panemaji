@@ -1,5 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: {
@@ -51,21 +57,21 @@ export default function RootLayout({
         <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <link rel="canonical" href="https://panemaji.onrender.com" />
       </head>
-      <body className="min-h-screen bg-gray-100">
+      <body className="min-h-screen bg-gray-100 overflow-x-hidden">
         <header className="bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-lg">
-          <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
             <a href="/" className="text-white no-underline hover:no-underline">
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 🔍 パネマジチェッカー
               </h1>
-              <p className="text-pink-200 text-sm mt-1">
+              <p className="text-pink-200 text-xs sm:text-sm mt-1">
                 パネル写真と実物の一致度を口コミでチェック
               </p>
             </a>
           </div>
         </header>
-        <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
-        <footer className="bg-gray-800 text-gray-400 text-center py-6 mt-12 text-sm">
+        <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
+        <footer className="bg-gray-800 text-gray-400 text-center py-4 sm:py-6 mt-8 sm:mt-12 text-xs sm:text-sm px-3">
           <p>&copy; 2026 パネマジチェッカー - 東京デリヘル パネマジ口コミサイト</p>
         </footer>
       </body>

@@ -27,30 +27,32 @@ export default function GirlPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-6">
-      <nav className="text-sm text-gray-500">
+      <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
-        <span className="mx-2">&gt;</span>
+        <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-500">{girl.area_name}</span>
-        <span className="mx-2">&gt;</span>
-        <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600">{girl.shop_name}</a>
-        <span className="mx-2">&gt;</span>
-        <span className="text-gray-800">{girl.name}</span>
+        <span className="mx-1 sm:mx-2">&gt;</span>
+        <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600 break-words">{girl.shop_name}</a>
+        <span className="mx-1 sm:mx-2">&gt;</span>
+        <span className="text-gray-800 break-words">{girl.name}</span>
       </nav>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{girl.name}</h2>
-              <p className="text-gray-500 mt-1">
-                <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{girl.name}</h2>
+              <p className="text-gray-500 mt-1 text-sm break-words">
+                <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600 break-words">
                   {girl.shop_name}
                 </a>
                 <span className="mx-1">-</span>
                 {girl.area_name}
               </p>
             </div>
-            <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} size="lg" />
+            <div className="shrink-0">
+              <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} size="lg" />
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

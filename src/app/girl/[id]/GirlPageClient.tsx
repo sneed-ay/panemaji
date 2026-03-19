@@ -26,7 +26,7 @@ export default function GirlPageClient({ girlId, girlName, initialReviews }: Pro
       <div className="text-center">
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white font-bold px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors text-lg"
+          className="bg-blue-600 text-white font-bold px-6 sm:px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg w-full sm:w-auto"
         >
           {showForm ? '閉じる' : '口コミを投稿する'}
         </button>
@@ -37,8 +37,8 @@ export default function GirlPageClient({ girlId, girlName, initialReviews }: Pro
       )}
 
       {/* Reviews List */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
           口コミ一覧（{reviews.length}件）
         </h3>
 
@@ -49,15 +49,15 @@ export default function GirlPageClient({ girlId, girlName, initialReviews }: Pro
         ) : (
           <div className="space-y-4">
             {reviews.map((review) => (
-              <div key={review.id} className="border border-gray-100 rounded-lg p-4 bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
+              <div key={review.id} className="border border-gray-100 rounded-lg p-3 sm:p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-2 gap-2">
                   <PanelRatingBadge rating={review.panel_rating} />
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 shrink-0">
                     {review.created_at?.split(' ')[0] || review.created_at}
                   </span>
                 </div>
                 {review.comment && (
-                  <p className="text-gray-700 mt-2 whitespace-pre-wrap">{review.comment}</p>
+                  <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base">{review.comment}</p>
                 )}
               </div>
             ))}

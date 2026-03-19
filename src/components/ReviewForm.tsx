@@ -87,8 +87,8 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-      <h3 className="text-lg font-bold text-gray-800">
+    <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 space-y-4">
+      <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">
         {girlName} さんの口コミを投稿
       </h3>
 
@@ -102,20 +102,20 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           パネマジ度 <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {ratingOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => setPanelRating(opt.value)}
-              className={`border-2 rounded-lg p-3 text-center transition-all ${
+              className={`border-2 rounded-lg p-2 sm:p-3 text-center transition-all ${
                 panelRating === opt.value
                   ? opt.color + ' ring-2 ring-offset-1 ring-blue-500 font-bold'
                   : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <div className="text-2xl mb-1">{opt.emoji}</div>
-              <div className="text-sm">{opt.label}</div>
+              <div className="text-xl sm:text-2xl mb-1">{opt.emoji}</div>
+              <div className="text-xs sm:text-sm">{opt.label}</div>
             </button>
           ))}
         </div>

@@ -15,7 +15,19 @@
   --border: #e5e7eb;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent long words/URLs from breaking layout on mobile */
+h1, h2, h3, h4, h5, h6, p, a, span, td, th, li {
+  overflow-wrap: break-word;
+  word-break: break-word;
 }

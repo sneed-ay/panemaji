@@ -28,37 +28,37 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="text-sm text-gray-500">
+      <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
-        <span className="mx-2">&gt;</span>
+        <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-500">{shop.area_name}</span>
-        <span className="mx-2">&gt;</span>
-        <span className="text-gray-800">{shop.name}</span>
+        <span className="mx-1 sm:mx-2">&gt;</span>
+        <span className="text-gray-800 break-words">{shop.name}</span>
       </nav>
 
       {/* Shop Header */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">{shop.name}</h2>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{shop.name}</h2>
+            <div className="flex items-center gap-2 sm:gap-3 mt-2">
+              <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded shrink-0">
                 {shop.category}
               </span>
-              <span className="text-gray-500 text-sm">{shop.area_name}</span>
+              <span className="text-gray-500 text-xs sm:text-sm">{shop.area_name}</span>
             </div>
             {shop.description && (
-              <p className="text-gray-600 mt-2">{shop.description}</p>
+              <p className="text-gray-600 mt-2 text-sm break-words">{shop.description}</p>
             )}
           </div>
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <PanemajiScore pct={shop.panemaji_pct ?? -1} reviewCount={shop.review_count || 0} size="lg" />
             <div className="text-right">
-              <p className="text-sm text-gray-500">
-                在籍 <span className="text-xl text-blue-600 font-bold">{shop.girl_count}</span> 人
+              <p className="text-xs sm:text-sm text-gray-500">
+                在籍 <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.girl_count}</span> 人
               </p>
-              <p className="text-sm text-gray-500 mt-1">
-                口コミ <span className="text-xl text-blue-600 font-bold">{shop.review_count}</span> 件
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                口コミ <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.review_count}</span> 件
               </p>
             </div>
           </div>
@@ -66,18 +66,18 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       </div>
 
       {/* Girl Search */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4">
         <form action={`/shop/${shopId}`} method="GET" className="flex gap-2">
           <input
             type="text"
             name="q"
             defaultValue={query}
             placeholder="女の子の名前で検索..."
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <button
             type="submit"
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base shrink-0"
           >
             検索
           </button>
@@ -85,12 +85,12 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       </div>
 
       {/* Girls List */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-gray-800">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-base sm:text-xl font-bold text-gray-800 min-w-0">
           在籍一覧
-          {query && <span className="text-base text-gray-500 ml-2">「{query}」の検索結果</span>}
+          {query && <span className="text-sm sm:text-base text-gray-500 ml-2 break-words">「{query}」の検索結果</span>}
         </h3>
-        <p className="text-sm text-gray-500">{girls.length}人 / パネマジ度順</p>
+        <p className="text-xs sm:text-sm text-gray-500 shrink-0">{girls.length}人 / パネマジ度順</p>
       </div>
 
       {girls.length === 0 ? (
@@ -105,11 +105,11 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
               href={`/girl/${girl.id}`}
               className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden no-underline"
             >
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-800">{girl.name}</h4>
-                    <p className="text-sm text-gray-500 mt-1">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">{girl.name}</h4>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
                       {girl.age}歳
                       {girl.height && ` T${girl.height}`}
                       {girl.bust && girl.cup && ` B${girl.bust}(${girl.cup})`}
@@ -117,7 +117,9 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
                       {girl.hip && ` H${girl.hip}`}
                     </p>
                   </div>
-                  <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} />
+                  <div className="shrink-0">
+                    <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} />
+                  </div>
                 </div>
                 <div className="mt-3">
                   <PanelRatingBar

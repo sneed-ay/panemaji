@@ -29,10 +29,10 @@ export default function PanemajiScore({ pct, reviewCount, size = 'md' }: Props) 
 
   if (size === 'lg') {
     return (
-      <div className={`inline-flex flex-col items-center rounded-lg border p-3 ${bgColor}`}>
-        <span className="text-xs text-gray-500">パネマジ度</span>
-        <span className={`text-3xl font-bold ${color}`}>{pct}%</span>
-        <span className="text-xs text-gray-400">{reviewCount}件の口コミ</span>
+      <div className={`inline-flex flex-col items-center rounded-lg border p-2 sm:p-3 ${bgColor}`}>
+        <span className="text-[10px] sm:text-xs text-gray-500">パネマジ度</span>
+        <span className={`text-2xl sm:text-3xl font-bold ${color}`}>{pct}%</span>
+        <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">{reviewCount}件の口コミ</span>
       </div>
     );
   }
