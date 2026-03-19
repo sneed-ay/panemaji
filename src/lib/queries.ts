@@ -171,7 +171,8 @@ export function addReview(girlId: number, panelRating: string, comment: string |
 
 // Update girl's twitter URL (only if not already set, or allow override)
 export function updateGirlTwitter(girlId: number, twitterUrl: string) {
-  db.prepare('UPDATE girls SET twitter_url = ? WHERE id = ? AND (twitter_url IS NULL OR twitter_url = ?)').run(twitterUrl, girlId, twitterUrl);
+  // Always update with latest submission (newest wins)
+  db.prepare('UPDATE girls SET twitter_url = ? WHERE id = ?').run(twitterUrl, girlId);
 }
 
 // Stats (only active) - single query instead of 3
