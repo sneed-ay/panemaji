@@ -34,11 +34,28 @@ function recordTweetTime(): void {
   ).run(now);
 }
 
-export async function postTweet(text: string): Promise<void> {
+/**
+ * Download an image from URL and return as Buffer
+ */
+async function downloadImage(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PanemajiBot/1.0)' },
+    });
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Post a tweet with optional image attachment
+ */
+export async function postTweet(text: string, imageUrl?: string | null): Promise<void> {
   try {
     console.log('[Twitter] Attempting to post tweet...');
-    console.log('[Twitter] appKey starts with:', TWITTER_CONFIG.appKey.substring(0, 5));
-    console.log('[Twitter] accessToken starts with:', TWITTER_CONFIG.accessToken.substring(0, 10));
 
     const client = new TwitterApi({
       appKey: TWITTER_CONFIG.appKey,
@@ -47,8 +64,31 @@ export async function postTweet(text: string): Promise<void> {
       accessSecret: TWITTER_CONFIG.accessSecret,
     });
 
-    const result = await client.v2.tweet(text);
-    console.log('[Twitter] Tweet posted successfully! ID:', result.data.id);
+    let mediaId: string | undefined;
+
+    // Try to upload image if URL provided
+    if (imageUrl) {
+      try {
+        console.log('[Twitter] Downloading image:', imageUrl.substring(0, 80));
+        const imageBuffer = await downloadImage(imageUrl);
+        if (imageBuffer && imageBuffer.length > 1000) {
+          console.log('[Twitter] Uploading image (' + imageBuffer.length + ' bytes)...');
+          mediaId = await client.v1.uploadMedia(imageBuffer, { mimeType: 'image/jpeg' });
+          console.log('[Twitter] Image uploaded, mediaId:', mediaId);
+        }
+      } catch (imgErr) {
+        console.error('[Twitter] Image upload failed, posting without image:', imgErr);
+      }
+    }
+
+    // Post tweet with or without media
+    if (mediaId) {
+      const result = await client.v2.tweet({ text, media: { media_ids: [mediaId] } });
+      console.log('[Twitter] Tweet with image posted! ID:', result.data.id);
+    } else {
+      const result = await client.v2.tweet(text);
+      console.log('[Twitter] Tweet posted (no image)! ID:', result.data.id);
+    }
 
     // Record successful tweet time for rate limiting
     recordTweetTime();

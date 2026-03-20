@@ -68,7 +68,7 @@ ${commentLine}
 ⬇️ パネマジ掲示板
 https://panemaji.com/girl/${girl_id}?t=${Date.now()}`;
 
-        postTweet(tweetText).catch((err) => {
+        postTweet(tweetText, girlWithStats.image_url).catch((err) => {
           console.error('[Twitter] Async tweet failed:', err);
         });
       }
