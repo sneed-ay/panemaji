@@ -73,18 +73,16 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="64x64" href="/icon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`} />
+        <>
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-CM0CD47KFB" />
             <script dangerouslySetInnerHTML={{ __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('consent', 'default', { analytics_storage: 'granted' });
-              gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');
+              gtag('config', 'G-CM0CD47KFB');
             `}} />
-          </>
-        )}
+        </>
       </head>
       <body className="min-h-screen bg-gray-100 overflow-x-hidden">
         <header className="bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-lg">
