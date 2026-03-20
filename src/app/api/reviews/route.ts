@@ -74,7 +74,6 @@ export async function POST(request: NextRequest) {
       const reviewCount = girlWithStats.review_count ?? 0;
       const realPct = girlWithStats.real_pct ?? -1;
       const realScore = realPct >= 0 ? Math.round(realPct) : 0;
-      const realScoreLine = `📈 累計リアル度: ${realScore}%（${reviewCount}件）`;
 
       const commentLine = comment ? `\n💬 ${comment}` : '';
 
