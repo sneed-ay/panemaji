@@ -38,7 +38,7 @@ export default function Home({ searchParams }: { searchParams: { pref?: string }
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         <div className="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
           <p className="text-xl sm:text-3xl font-bold text-blue-600">{stats.shopCount}</p>
           <p className="text-gray-500 text-xs sm:text-sm mt-1">店舗</p>
@@ -46,10 +46,6 @@ export default function Home({ searchParams }: { searchParams: { pref?: string }
         <div className="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
           <p className="text-xl sm:text-3xl font-bold text-blue-600">{stats.girlCount}</p>
           <p className="text-gray-500 text-xs sm:text-sm mt-1">女性</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
-          <p className="text-xl sm:text-3xl font-bold text-blue-600">{stats.reviewCount}</p>
-          <p className="text-gray-500 text-xs sm:text-sm mt-1">口コミ</p>
         </div>
       </div>
 
