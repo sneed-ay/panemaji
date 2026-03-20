@@ -19,14 +19,14 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
       description,
       url: `https://panemaji.com/girl/${params.id}`,
       siteName: 'パネマジ掲示板',
-      ...(girl.image_url ? { images: [{ url: girl.image_url, width: 300, height: 400 }] } : {}),
+      images: [{ url: 'https://panemaji.com/icon-512.png', width: 512, height: 512 }],
       type: 'article',
     },
     twitter: {
-      card: girl.image_url ? 'summary_large_image' : 'summary',
+      card: 'summary',
       title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
       description,
-      ...(girl.image_url ? { images: [girl.image_url] } : {}),
+      images: ['https://panemaji.com/icon-512.png'],
     },
   };
 }

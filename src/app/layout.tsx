@@ -35,6 +35,7 @@ export const metadata: Metadata = {
     locale: "ja_JP",
     siteName: "パネマジ掲示板",
     url: "https://panemaji.com",
+    images: [{ url: "https://panemaji.com/icon-512.png", width: 512, height: 512 }],
   },
   twitter: {
     card: "summary_large_image",
