@@ -57,19 +57,15 @@ export async function POST(request: NextRequest) {
 
       const commentLine = comment ? `\n💬 ${comment}` : '';
 
-      // Add invisible timestamp to avoid X duplicate tweet rejection
-      const ts = Date.now().toString(36);
-      const invisible = ts.split('').map(c => c + '\u200B').join('');
-
       const tweetText = `【新規口コミ🔥】
 🏠 ${girlWithStats.shop_name}
 👩 ${girlWithStats.name} さん
 📊 ${ratingText}
 ${commentLine}
-${realScoreLine}
+📈 累計リアル度: ${realScore}%（${reviewCount}件）
 
 ⬇️ パネマジ掲示板
-https://panemaji.com/girl/${girl_id}${invisible}`;
+https://panemaji.com/girl/${girl_id}?t=${Date.now()}`;
 
       postTweet(tweetText).catch((err) => {
         console.error('[Twitter] Async tweet failed:', err);
