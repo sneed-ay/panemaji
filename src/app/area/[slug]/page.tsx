@@ -1,4 +1,4 @@
-import { getAreaBySlug, getShopsByArea } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureNameToSlug } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanemajiScore from '@/components/PanemajiScore';
 import type { Metadata } from 'next';
@@ -10,7 +10,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   if (!area) return {};
   return {
     title: `${area.name}のデリヘル パネマジ口コミ一覧`,
-    description: `${area.name}エリアのデリヘル店舗のパネマジ度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
+    description: `${area.prefecture} ${area.name}エリアのデリヘル店舗のパネマジ度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
   };
 }
 
@@ -19,11 +19,14 @@ export default function AreaPage({ params }: { params: { slug: string } }) {
   if (!area) notFound();
 
   const shops = getShopsByArea(area.id);
+  const prefSlug = prefectureNameToSlug(area.prefecture);
 
   return (
     <div className="space-y-6">
       <nav className="text-xs sm:text-sm text-gray-500">
         <a href="/" className="hover:text-blue-600">トップ</a>
+        <span className="mx-1 sm:mx-2">&gt;</span>
+        <a href={`/?pref=${prefSlug}`} className="hover:text-blue-600">{area.prefecture}</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-800">{area.name}</span>
       </nav>

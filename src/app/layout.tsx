@@ -103,7 +103,7 @@ export default function RootLayout({
         </header>
         <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
         <footer className="bg-gray-800 text-gray-400 text-center py-4 sm:py-6 mt-8 sm:mt-12 text-xs sm:text-sm px-3">
-          <p>&copy; 2026 パネマジ掲示板 - 東京デリヘル パネマジ口コミサイト</p>
+          <p>&copy; 2026 パネマジ掲示板 - デリヘル パネマジ口コミサイト</p>
         </footer>
       </body>
     </html>

@@ -6,9 +6,46 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
   try { seedIfEmpty(); } catch { /* DB not available during build */ }
 }
 
+// Prefectures
+export type Prefecture = {
+  name: string;
+  slug: string;
+};
+
+const PREFECTURE_SLUG_MAP: Record<string, string> = {
+  '東京': 'tokyo',
+  '神奈川': 'kanagawa',
+  '埼玉': 'saitama',
+  '千葉': 'chiba',
+};
+
+const SLUG_PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(PREFECTURE_SLUG_MAP).map(([k, v]) => [v, k])
+);
+
+export function getPrefectures(): Prefecture[] {
+  const rows = db.prepare('SELECT DISTINCT prefecture FROM areas ORDER BY prefecture').all() as { prefecture: string }[];
+  return rows.map(r => ({
+    name: r.prefecture,
+    slug: PREFECTURE_SLUG_MAP[r.prefecture] || r.prefecture,
+  }));
+}
+
+export function prefectureSlugToName(slug: string): string {
+  return SLUG_PREFECTURE_MAP[slug] || '東京';
+}
+
+export function prefectureNameToSlug(name: string): string {
+  return PREFECTURE_SLUG_MAP[name] || 'tokyo';
+}
+
 // Areas
 export function getAllAreas(): Area[] {
   return db.prepare('SELECT * FROM areas ORDER BY id').all() as Area[];
+}
+
+export function getAreasByPrefecture(prefecture: string): Area[] {
+  return db.prepare('SELECT * FROM areas WHERE prefecture = ? ORDER BY id').all(prefecture) as Area[];
 }
 
 export function getAreaBySlug(slug: string): Area | undefined {
@@ -186,4 +223,13 @@ export function getStats() {
       (SELECT COUNT(*) FROM girls WHERE is_active = 1) as girlCount,
       (SELECT COUNT(*) FROM reviews) as reviewCount
   `).get() as { shopCount: number; girlCount: number; reviewCount: number };
+}
+
+export function getStatsByPrefecture(prefecture: string) {
+  return db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ?) as shopCount,
+      (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ?) as girlCount,
+      (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ?) as reviewCount
+  `).get(prefecture, prefecture, prefecture) as { shopCount: number; girlCount: number; reviewCount: number };
 }

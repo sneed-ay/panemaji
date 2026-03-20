@@ -1,15 +1,42 @@
-import { getAllAreas, getStats, getLatestReviews } from '@/lib/queries';
+import { getAreasByPrefecture, getStatsByPrefecture, getLatestReviews, getPrefectures, prefectureSlugToName } from '@/lib/queries';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const areas = getAllAreas();
-  const stats = getStats();
+export default function Home({ searchParams }: { searchParams: { pref?: string } }) {
+  const prefSlug = searchParams.pref || 'tokyo';
+  const prefName = prefectureSlugToName(prefSlug);
+  const prefectures = getPrefectures();
+  const areas = getAreasByPrefecture(prefName);
+  const stats = getStatsByPrefecture(prefName);
   const latestReviews = getLatestReviews(10);
 
   return (
     <div className="space-y-8">
+      {/* Prefecture Tabs */}
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+        <div className="flex flex-wrap gap-2">
+          {prefectures.map((pref) => {
+            const isActive = pref.slug === prefSlug;
+            return (
+              <a
+                key={pref.slug}
+                href={`/?pref=${pref.slug}`}
+                className={`
+                  inline-block px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors no-underline
+                  ${isActive
+                    ? 'bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                  }
+                `}
+              >
+                {pref.name}
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <div className="bg-white rounded-lg shadow p-3 sm:p-6 text-center">
@@ -47,7 +74,7 @@ export default function Home() {
       {/* Areas */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-          東京デリヘル パネマジチェック - エリアから探す
+          {prefName}デリヘル パネマジチェック - エリアから探す
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {areas.map((area) => (

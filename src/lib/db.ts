@@ -82,6 +82,14 @@ function getDb(): Database.Database {
     _db.exec('ALTER TABLE girls ADD COLUMN twitter_url TEXT');
   }
 
+  // Add prefecture column to areas if missing
+  const areaCols = (_db.prepare('PRAGMA table_info(areas)').all() as { name: string }[]).map((c) => c.name);
+  if (!areaCols.includes('prefecture')) {
+    _db.exec("ALTER TABLE areas ADD COLUMN prefecture TEXT NOT NULL DEFAULT '東京'");
+    // Set Kanagawa areas (id 27-37)
+    _db.exec("UPDATE areas SET prefecture = '神奈川' WHERE id >= 27 AND id <= 37");
+  }
+
   // Optimize SQLite for read-heavy workload
   _db.pragma('cache_size = -20000'); // 20MB cache
   _db.pragma('temp_store = MEMORY');
@@ -106,6 +114,7 @@ export type Area = {
   id: number;
   name: string;
   slug: string;
+  prefecture: string;
 };
 
 export type Shop = {
