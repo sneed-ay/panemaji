@@ -24,26 +24,22 @@ export async function POST(request: NextRequest) {
       message.trim()
     );
 
-    // Optionally send via Web3Forms if key is configured
-    const web3formsKey = process.env.CONTACT_FORM_KEY;
-    if (web3formsKey) {
-      try {
-        await fetch("https://api.web3forms.com/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            access_key: web3formsKey,
-            subject: `[パネマジ掲示板] ${category || "お問い合わせ"}`,
-            from_name: name?.trim() || "匿名",
-            email: email?.trim() || "noreply@panemaji.com",
-            message: `【種別】${category}\n【名前】${name || "未入力"}\n【メール】${email || "未入力"}\n\n${message}`,
-            to: "panemaji@sneed.jp",
-          }),
-        });
-      } catch {
-        // Web3Forms failure is non-critical; DB save already succeeded
-        console.error("Web3Forms notification failed");
-      }
+    // Send email notification via Web3Forms
+    try {
+      await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: "7993188c-b39f-447d-8897-1d30f0aa30b6",
+          subject: `[パネマジ掲示板] ${category || "お問い合わせ"}`,
+          from_name: name?.trim() || "匿名",
+          email: email?.trim() || "noreply@panemaji.com",
+          message: `【種別】${category}\n【名前】${name || "未入力"}\n【メール】${email || "未入力"}\n\n${message}`,
+        }),
+      });
+    } catch {
+      // Web3Forms failure is non-critical; DB save already succeeded
+      console.error("Web3Forms notification failed");
     }
 
     return NextResponse.json({ success: true });
