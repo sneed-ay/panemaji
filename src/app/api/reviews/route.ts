@@ -8,17 +8,6 @@ export async function GET() {
   return NextResponse.json(reviews);
 }
 
-// Temporary DELETE for test cleanup
-export async function DELETE(request: NextRequest) {
-  if (request.headers.get('x-admin-secret') !== 'cleanup-test-reviews-2026') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const { ids } = await request.json();
-  const db = (await import('@/lib/db')).default;
-  let deleted = 0;
-  for (const id of ids) { deleted += db.prepare('DELETE FROM reviews WHERE id = ?').run(id).changes; }
-  return NextResponse.json({ deleted });
-}
 
 
 export async function POST(request: NextRequest) {
@@ -70,6 +59,11 @@ export async function POST(request: NextRequest) {
 
         const commentLine = comment ? `\n💬 ${comment}` : '';
 
+        // Add @mention if girl has X account
+        const twitterUrl = girlWithStats.twitter_url || '';
+        const twitterHandle = twitterUrl.replace(/^https?:\/\/(x\.com|twitter\.com)\//, '').replace(/\/.*$/, '');
+        const mentionLine = twitterHandle ? `\n\n@${twitterHandle}` : '';
+
         const tweetText = `【新規口コミ🔥】
 🏠 ${girlWithStats.shop_name}
 👩 ${girlWithStats.name} さん
@@ -78,7 +72,7 @@ ${commentLine}
 📈 累計リアル度: ${realScore}%（${reviewCount}件）
 
 ⬇️ パネマジ掲示板
-https://panemaji.com/girl/${girl_id}?t=${Date.now()}`;
+https://panemaji.com/girl/${girl_id}?t=${Date.now()}${mentionLine}`;
 
         postTweet(tweetText).catch((err) => {
           console.error('[Twitter] Async tweet failed:', err);
