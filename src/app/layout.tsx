@@ -104,6 +104,10 @@ export default function RootLayout({
         </header>
         <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
         <footer className="bg-gray-800 text-gray-400 text-center py-4 sm:py-6 mt-8 sm:mt-12 text-xs sm:text-sm px-3">
+          <div className="flex justify-center gap-4 mb-2">
+            <a href="/terms" className="hover:text-white transition-colors">利用規約</a>
+            <a href="/contact" className="hover:text-white transition-colors">お問い合わせ</a>
+          </div>
           <p>&copy; 2026 パネマジ掲示板 - デリヘル パネマジ口コミサイト</p>
         </footer>
       </body>

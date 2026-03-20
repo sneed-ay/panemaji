@@ -74,6 +74,15 @@ function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_shops_is_active ON shops(is_active);
     CREATE INDEX IF NOT EXISTS idx_shops_name ON shops(name);
     CREATE INDEX IF NOT EXISTS idx_areas_slug ON areas(slug);
+
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT,
+      category TEXT NOT NULL DEFAULT '一般的なお問い合わせ',
+      message TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Add twitter_url column if missing
