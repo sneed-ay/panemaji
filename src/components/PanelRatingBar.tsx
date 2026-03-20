@@ -29,8 +29,8 @@ export default function PanelRatingBar({ matchCount, diffCount, jiraiCount }: Pr
       </div>
       <div className="flex justify-between text-[10px] sm:text-xs mt-1 text-gray-600 gap-1">
         <span className="text-green-700 truncate">パネル通り {matchCount}</span>
-        <span className="text-yellow-700 truncate">違う {diffCount}</span>
-        <span className="text-red-700 truncate">地雷 {jiraiCount}</span>
+        <span className="text-yellow-700 truncate">許せる {diffCount}</span>
+        <span className="text-red-700 truncate">パネル詐欺 {jiraiCount}</span>
       </div>
     </div>
   );

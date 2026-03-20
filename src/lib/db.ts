@@ -130,7 +130,7 @@ export type Shop = {
   girl_count?: number;
   review_count?: number;
   panel_match_count?: number;
-  panemaji_pct?: number;
+  real_pct?: number;
 };
 
 export type Girl = {
@@ -154,7 +154,7 @@ export type Girl = {
   panel_match_count?: number;
   panel_diff_count?: number;
   jirai_count?: number;
-  panemaji_pct?: number;
+  real_pct?: number;
 };
 
 export type Review = {

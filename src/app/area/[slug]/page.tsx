@@ -1,6 +1,6 @@
 import { getAreaBySlug, getShopsByArea, prefectureNameToSlug } from '@/lib/queries';
 import { notFound } from 'next/navigation';
-import PanemajiScore from '@/components/PanemajiScore';
+import RealScore from '@/components/RealScore';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -9,8 +9,8 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const area = getAreaBySlug(params.slug);
   if (!area) return {};
   return {
-    title: `${area.name}のデリヘル パネマジ口コミ一覧`,
-    description: `${area.prefecture} ${area.name}エリアのデリヘル店舗のパネマジ度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
+    title: `${area.name}のデリヘル リアル度口コミ一覧`,
+    description: `${area.prefecture} ${area.name}エリアのデリヘル店舗のリアル度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
   };
 }
 
@@ -35,7 +35,7 @@ export default function AreaPage({ params }: { params: { slug: string } }) {
         <h2 className="text-lg sm:text-2xl font-bold text-gray-800 break-words min-w-0">
           {area.name}の風俗店一覧
         </h2>
-        <p className="text-xs sm:text-sm text-gray-500 shrink-0">パネマジ度順</p>
+        <p className="text-xs sm:text-sm text-gray-500 shrink-0">リアル度順</p>
       </div>
 
       {shops.length === 0 ? (
@@ -61,7 +61,7 @@ export default function AreaPage({ params }: { params: { slug: string } }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                  <PanemajiScore pct={shop.panemaji_pct ?? -1} reviewCount={shop.review_count || 0} />
+                  <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} />
                   <div className="text-right">
                     <p className="text-xs sm:text-sm text-gray-500">
                       在籍 <span className="text-blue-600 font-bold">{shop.girl_count}</span> 人

@@ -1,7 +1,7 @@
 import { getGirlWithReviewStats, getReviewsByGirl } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
-import PanemajiScore from '@/components/PanemajiScore';
+import RealScore from '@/components/RealScore';
 import GirlPageClient from './GirlPageClient';
 import type { Metadata } from 'next';
 
@@ -11,8 +11,8 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const girl = getGirlWithReviewStats(parseInt(params.id));
   if (!girl) return {};
   return {
-    title: `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`,
-    description: `${girl.shop_name}の${girl.name}さんはパネル通り？パネマジ度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`,
+    title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
+    description: `${girl.shop_name}の${girl.name}さんはパネル通り？リアル度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`,
   };
 }
 
@@ -62,7 +62,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
               )}
             </div>
             <div className="shrink-0">
-              <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} size="lg" />
+              <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} size="lg" />
             </div>
           </div>
 

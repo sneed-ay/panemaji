@@ -62,7 +62,8 @@ const SHOP_STATS_JOIN = `
   LEFT JOIN (
     SELECT g.shop_id,
       COUNT(*) as review_count,
-      SUM(CASE WHEN r.panel_rating = 'panel_match' THEN 1 ELSE 0 END) as panel_match_count
+      SUM(CASE WHEN r.panel_rating = 'panel_match' THEN 1 ELSE 0 END) as panel_match_count,
+      SUM(CASE WHEN r.panel_rating = 'panel_diff' THEN 1 ELSE 0 END) as panel_diff_count
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
     GROUP BY g.shop_id
@@ -75,8 +76,8 @@ const SHOP_STATS_COLS = `
   COALESCE(rc.panel_match_count, 0) as panel_match_count,
   CASE
     WHEN COALESCE(rc.review_count, 0) = 0 THEN -1
-    ELSE ROUND(100.0 * COALESCE(rc.panel_match_count, 0) / rc.review_count)
-  END as panemaji_pct
+    ELSE ROUND((COALESCE(rc.panel_match_count, 0) * 100.0 + COALESCE(rc.panel_diff_count, 0) * 50.0) / rc.review_count)
+  END as real_pct
 `;
 
 // Shops (only active shops)
@@ -87,7 +88,7 @@ export function getShopsByArea(areaId: number): Shop[] {
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
     WHERE s.area_id = ? AND s.is_active = 1
-    ORDER BY panemaji_pct DESC, review_count DESC, s.name
+    ORDER BY real_pct DESC, review_count DESC, s.name
   `).all(areaId) as Shop[];
 }
 
@@ -109,7 +110,7 @@ export function searchShops(query: string): Shop[] {
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
     WHERE s.name LIKE ? AND s.is_active = 1
-    ORDER BY panemaji_pct DESC, review_count DESC, s.name
+    ORDER BY real_pct DESC, review_count DESC, s.name
     LIMIT 50
   `).all(q) as Shop[];
 }
@@ -134,8 +135,8 @@ const GIRL_STATS_COLS = `
   COALESCE(rs.jirai_count, 0) as jirai_count,
   CASE
     WHEN COALESCE(rs.review_count, 0) = 0 THEN -1
-    ELSE ROUND(100.0 * rs.panel_match_count / rs.review_count)
-  END as panemaji_pct
+    ELSE ROUND((rs.panel_match_count * 100.0 + rs.panel_diff_count * 50.0) / rs.review_count)
+  END as real_pct
 `;
 
 // Girls (only active by default)
@@ -150,7 +151,7 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
     JOIN shops s ON g.shop_id = s.id
     ${GIRL_STATS_JOIN}
     ${where}
-    ORDER BY panemaji_pct DESC, review_count DESC, g.name
+    ORDER BY real_pct DESC, review_count DESC, g.name
   `).all(...params) as Girl[];
 }
 

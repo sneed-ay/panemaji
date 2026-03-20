@@ -4,7 +4,7 @@ type Props = {
   size?: 'sm' | 'md' | 'lg';
 };
 
-export default function PanemajiScore({ pct, reviewCount, size = 'md' }: Props) {
+export default function RealScore({ pct, reviewCount, size = 'md' }: Props) {
   if (pct < 0 || reviewCount === 0) {
     return (
       <span className="text-gray-400 text-sm">---</span>
@@ -30,7 +30,7 @@ export default function PanemajiScore({ pct, reviewCount, size = 'md' }: Props) 
   if (size === 'lg') {
     return (
       <div className={`inline-flex flex-col items-center rounded-lg border p-2 sm:p-3 ${bgColor}`}>
-        <span className="text-[10px] sm:text-xs text-gray-500">パネマジ度</span>
+        <span className="text-[10px] sm:text-xs text-gray-500">リアル度</span>
         <span className={`text-2xl sm:text-3xl font-bold ${color}`}>{pct}%</span>
         <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">{reviewCount}件の口コミ</span>
       </div>
@@ -39,7 +39,7 @@ export default function PanemajiScore({ pct, reviewCount, size = 'md' }: Props) 
 
   return (
     <div className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 ${bgColor}`}>
-      <span className="text-xs text-gray-500">パネマジ度</span>
+      <span className="text-xs text-gray-500">リアル度</span>
       <span className={`text-sm font-bold ${color}`}>{pct}%</span>
     </div>
   );

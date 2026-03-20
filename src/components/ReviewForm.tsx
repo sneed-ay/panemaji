@@ -42,7 +42,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!panelRating) {
-      setError('パネマジ度を選択してください');
+      setError('評価を選択してください');
       return;
     }
     setSubmitting(true);
@@ -85,8 +85,8 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
 
   const ratingOptions = [
     { value: 'panel_match', label: 'パネル通り', emoji: '\u2705', color: 'border-green-400 bg-green-50 text-green-800 hover:bg-green-100' },
-    { value: 'panel_diff', label: 'パネルと違う', emoji: '\u26a0\ufe0f', color: 'border-yellow-400 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' },
-    { value: 'jirai', label: '地雷', emoji: '\ud83d\udca3', color: 'border-red-400 bg-red-50 text-red-800 hover:bg-red-100' },
+    { value: 'panel_diff', label: '許せる', emoji: '\u26a0\ufe0f', color: 'border-yellow-400 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' },
+    { value: 'jirai', label: 'パネル詐欺', emoji: '\ud83d\udca3', color: 'border-red-400 bg-red-50 text-red-800 hover:bg-red-100' },
   ];
 
   return (
@@ -103,7 +103,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          パネマジ度 <span className="text-red-500">*</span>
+          リアル度 <span className="text-red-500">*</span>
         </label>
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {ratingOptions.map((opt) => (

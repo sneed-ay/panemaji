@@ -1,7 +1,7 @@
 import { getShopById, getGirlsByShop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
-import PanemajiScore from '@/components/PanemajiScore';
+import RealScore from '@/components/RealScore';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -10,8 +10,8 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const shop = getShopById(parseInt(params.id));
   if (!shop) return {};
   return {
-    title: `${shop.name} パネマジ口コミ・評価`,
-    description: `${shop.name}の女性一覧とパネマジ度チェック。パネル写真と実物が一致しているか口コミで確認。${shop.area_name || '東京'}のデリヘル。`,
+    title: `${shop.name} リアル度口コミ・評価`,
+    description: `${shop.name}の女性一覧とリアル度チェック。パネル写真と実物が一致しているか口コミで確認。${shop.area_name || '東京'}のデリヘル。`,
   };
 }
 
@@ -52,7 +52,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
             )}
           </div>
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            <PanemajiScore pct={shop.panemaji_pct ?? -1} reviewCount={shop.review_count || 0} size="lg" />
+            <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} size="lg" />
             <div className="text-right">
               <p className="text-xs sm:text-sm text-gray-500">
                 在籍 <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.girl_count}</span> 人
@@ -90,7 +90,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           在籍一覧
           {query && <span className="text-sm sm:text-base text-gray-500 ml-2 break-words">「{query}」の検索結果</span>}
         </h3>
-        <p className="text-xs sm:text-sm text-gray-500 shrink-0">{girls.length}人 / パネマジ度順</p>
+        <p className="text-xs sm:text-sm text-gray-500 shrink-0">{girls.length}人 / リアル度順</p>
       </div>
 
       {girls.length === 0 ? (
@@ -118,7 +118,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
                     </p>
                   </div>
                   <div className="shrink-0">
-                    <PanemajiScore pct={girl.panemaji_pct ?? -1} reviewCount={girl.review_count || 0} />
+                    <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
                   </div>
                 </div>
                 <div className="mt-3">
