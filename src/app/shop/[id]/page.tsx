@@ -31,7 +31,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
-        <span className="text-gray-500">{shop.area_name}</span>
+        <a href={`/area/${shop.area_slug}`} className="hover:text-blue-600">{shop.area_name}</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-800 break-words">{shop.name}</span>
       </nav>

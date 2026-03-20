@@ -122,6 +122,7 @@ export type Shop = {
   name: string;
   area_id: number;
   area_name?: string;
+  area_slug?: string;
   category: string;
   description: string | null;
   source_url: string | null;
@@ -139,6 +140,7 @@ export type Girl = {
   shop_id: number;
   shop_name?: string;
   area_name?: string;
+  area_slug?: string;
   age: number | null;
   height: number | null;
   bust: number | null;

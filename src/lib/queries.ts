@@ -83,7 +83,7 @@ const SHOP_STATS_COLS = `
 // Shops (only active shops)
 export function getShopsByArea(areaId: number): Shop[] {
   return db.prepare(`
-    SELECT s.*, a.name as area_name, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
@@ -94,7 +94,7 @@ export function getShopsByArea(areaId: number): Shop[] {
 
 export function getShopById(id: number): Shop | undefined {
   return db.prepare(`
-    SELECT s.*, a.name as area_name, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
@@ -105,7 +105,7 @@ export function getShopById(id: number): Shop | undefined {
 export function searchShops(query: string): Shop[] {
   const q = `%${query}%`;
   return db.prepare(`
-    SELECT s.*, a.name as area_name, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
@@ -157,7 +157,7 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
 
 export function getGirlById(id: number): Girl | undefined {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, a.name as area_name
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
@@ -167,7 +167,7 @@ export function getGirlById(id: number): Girl | undefined {
 
 export function getGirlWithReviewStats(id: number): Girl | undefined {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, a.name as area_name, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id

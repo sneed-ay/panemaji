@@ -30,7 +30,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
-        <span className="text-gray-500">{girl.area_name}</span>
+        <a href={`/area/${girl.area_slug}`} className="hover:text-blue-600">{girl.area_name}</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
         <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600 break-words">{girl.shop_name}</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
