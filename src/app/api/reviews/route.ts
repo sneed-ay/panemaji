@@ -8,6 +8,18 @@ export async function GET() {
   return NextResponse.json(reviews);
 }
 
+// Temporary DELETE for test cleanup
+export async function DELETE(request: NextRequest) {
+  if (request.headers.get('x-admin-secret') !== 'cleanup-test-reviews-2026') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const { ids } = await request.json();
+  const db = (await import('@/lib/db')).default;
+  let deleted = 0;
+  for (const id of ids) { deleted += db.prepare('DELETE FROM reviews WHERE id = ?').run(id).changes; }
+  return NextResponse.json({ deleted });
+}
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,7 +80,7 @@ ${commentLine}
 ⬇️ パネマジ掲示板
 https://panemaji.com/girl/${girl_id}?t=${Date.now()}`;
 
-        postTweet(tweetText, girlWithStats.image_url).catch((err) => {
+        postTweet(tweetText).catch((err) => {
           console.error('[Twitter] Async tweet failed:', err);
         });
       }
