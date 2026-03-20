@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { addReview, getLatestReviews, getGirlById } from '@/lib/queries';
+import { addReview, getLatestReviews, getGirlById, getGirlWithReviewStats } from '@/lib/queries';
+import { postTweet } from '@/lib/twitter';
 
 export async function GET() {
   const reviews = getLatestReviews(20);
@@ -38,6 +39,44 @@ export async function POST(request: NextRequest) {
       revalidatePath(`/shop/${girl.shop_id}`);
     }
     revalidatePath('/'); // Latest reviews on homepage
+
+    // Post to X asynchronously (don't block the response)
+    const girlWithStats = getGirlWithReviewStats(girl_id);
+    if (girlWithStats) {
+      const ratingEmoji: Record<string, string> = {
+        panel_match: 'パネル通り ✅',
+        panel_diff: '許せる 🟡',
+        jirai: 'パネル詐欺 🚨',
+      };
+      const ratingText = ratingEmoji[panel_rating] || panel_rating;
+
+      const reviewCount = girlWithStats.review_count ?? 0;
+      const realPct = girlWithStats.real_pct ?? -1;
+      const realScoreLine = reviewCount === 0
+        ? '📈 初回口コミ！'
+        : `📈 累計リアル度: ${Math.round(realPct)}%（${reviewCount}件）`;
+
+      const commentLine = comment ? `\n💬 ${comment}` : '';
+
+      // Add timestamp to avoid X duplicate tweet rejection
+      const ts = Date.now().toString(36);
+
+      const tweetText = `【口コミ投稿】
+🏠 ${girlWithStats.shop_name}
+👩 ${girlWithStats.name} さん
+📊 ${ratingText}
+${commentLine}
+${realScoreLine}
+
+パネマジ掲示板
+▶ https://panemaji.com/girl/${girl_id}
+
+#${ts}`;
+
+      postTweet(tweetText).catch((err) => {
+        console.error('[Twitter] Async tweet failed:', err);
+      });
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {
