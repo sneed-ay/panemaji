@@ -2,6 +2,7 @@ import { getGirlWithReviewStats, getReviewsByGirl } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
 import RealScore from '@/components/RealScore';
+import GirlImage from '@/components/GirlImage';
 import GirlPageClient from './GirlPageClient';
 import type { Metadata } from 'next';
 
@@ -11,6 +12,7 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const girl = getGirlWithReviewStats(parseInt(params.id));
   if (!girl) return {};
   const description = `${girl.shop_name}の${girl.name}さんはパネル通り？リアル度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`;
+  const ogImage = girl.image_url || 'https://panemaji.com/icon-512.png';
   return {
     title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
     description,
@@ -19,14 +21,14 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
       description,
       url: `https://panemaji.com/girl/${params.id}`,
       siteName: 'パネマジ掲示板',
-      images: [{ url: 'https://panemaji.com/icon-512.png', width: 512, height: 512 }],
+      images: [{ url: ogImage, width: 512, height: 512 }],
       type: 'article',
     },
     twitter: {
       card: 'summary',
       title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
       description,
-      images: ['https://panemaji.com/icon-512.png'],
+      images: [ogImage],
     },
   };
 }
@@ -55,15 +57,18 @@ export default function GirlPage({ params }: { params: { id: string } }) {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{girl.name}</h2>
-              <p className="text-gray-500 mt-1 text-sm break-words">
-                <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600 break-words">
-                  {girl.shop_name}
-                </a>
-                <span className="mx-1">-</span>
-                {girl.area_name}
-              </p>
+            <div className="flex items-start gap-4">
+              <GirlImage src={girl.image_url} alt={girl.name} size={200} className="hidden sm:flex" />
+              <GirlImage src={girl.image_url} alt={girl.name} size={120} className="flex sm:hidden" />
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{girl.name}</h2>
+                <p className="text-gray-500 mt-1 text-sm break-words">
+                  <a href={`/shop/${girl.shop_id}`} className="hover:text-blue-600 break-words">
+                    {girl.shop_name}
+                  </a>
+                  <span className="mx-1">-</span>
+                  {girl.area_name}
+                </p>
               {girl.twitter_url && (
                 <a
                   href={girl.twitter_url}
@@ -75,6 +80,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                   <span>{girl.twitter_url.replace('https://x.com/', '@')}</span>
                 </a>
               )}
+              </div>
             </div>
             <div className="shrink-0">
               <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} size="lg" />

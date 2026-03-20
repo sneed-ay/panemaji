@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { addReview, getLatestReviews, getGirlById, getGirlWithReviewStats } from '@/lib/queries';
-import { postTweet } from '@/lib/twitter';
+import { postTweet, canTweetNow } from '@/lib/twitter';
 
 export async function GET() {
   const reviews = getLatestReviews(20);
@@ -41,23 +41,24 @@ export async function POST(request: NextRequest) {
     }
     revalidatePath('/'); // Latest reviews on homepage
 
-    // Post to X asynchronously (don't block the response)
-    const girlWithStats = getGirlWithReviewStats(girl_id);
-    if (girlWithStats) {
-      const ratingEmoji: Record<string, string> = {
-        panel_match: 'パネル通り ✅',
-        panel_diff: '許せる 🟡',
-        jirai: 'パネル詐欺 🚨',
-      };
-      const ratingText = ratingEmoji[panel_rating] || panel_rating;
+    // Post to X asynchronously with rate limiting (max 1 tweet per 10 min)
+    if (canTweetNow()) {
+      const girlWithStats = getGirlWithReviewStats(girl_id);
+      if (girlWithStats) {
+        const ratingEmoji: Record<string, string> = {
+          panel_match: 'パネル通り ✅',
+          panel_diff: '許せる 🟡',
+          jirai: 'パネル詐欺 🚨',
+        };
+        const ratingText = ratingEmoji[panel_rating] || panel_rating;
 
-      const reviewCount = girlWithStats.review_count ?? 0;
-      const realPct = girlWithStats.real_pct ?? -1;
-      const realScore = realPct >= 0 ? Math.round(realPct) : 0;
+        const reviewCount = girlWithStats.review_count ?? 0;
+        const realPct = girlWithStats.real_pct ?? -1;
+        const realScore = realPct >= 0 ? Math.round(realPct) : 0;
 
-      const commentLine = comment ? `\n💬 ${comment}` : '';
+        const commentLine = comment ? `\n💬 ${comment}` : '';
 
-      const tweetText = `【新規口コミ🔥】
+        const tweetText = `【新規口コミ🔥】
 🏠 ${girlWithStats.shop_name}
 👩 ${girlWithStats.name} さん
 📊 ${ratingText}
@@ -67,9 +68,12 @@ ${commentLine}
 ⬇️ パネマジ掲示板
 https://panemaji.com/girl/${girl_id}?t=${Date.now()}`;
 
-      postTweet(tweetText).catch((err) => {
-        console.error('[Twitter] Async tweet failed:', err);
-      });
+        postTweet(tweetText).catch((err) => {
+          console.error('[Twitter] Async tweet failed:', err);
+        });
+      }
+    } else {
+      console.log('[Twitter] Rate limited: skipping tweet (10min interval not elapsed)');
     }
 
     return NextResponse.json({ success: true }, { status: 201 });

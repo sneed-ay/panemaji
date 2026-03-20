@@ -82,6 +82,14 @@ function getDb(): Database.Database {
     _db.exec('ALTER TABLE girls ADD COLUMN twitter_url TEXT');
   }
 
+  // Add tweet_settings table for rate limiting
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS tweet_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
+
   // Add prefecture column to areas if missing
   const areaCols = (_db.prepare('PRAGMA table_info(areas)').all() as { name: string }[]).map((c) => c.name);
   if (!areaCols.includes('prefecture')) {

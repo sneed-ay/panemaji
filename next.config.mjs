@@ -3,6 +3,14 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['better-sqlite3', 'twitter-api-v2'],
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.cityheaven.net',
+      },
+    ],
+  },
   headers: async () => [
     {
       // Static assets - long cache

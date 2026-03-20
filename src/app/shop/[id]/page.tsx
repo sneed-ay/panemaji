@@ -2,6 +2,7 @@ import { getShopById, getGirlsByShop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
 import RealScore from '@/components/RealScore';
+import GirlImage from '@/components/GirlImage';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -106,27 +107,32 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
               className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden no-underline"
             >
               <div className="p-3 sm:p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">{girl.name}</h4>
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
-                      {girl.age}歳
-                      {girl.height && ` T${girl.height}`}
-                      {girl.bust && girl.cup && ` B${girl.bust}(${girl.cup})`}
-                      {girl.waist && ` W${girl.waist}`}
-                      {girl.hip && ` H${girl.hip}`}
-                    </p>
+                <div className="flex items-start gap-3">
+                  <GirlImage src={girl.image_url} alt={girl.name} size={80} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">{girl.name}</h4>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
+                          {girl.age}歳
+                          {girl.height && ` T${girl.height}`}
+                          {girl.bust && girl.cup && ` B${girl.bust}(${girl.cup})`}
+                          {girl.waist && ` W${girl.waist}`}
+                          {girl.hip && ` H${girl.hip}`}
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <PanelRatingBar
+                        matchCount={girl.panel_match_count || 0}
+                        diffCount={girl.panel_diff_count || 0}
+                        jiraiCount={girl.jirai_count || 0}
+                      />
+                    </div>
                   </div>
-                  <div className="shrink-0">
-                    <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <PanelRatingBar
-                    matchCount={girl.panel_match_count || 0}
-                    diffCount={girl.panel_diff_count || 0}
-                    jiraiCount={girl.jirai_count || 0}
-                  />
                 </div>
               </div>
             </a>
