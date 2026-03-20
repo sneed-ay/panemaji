@@ -52,24 +52,23 @@ export async function POST(request: NextRequest) {
 
       const reviewCount = girlWithStats.review_count ?? 0;
       const realPct = girlWithStats.real_pct ?? -1;
-      const realScoreLine = reviewCount === 0
-        ? '📈 初回口コミ！'
-        : `📈 累計リアル度: ${Math.round(realPct)}%（${reviewCount}件）`;
+      const realScore = realPct >= 0 ? Math.round(realPct) : 0;
+      const realScoreLine = `📈 累計リアル度: ${realScore}%（${reviewCount}件）`;
 
       const commentLine = comment ? `\n💬 ${comment}` : '';
 
       // Add timestamp to avoid X duplicate tweet rejection
       const ts = Date.now().toString(36);
 
-      const tweetText = `【口コミ投稿】
+      const tweetText = `【新規口コミ🔥】
 🏠 ${girlWithStats.shop_name}
 👩 ${girlWithStats.name} さん
 📊 ${ratingText}
 ${commentLine}
 ${realScoreLine}
 
-パネマジ掲示板
-▶ https://panemaji.com/girl/${girl_id}
+⬇️ パネマジ掲示板
+https://panemaji.com/girl/${girl_id}
 
 #${ts}`;
 

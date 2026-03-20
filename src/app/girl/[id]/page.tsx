@@ -10,9 +10,24 @@ export const dynamic = 'force-dynamic';
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));
   if (!girl) return {};
+  const description = `${girl.shop_name}の${girl.name}さんはパネル通り？リアル度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`;
   return {
     title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
-    description: `${girl.shop_name}の${girl.name}さんはパネル通り？リアル度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`,
+    description,
+    openGraph: {
+      title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
+      description,
+      url: `https://panemaji.com/girl/${params.id}`,
+      siteName: 'パネマジ掲示板',
+      ...(girl.image_url ? { images: [{ url: girl.image_url, width: 300, height: 400 }] } : {}),
+      type: 'article',
+    },
+    twitter: {
+      card: girl.image_url ? 'summary_large_image' : 'summary',
+      title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
+      description,
+      ...(girl.image_url ? { images: [girl.image_url] } : {}),
+    },
   };
 }
 
