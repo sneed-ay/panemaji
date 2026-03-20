@@ -8,26 +8,6 @@ export async function GET() {
   return NextResponse.json(reviews);
 }
 
-// Temporary: DELETE test reviews by ID range
-export async function DELETE(request: NextRequest) {
-  const secret = request.headers.get('x-admin-secret');
-  if (secret !== 'cleanup-test-reviews-2026') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const body = await request.json();
-  const ids: number[] = body.ids;
-  if (!ids || !Array.isArray(ids)) {
-    return NextResponse.json({ error: 'ids required' }, { status: 400 });
-  }
-  const db = (await import('@/lib/db')).default;
-  const stmt = db.prepare('DELETE FROM reviews WHERE id = ?');
-  let deleted = 0;
-  for (const id of ids) {
-    const result = stmt.run(id);
-    deleted += result.changes;
-  }
-  return NextResponse.json({ deleted });
-}
 
 export async function POST(request: NextRequest) {
   try {
