@@ -253,7 +253,7 @@ export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
 
 export function getLatestReviews(limit: number = 20): Review[] {
   return db.prepare(`
-    SELECT r.*, g.name as girl_name, s.name as shop_name
+    SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id

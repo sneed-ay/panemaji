@@ -183,6 +183,7 @@ export type Review = {
   girl_id: number;
   girl_name?: string;
   shop_name?: string;
+  girl_image_url?: string | null;
   visit_date: string;
   panel_rating: 'panel_match' | 'panel_diff' | 'jirai';
   comment: string | null;

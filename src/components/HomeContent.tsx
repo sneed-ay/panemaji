@@ -1,12 +1,50 @@
-import { getAreasByPrefecture, getStatsByPrefecture, getLatestReviews, getPrefectures, getRegionOrder, prefectureSlugToName, getShopsSeekingReviews } from '@/lib/queries';
+import { getAreasByPrefecture, getStatsByPrefecture, getLatestReviews, getPrefectures, getRegionOrder, prefectureSlugToName, getTopRealGirls, getWorstRealGirls } from '@/lib/queries';
 import type { Prefecture } from '@/lib/queries';
+import type { Girl } from '@/lib/db';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import PrefectureSelector from '@/components/PrefectureSelector';
+import GirlImage from '@/components/GirlImage';
 
 
 type Props = {
   prefSlug: string;
 };
+
+const MEDAL_COLORS: Record<number, { bg: string; border: string; text: string; label: string }> = {
+  0: { bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-600', label: '1' },
+  1: { bg: 'bg-gray-50', border: 'border-gray-400', text: 'text-gray-500', label: '2' },
+  2: { bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-600', label: '3' },
+};
+
+function RankingCard({ girl, rank }: { girl: Girl; rank: number }) {
+  const medal = MEDAL_COLORS[rank];
+  const realPct = girl.real_pct ?? 0;
+
+  return (
+    <a
+      href={`/girl/${girl.id}`}
+      className={`block rounded-lg border-2 ${medal ? medal.border : 'border-gray-200'} ${medal ? medal.bg : 'bg-white'} p-2 hover:shadow-md transition-shadow no-underline`}
+    >
+      <div className="relative">
+        {/* Rank badge */}
+        <div className={`absolute -top-1 -left-1 z-10 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${rank === 0 ? 'bg-yellow-500' : rank === 1 ? 'bg-gray-400' : rank === 2 ? 'bg-orange-400' : 'bg-blue-400'}`}>
+          {rank + 1}
+        </div>
+        <GirlImage src={girl.image_url} alt={girl.name} size={120} className="w-full !rounded-md" />
+      </div>
+      <div className="mt-2 min-w-0">
+        <p className="text-sm font-bold text-gray-800 truncate">{girl.name}</p>
+        <p className="text-xs text-gray-500 truncate">{girl.shop_name}</p>
+        <div className="flex items-center justify-between mt-1">
+          <span className={`text-sm font-bold ${realPct >= 70 ? 'text-green-600' : realPct >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+            {realPct}%
+          </span>
+          <span className="text-xs text-gray-400">{girl.review_count}件</span>
+        </div>
+      </div>
+    </a>
+  );
+}
 
 export default function HomeContent({ prefSlug }: Props) {
   const prefName = prefectureSlugToName(prefSlug);
@@ -15,7 +53,8 @@ export default function HomeContent({ prefSlug }: Props) {
   const areas = getAreasByPrefecture(prefSlug);
   const stats = getStatsByPrefecture(prefSlug);
   const latestReviews = getLatestReviews(10);
-  const shopsSeekingReviews = getShopsSeekingReviews(prefSlug, 8);
+  const topGirls = getTopRealGirls(prefSlug, 5);
+  const worstGirls = getWorstRealGirls(prefSlug, 5);
 
   // Group prefectures by region
   const prefsByRegion: Record<string, Prefecture[]> = {};
@@ -80,6 +119,58 @@ export default function HomeContent({ prefSlug }: Props) {
         </form>
       </div>
 
+      {/* Panel Match Rate TOP 5 */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+          &#x1F3C6; パネル通り率 TOP5
+        </h2>
+        {topGirls.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {topGirls.map((girl, i) => (
+                <RankingCard key={girl.id} girl={girl} rank={i} />
+              ))}
+            </div>
+            <div className="mt-4 text-center">
+              <a
+                href={`/ranking?pref=${prefSlug}`}
+                className="inline-block text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ランキングをもっと見る &rarr;
+              </a>
+            </div>
+          </>
+        ) : (
+          <p className="text-gray-500 text-sm">口コミが増えたら表示されます</p>
+        )}
+      </div>
+
+      {/* Panel Fraud Rate TOP 5 */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+          &#x26A0;&#xFE0F; 注意！パネル詐欺率 TOP5
+        </h2>
+        {worstGirls.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {worstGirls.map((girl, i) => (
+                <RankingCard key={girl.id} girl={girl} rank={i} />
+              ))}
+            </div>
+            <div className="mt-4 text-center">
+              <a
+                href={`/ranking?pref=${prefSlug}&tab=worst`}
+                className="inline-block text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ランキングをもっと見る &rarr;
+              </a>
+            </div>
+          </>
+        ) : (
+          <p className="text-gray-500 text-sm">口コミが増えたら表示されます</p>
+        )}
+      </div>
+
       {/* Areas */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
@@ -102,54 +193,6 @@ export default function HomeContent({ prefSlug }: Props) {
         )}
       </div>
 
-      {/* Shops Seeking Reviews */}
-      {shopsSeekingReviews.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-            &#x1F4DD; 口コミ募集中の人気店舗
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">在籍数が多いのに口コミが少ない店舗です。あなたの口コミを待っています！</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {shopsSeekingReviews.map((shop) => (
-              <a
-                key={shop.id}
-                href={`/shop/${shop.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors no-underline"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 text-sm truncate">{shop.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{shop.area_name}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-gray-500">在籍 <span className="text-blue-600 font-bold">{shop.girl_count}</span>人</p>
-                  <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
-                    口コミ{shop.review_count || 0}件
-                  </span>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Popular Search Keywords */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-          人気の検索ワード
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {getPopularKeywords(prefName).map((kw) => (
-            <a
-              key={kw}
-              href={`/search?q=${encodeURIComponent(kw)}`}
-              className="inline-block px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs sm:text-sm hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-300 transition-colors no-underline"
-            >
-              {kw}
-            </a>
-          ))}
-        </div>
-      </div>
-
       {/* Latest Reviews */}
       {latestReviews.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
@@ -162,6 +205,9 @@ export default function HomeContent({ prefSlug }: Props) {
                 key={review.id}
                 className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-lg"
               >
+                <a href={`/girl/${review.girl_id}`} className="shrink-0">
+                  <GirlImage src={review.girl_image_url ?? null} alt={review.girl_name || ''} size={48} />
+                </a>
                 <PanelRatingBadge rating={review.panel_rating} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm break-words">
@@ -187,28 +233,4 @@ export default function HomeContent({ prefSlug }: Props) {
       )}
     </div>
   );
-}
-
-function getPopularKeywords(prefName: string): string[] {
-  const baseKeywords = [
-    `${prefName} パネマジ`,
-    `${prefName} 風俗 口コミ`,
-    `${prefName} パネル通り`,
-  ];
-  const areaKeywords: Record<string, string[]> = {
-    '東京': ['新宿 パネマジ', '池袋 風俗 口コミ', '五反田 パネル通り', '渋谷 風俗', '錦糸町 パネマジ', '新橋 口コミ'],
-    '神奈川': ['横浜 パネマジ', '川崎 風俗 口コミ', '関内 パネル通り'],
-    '大阪': ['梅田 パネマジ', '難波 風俗 口コミ', '日本橋 パネル通り'],
-    '愛知': ['名古屋 パネマジ', '栄 風俗 口コミ', '名駅 パネル通り'],
-    '福岡': ['博多 パネマジ', '中洲 風俗 口コミ', '天神 パネル通り'],
-    '北海道': ['札幌 パネマジ', 'すすきの 風俗 口コミ'],
-    '宮城': ['仙台 パネマジ', '仙台 風俗 口コミ'],
-    '埼玉': ['大宮 パネマジ', '大宮 風俗 口コミ'],
-    '千葉': ['千葉 パネマジ', '船橋 風俗 口コミ'],
-    '京都': ['京都 パネマジ', '祇園 風俗 口コミ'],
-    '兵庫': ['神戸 パネマジ', '三宮 風俗 口コミ'],
-    '広島': ['広島 パネマジ', '広島 風俗 口コミ'],
-  };
-  const extra = areaKeywords[prefName] || [];
-  return [...baseKeywords, ...extra];
 }
