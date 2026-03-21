@@ -38,6 +38,10 @@ function recordTweetTime(): void {
  * Post a tweet (text only, OGP card handles the image via link preview)
  */
 export async function postTweet(text: string): Promise<void> {
+  // X account suspended - disable posting until new account is set up
+  console.log('[Twitter] Posting disabled (account suspended)');
+  return;
+
   try {
     console.log('[Twitter] Posting tweet...');
 
