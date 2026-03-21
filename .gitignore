@@ -40,3 +40,7 @@ scrape-progress.json
 panemaji.db-shm
 panemaji.db-wal
 .claude/
+panemaji.db
+panemaji.db-wal
+panemaji.db-shm
+panemaji.db.gz
