@@ -9,7 +9,7 @@ import fs from 'fs';
 import zlib from 'zlib';
 import Database from 'better-sqlite3';
 
-const DB_URL = 'https://github.com/sneed-ay/panemaji/releases/download/db-v3/panemaji.db.gz';
+const DB_URL = 'https://github.com/sneed-ay/panemaji/releases/download/db-v4/panemaji.db.gz';
 const DB_PATH = './panemaji.db';
 
 function download(url) {
