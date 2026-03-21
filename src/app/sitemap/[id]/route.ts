@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAllAreas, getAllShopIds, getGirlIdsPaginated, getPrefectureSlugs } from '@/lib/queries';
+
+export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://panemaji.com';
 const GIRLS_PER_SITEMAP = 50000;
@@ -18,6 +19,9 @@ function buildUrlEntry(loc: string, lastmod: string, changefreq: string, priorit
 }
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
+  // Lazy import to avoid build-time DB connection
+  const { getAllAreas, getAllShopIds, getGirlIdsPaginated, getPrefectureSlugs } = await import('@/lib/queries');
+
   const sitemapId = parseInt(params.id);
   if (isNaN(sitemapId)) {
     return new NextResponse('Not Found', { status: 404 });
@@ -31,10 +35,10 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     // Top page
     entries.push(buildUrlEntry(BASE_URL, today, 'daily', 1.0));
 
-    // Prefecture pages (/?pref=xxx)
+    // Prefecture pages
     const prefSlugs = getPrefectureSlugs();
     for (const slug of prefSlugs) {
-      entries.push(buildUrlEntry(`${BASE_URL}/?pref=${slug}`, today, 'daily', 0.9));
+      entries.push(buildUrlEntry(`${BASE_URL}/${slug}`, today, 'daily', 0.9));
     }
 
     // Area pages

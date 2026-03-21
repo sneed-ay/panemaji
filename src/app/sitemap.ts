@@ -1,16 +1,14 @@
 import type { MetadataRoute } from 'next';
-import { getActiveGirlCount } from '@/lib/queries';
 
 const GIRLS_PER_SITEMAP = 50000;
+const ESTIMATED_GIRLS = 150000;
 const BASE_URL = 'https://panemaji.com';
 
+// Sitemap index - uses estimated count to avoid build-time DB access
+// The actual girl pages are generated dynamically in /sitemap/[id]
 export default function sitemap(): MetadataRoute.Sitemap {
-  const girlCount = getActiveGirlCount();
-  const girlSitemapCount = Math.ceil(girlCount / GIRLS_PER_SITEMAP);
+  const girlSitemapCount = Math.ceil(ESTIMATED_GIRLS / GIRLS_PER_SITEMAP);
 
-  // Sitemap index entries - we use numbered sitemaps
-  // 0 = static pages (top, prefectures, areas, shops)
-  // 1..N = girl pages (50,000 per sitemap)
   const sitemaps: MetadataRoute.Sitemap = [];
 
   // Static sitemap (id=0): top + prefectures + areas + shops
