@@ -1,6 +1,7 @@
-import { getShopById, getGirlsByShop } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getReviewsByShop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
+import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
 import type { Metadata } from 'next';
@@ -10,9 +11,29 @@ export const dynamic = 'force-dynamic';
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const shop = getShopById(parseInt(params.id));
   if (!shop) return {};
+  const reviewCount = shop.review_count || 0;
+  const girlCount = shop.girl_count || 0;
+  const realPct = shop.real_pct != null && shop.real_pct >= 0 ? shop.real_pct : null;
+  const title = `${shop.name}のパネマジ度・口コミ一覧 | ${shop.area_name || '東京'}`;
+  const description = `${shop.name}の在籍嬢のパネマジ度を口コミでチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人。${reviewCount > 0 ? `口コミ${reviewCount}件。` : ''}${shop.area_name || '東京'}のデリヘル口コミ。`;
   return {
-    title: `${shop.name} リアル度口コミ・評価`,
-    description: `${shop.name}の女性一覧とリアル度チェック。パネル写真と実物が一致しているか口コミで確認。${shop.area_name || '東京'}のデリヘル。`,
+    title,
+    description,
+    alternates: {
+      canonical: `https://panemaji.com/shop/${params.id}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://panemaji.com/shop/${params.id}`,
+      siteName: 'パネマジ掲示板',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
   };
 }
 
@@ -25,9 +46,38 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
   const query = searchParams.q || '';
   const girls = getGirlsByShop(shopId, query || undefined);
+  const latestReviews = getReviewsByShop(shopId, 5);
+
+  const matchCount = shop.panel_match_count || 0;
+  const diffCount = shop.panel_diff_count || 0;
+  const jiraiCount = shop.jirai_count || 0;
+  const totalReviews = shop.review_count || 0;
+
+  // JSON-LD LocalBusiness structured data
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: shop.name,
+    url: `https://panemaji.com/shop/${shop.id}`,
+    description: shop.description || `${shop.area_name}エリアのデリヘル「${shop.name}」`,
+    ...(shop.area_name ? { areaServed: shop.area_name } : {}),
+    ...(typeof shop.review_count === 'number' && shop.review_count > 0 && typeof shop.real_pct === 'number' && shop.real_pct >= 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: Math.round(shop.real_pct / 20 * 10) / 10,
+        bestRating: 5,
+        worstRating: 1,
+        reviewCount: shop.review_count,
+      },
+    } : {}),
+  };
 
   return (
     <div className="space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Breadcrumb */}
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
@@ -65,6 +115,55 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           </div>
         </div>
       </div>
+
+      {/* Panel Rating Distribution */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">パネマジ度分布</h3>
+        {totalReviews === 0 ? (
+          <p className="text-gray-400 text-sm">まだ口コミがありません</p>
+        ) : (
+          <div className="space-y-3">
+            <DistributionRow label="パネル通り" count={matchCount} total={totalReviews} color="bg-green-500" />
+            <DistributionRow label="許せる" count={diffCount} total={totalReviews} color="bg-yellow-400" />
+            <DistributionRow label="パネル詐欺" count={jiraiCount} total={totalReviews} color="bg-red-500" />
+            <p className="text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
+              全{totalReviews}件の口コミ → 総合パネマジ度 <span className="font-bold text-blue-600">{shop.real_pct != null && shop.real_pct >= 0 ? `${shop.real_pct}%` : '-'}</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Latest Reviews */}
+      {latestReviews.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">最新の口コミ</h3>
+          <div className="space-y-3">
+            {latestReviews.map((review) => (
+              <div
+                key={review.id}
+                className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-lg"
+              >
+                <PanelRatingBadge rating={review.panel_rating} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm break-words">
+                    <a href={`/girl/${review.girl_id}`} className="font-medium text-blue-600 hover:text-blue-800">
+                      {review.girl_name}
+                    </a>
+                  </p>
+                  {review.comment && (
+                    <p className="text-gray-600 text-xs sm:text-sm mt-1 break-words line-clamp-2">
+                      {review.comment}
+                    </p>
+                  )}
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
+                  {review.created_at?.split(' ')[0] || review.created_at}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Girl Search */}
       <div className="bg-white rounded-lg shadow p-3 sm:p-4">
@@ -125,7 +224,13 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
                         <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
                       </div>
                     </div>
-                    <div className="mt-3">
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-gray-400">口コミ {girl.review_count || 0}件</span>
+                      {(girl.review_count || 0) === 0 && (
+                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">口コミ募集中</span>
+                      )}
+                    </div>
+                    <div className="mt-2">
                       <PanelRatingBar
                         matchCount={girl.panel_match_count || 0}
                         diffCount={girl.panel_diff_count || 0}
@@ -139,6 +244,21 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function DistributionRow({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-gray-700 w-20 shrink-0">{label}</span>
+      <div className="flex-1 bg-gray-200 rounded-full h-5 overflow-hidden">
+        {pct > 0 && (
+          <div className={`${color} h-full rounded-full transition-all`} style={{ width: `${pct}%` }} />
+        )}
+      </div>
+      <span className="text-sm text-gray-600 w-20 shrink-0 text-right">{count}件 ({pct}%)</span>
     </div>
   );
 }

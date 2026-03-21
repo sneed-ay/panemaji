@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://panemaji.onrender.com/sitemap.xml
+Sitemap: https://panemaji.com/sitemap.xml

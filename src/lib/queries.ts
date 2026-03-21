@@ -111,7 +111,8 @@ const SHOP_STATS_JOIN = `
     SELECT g.shop_id,
       COUNT(*) as review_count,
       SUM(CASE WHEN r.panel_rating = 'panel_match' THEN 1 ELSE 0 END) as panel_match_count,
-      SUM(CASE WHEN r.panel_rating = 'panel_diff' THEN 1 ELSE 0 END) as panel_diff_count
+      SUM(CASE WHEN r.panel_rating = 'panel_diff' THEN 1 ELSE 0 END) as panel_diff_count,
+      SUM(CASE WHEN r.panel_rating = 'jirai' THEN 1 ELSE 0 END) as jirai_count
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
     GROUP BY g.shop_id
@@ -122,6 +123,8 @@ const SHOP_STATS_COLS = `
   COALESCE(gc.girl_count, 0) as girl_count,
   COALESCE(rc.review_count, 0) as review_count,
   COALESCE(rc.panel_match_count, 0) as panel_match_count,
+  COALESCE(rc.panel_diff_count, 0) as panel_diff_count,
+  COALESCE(rc.jirai_count, 0) as jirai_count,
   CASE
     WHEN COALESCE(rc.review_count, 0) = 0 THEN -1
     ELSE ROUND((COALESCE(rc.panel_match_count, 0) * 100.0 + COALESCE(rc.panel_diff_count, 0) * 50.0) / rc.review_count)
@@ -236,6 +239,18 @@ export function getReviewsByGirl(girlId: number): Review[] {
   `).all(girlId) as Review[];
 }
 
+export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
+  return db.prepare(`
+    SELECT r.*, g.name as girl_name, s.name as shop_name
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    JOIN shops s ON g.shop_id = s.id
+    WHERE g.shop_id = ?
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `).all(shopId, limit) as Review[];
+}
+
 export function getLatestReviews(limit: number = 20): Review[] {
   return db.prepare(`
     SELECT r.*, g.name as girl_name, s.name as shop_name
@@ -256,6 +271,27 @@ export function addReview(girlId: number, panelRating: string, comment: string |
   return db.prepare(
     'INSERT INTO reviews (girl_id, visit_date, panel_rating, comment, browser_id) VALUES (?, ?, ?, ?, ?)'
   ).run(girlId, now, panelRating, comment, browserId);
+}
+
+// Update review comment (add comment after voting)
+export function updateReviewComment(girlId: number, browserId: string, comment: string) {
+  return db.prepare(
+    'UPDATE reviews SET comment = ? WHERE girl_id = ? AND browser_id = ?'
+  ).run(comment, girlId, browserId);
+}
+
+// Get other girls in the same shop (for post-vote recommendations)
+// Prioritizes girls with fewer reviews, excludes the current girl
+export function getOtherGirlsInShop(shopId: number, excludeGirlId: number, limit: number = 3): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
+    ORDER BY COALESCE(rs.review_count, 0) ASC, g.name
+    LIMIT ?
+  `).all(shopId, excludeGirlId, limit) as Girl[];
 }
 
 // Update girl's twitter URL (only if not already set, or allow override)
@@ -281,4 +317,82 @@ export function getStatsByPrefecture(prefectureSlug: string) {
       (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ?) as girlCount,
       (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ?) as reviewCount
   `).get(prefectureSlug, prefectureSlug, prefectureSlug) as { shopCount: number; girlCount: number; reviewCount: number };
+}
+
+// Sitemap helpers
+export function getAllShopIds(): { id: number }[] {
+  return db.prepare('SELECT id FROM shops WHERE is_active = 1 ORDER BY id').all() as { id: number }[];
+}
+
+export function getGirlIdsPaginated(offset: number, limit: number): { id: number }[] {
+  return db.prepare('SELECT id FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').all(limit, offset) as { id: number }[];
+}
+
+export function getActiveGirlCount(): number {
+  return (db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active = 1').get() as { c: number }).c;
+}
+
+export function getPrefectureSlugs(): string[] {
+  return Object.keys(PREFECTURE_MAP);
+}
+
+// Ranking queries
+
+// Top girls by real_pct (panel match rate) - requires minimum reviews
+export function getTopRealGirls(prefectureSlug: string, limit: number = 20): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    JOIN areas a ON s.area_id = a.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.is_active = 1 AND a.prefecture = ? AND COALESCE(rs.review_count, 0) >= 3
+    ORDER BY real_pct DESC, rs.review_count DESC
+    LIMIT ?
+  `).all(prefectureSlug, limit) as Girl[];
+}
+
+// Worst girls by real_pct (panel fraud rate) - requires minimum reviews
+export function getWorstRealGirls(prefectureSlug: string, limit: number = 20): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    JOIN areas a ON s.area_id = a.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.is_active = 1 AND a.prefecture = ? AND COALESCE(rs.review_count, 0) >= 3
+    ORDER BY real_pct ASC, rs.review_count DESC
+    LIMIT ?
+  `).all(prefectureSlug, limit) as Girl[];
+}
+
+// Top shops by real_pct - requires minimum reviews
+export function getTopRealShops(prefectureSlug: string, limit: number = 20): Shop[] {
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(rc.review_count, 0) >= 5
+    ORDER BY real_pct DESC, rc.review_count DESC
+    LIMIT ?
+  `).all(prefectureSlug, limit) as Shop[];
+}
+
+// Shops with many girls but few reviews (review-seeking shops)
+export function getShopsSeekingReviews(prefectureSlug: string, limit: number = 10): Shop[] {
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(gc.girl_count, 0) >= 5 AND COALESCE(rc.review_count, 0) < 5
+    ORDER BY gc.girl_count DESC
+    LIMIT ?
+  `).all(prefectureSlug, limit) as Shop[];
+}
+
+// Check if a prefecture slug is valid
+export function isValidPrefecture(slug: string): boolean {
+  return slug in PREFECTURE_MAP;
 }

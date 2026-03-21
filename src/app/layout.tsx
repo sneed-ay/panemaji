@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s｜パネマジ掲示板",
   },
   description:
-    "パネマジ掲示板は、風俗嬢のパネル写真と実物が一致しているか口コミでチェックできるサイト。東京都のデリヘル607店舗・5万人以上の女性を網羅。リアル度をみんなで共有しよう。",
+    "パネマジ掲示板は、風俗嬢のパネル写真と実物が一致しているか口コミでチェックできるサイト。全国46都道府県のデリヘル3,000店舗以上・14万人以上の女性を網羅。リアル度をみんなで共有しよう。",
   keywords: [
     "パネマジ",
     "パネマジ掲示板",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "パネマジ掲示板｜風俗パネル写真の口コミ・評価サイト",
     description:
-      "パネマジ掲示板 - パネル写真と実物が一致しているか口コミでチェック。東京デリヘル607店舗を網羅。",
+      "パネマジ掲示板 - パネル写真と実物が一致しているか口コミでチェック。全国3,000店舗以上を網羅。",
     type: "website",
     locale: "ja_JP",
     siteName: "パネマジ掲示板",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "パネマジ掲示板｜風俗パネル写真の口コミ・評価サイト",
     description:
-      "パネマジ掲示板 - パネル写真と実物が一致しているか口コミでチェック。東京デリヘル607店舗を網羅。",
+      "パネマジ掲示板 - パネル写真と実物が一致しているか口コミでチェック。全国3,000店舗以上を網羅。",
   },
   icons: {
     icon: [
@@ -54,6 +54,9 @@ export const metadata: Metadata = {
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180' },
     ],
+  },
+  alternates: {
+    canonical: "https://panemaji.com",
   },
   robots: {
     index: true,
@@ -71,7 +74,7 @@ export default function RootLayout({
       <head>
         <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <meta name="google-site-verification" content="PSaa2abLK1zBpmEGM4_h6DlO0YcBdtgnI4xwSY429wY" />
-        <link rel="canonical" href="https://panemaji.com" />
+
         <link rel="icon" href="/favicon.ico" sizes="48x48" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -92,14 +95,23 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-100 overflow-x-hidden">
         <header className="bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-lg">
           <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-            <a href="/" className="text-white no-underline hover:no-underline">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                🔍 パネマジ掲示板
-              </h1>
-              <p className="text-pink-200 text-xs sm:text-sm mt-1">
-                パネル写真と実物の一致度を口コミでチェック
-              </p>
-            </a>
+            <div className="flex items-center justify-between gap-3">
+              <a href="/" className="text-white no-underline hover:no-underline">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                  🔍 パネマジ掲示板
+                </h1>
+                <p className="text-pink-200 text-xs sm:text-sm mt-1">
+                  パネル写真と実物の一致度を口コミでチェック
+                </p>
+              </a>
+              <a
+                href="/ranking"
+                className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-xs sm:text-sm font-medium transition-colors no-underline"
+              >
+                &#x1F3C6;
+                <span className="hidden sm:inline">ランキング</span>
+              </a>
+            </div>
           </div>
         </header>
         <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>

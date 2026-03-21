@@ -148,6 +148,8 @@ export type Shop = {
   girl_count?: number;
   review_count?: number;
   panel_match_count?: number;
+  panel_diff_count?: number;
+  jirai_count?: number;
   real_pct?: number;
 };
 

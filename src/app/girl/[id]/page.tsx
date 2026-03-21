@@ -1,8 +1,9 @@
-import { getGirlWithReviewStats, getReviewsByGirl } from '@/lib/queries';
+import { getGirlWithReviewStats, getReviewsByGirl, getOtherGirlsInShop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBar from '@/components/PanelRatingBar';
 import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
+import ShareButtons from '@/components/ShareButtons';
 import GirlPageClient from './GirlPageClient';
 import type { Metadata } from 'next';
 
@@ -11,13 +12,17 @@ export const dynamic = 'force-dynamic';
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));
   if (!girl) return {};
-  const description = `${girl.shop_name}の${girl.name}さんはパネル通り？リアル度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`;
+  const title = `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`;
+  const description = `${girl.name}さんはパネル通り？パネマジ度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`;
   const ogImage = girl.image_url || 'https://panemaji.com/icon-512.png';
   return {
-    title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
+    title,
     description,
+    alternates: {
+      canonical: `https://panemaji.com/girl/${params.id}`,
+    },
     openGraph: {
-      title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
+      title,
       description,
       url: `https://panemaji.com/girl/${params.id}`,
       siteName: 'パネマジ掲示板',
@@ -26,7 +31,7 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
+      title,
       description,
       images: [ogImage],
     },
@@ -41,9 +46,51 @@ export default function GirlPage({ params }: { params: { id: string } }) {
   if (!girl) notFound();
 
   const reviews = getReviewsByGirl(girlId);
+  const otherGirls = getOtherGirlsInShop(girl.shop_id, girlId, 3);
+
+  // JSON-LD structured data for reviews
+  const ratingMap: Record<string, number> = { panel_match: 5, panel_diff: 3, jirai: 1 };
+  const jsonLdReviews = reviews.map((r) => ({
+    '@type': 'Review' as const,
+    author: { '@type': 'Person' as const, name: '匿名ユーザー' },
+    datePublished: r.created_at?.split(' ')[0] || r.visit_date,
+    reviewRating: {
+      '@type': 'Rating' as const,
+      ratingValue: ratingMap[r.panel_rating] || 3,
+      bestRating: 5,
+      worstRating: 1,
+    },
+    ...(r.comment ? { reviewBody: r.comment.slice(0, 200) } : {}),
+  }));
+
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + (ratingMap[r.panel_rating] || 3), 0) / reviews.length
+    : undefined;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: girl.name,
+    url: `https://panemaji.com/girl/${girl.id}`,
+    ...(girl.image_url ? { image: girl.image_url } : {}),
+    ...(reviews.length > 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: Math.round(avgRating! * 10) / 10,
+        bestRating: 5,
+        worstRating: 1,
+        reviewCount: reviews.length,
+      },
+      review: jsonLdReviews.slice(0, 10),
+    } : {}),
+  };
 
   return (
     <div className="space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
@@ -53,6 +100,15 @@ export default function GirlPage({ params }: { params: { id: string } }) {
         <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-800 break-words">{girl.name}</span>
       </nav>
+
+      <div className="flex items-center justify-between gap-2">
+        <div />
+        <ShareButtons
+          url={`/girl/${girl.id}`}
+          text={`${girl.name}（${girl.shop_name}）のリアル度をチェック！ #パネマジ掲示板`}
+          variant="compact"
+        />
+      </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-4 sm:p-6">
@@ -134,7 +190,14 @@ export default function GirlPage({ params }: { params: { id: string } }) {
       <GirlPageClient
         girlId={girl.id}
         girlName={girl.name}
+        shopName={girl.shop_name || ''}
         initialReviews={reviews}
+        otherGirls={otherGirls.map(g => ({
+          id: g.id,
+          name: g.name,
+          image_url: g.image_url,
+          review_count: g.review_count || 0,
+        }))}
       />
     </div>
   );

@@ -1,39 +1,85 @@
 'use client';
 
-import { useState } from 'react';
-import ReviewForm from '@/components/ReviewForm';
+import { useState, useEffect, useCallback } from 'react';
+import OneTabVote from '@/components/OneTabVote';
+import ShareButtons from '@/components/ShareButtons';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
+import GirlImage from '@/components/GirlImage';
 import type { Review } from '@/lib/db';
+
+type OtherGirl = {
+  id: number;
+  name: string;
+  image_url: string | null;
+  review_count: number;
+};
 
 type Props = {
   girlId: number;
   girlName: string;
+  shopName: string;
   initialReviews: Review[];
+  otherGirls: OtherGirl[];
 };
 
-export default function GirlPageClient({ girlId, girlName, initialReviews }: Props) {
+export default function GirlPageClient({ girlId, girlName, shopName, initialReviews, otherGirls }: Props) {
   const [reviews] = useState(initialReviews);
-  const [showForm, setShowForm] = useState(false);
+  const [voted, setVoted] = useState(false);
 
-  const handleSuccess = () => {
-    // Reload page to refresh data
-    window.location.reload();
-  };
+  useEffect(() => {
+    const reviewed = localStorage.getItem(`reviewed_${girlId}`);
+    if (reviewed) setVoted(true);
+  }, [girlId]);
+
+  const handleVoteSuccess = useCallback(() => {
+    setVoted(true);
+    // Reload after a short delay to refresh stats
+    setTimeout(() => window.location.reload(), 800);
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* Review Form Toggle */}
-      <div className="text-center">
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white font-bold px-6 sm:px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg w-full sm:w-auto"
-        >
-          {showForm ? '閉じる' : '口コミを投稿する'}
-        </button>
-      </div>
+      {/* One-Tap Vote */}
+      <OneTabVote
+        girlId={girlId}
+        girlName={girlName}
+        alreadyVoted={voted}
+        onSuccess={handleVoteSuccess}
+      />
 
-      {showForm && (
-        <ReviewForm girlId={girlId} girlName={girlName} onSuccess={handleSuccess} />
+      {/* Post-vote share */}
+      {voted && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <ShareButtons
+            url={`/girl/${girlId}`}
+            text={`${girlName}（${shopName}）のリアル度を評価しました！ #パネマジ掲示板`}
+          />
+        </div>
+      )}
+
+      {/* Post-vote recommendation */}
+      {voted && otherGirls.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <p className="text-sm text-gray-500 mb-3 flex items-center gap-1.5">
+            <span>💡</span>
+            <span>{shopName} の他の女性も評価する？</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {otherGirls.map((g) => (
+              <a
+                key={g.id}
+                href={`/girl/${g.id}`}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors no-underline"
+              >
+                <GirlImage src={g.image_url} alt={g.name} size={64} />
+                <span className="text-xs font-medium text-gray-800 text-center break-words line-clamp-1">{g.name}</span>
+                <span className="text-[10px] text-gray-400">
+                  {g.review_count === 0 ? 'まだ評価なし' : `${g.review_count}件`}
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Reviews List */}
