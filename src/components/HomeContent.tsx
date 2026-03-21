@@ -155,6 +155,24 @@ export default function HomeContent({ prefSlug }: Props) {
         </div>
       )}
 
+      {/* Popular Search Keywords */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+          人気の検索ワード
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {getPopularKeywords(prefName).map((kw) => (
+            <a
+              key={kw}
+              href={`/search?q=${encodeURIComponent(kw)}`}
+              className="inline-block px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs sm:text-sm hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-300 transition-colors no-underline"
+            >
+              {kw}
+            </a>
+          ))}
+        </div>
+      </div>
+
       {/* Latest Reviews */}
       {latestReviews.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
@@ -192,4 +210,28 @@ export default function HomeContent({ prefSlug }: Props) {
       )}
     </div>
   );
+}
+
+function getPopularKeywords(prefName: string): string[] {
+  const baseKeywords = [
+    `${prefName} パネマジ`,
+    `${prefName} デリヘル 口コミ`,
+    `${prefName} パネル通り`,
+  ];
+  const areaKeywords: Record<string, string[]> = {
+    '東京': ['新宿 パネマジ', '池袋 デリヘル 口コミ', '五反田 パネル通り', '渋谷 デリヘル', '錦糸町 パネマジ', '新橋 口コミ'],
+    '神奈川': ['横浜 パネマジ', '川崎 デリヘル 口コミ', '関内 パネル通り'],
+    '大阪': ['梅田 パネマジ', '難波 デリヘル 口コミ', '日本橋 パネル通り'],
+    '愛知': ['名古屋 パネマジ', '栄 デリヘル 口コミ', '名駅 パネル通り'],
+    '福岡': ['博多 パネマジ', '中洲 デリヘル 口コミ', '天神 パネル通り'],
+    '北海道': ['札幌 パネマジ', 'すすきの デリヘル 口コミ'],
+    '宮城': ['仙台 パネマジ', '仙台 デリヘル 口コミ'],
+    '埼玉': ['大宮 パネマジ', '大宮 デリヘル 口コミ'],
+    '千葉': ['千葉 パネマジ', '船橋 デリヘル 口コミ'],
+    '京都': ['京都 パネマジ', '祇園 デリヘル 口コミ'],
+    '兵庫': ['神戸 パネマジ', '三宮 デリヘル 口コミ'],
+    '広島': ['広島 パネマジ', '広島 デリヘル 口コミ'],
+  };
+  const extra = areaKeywords[prefName] || [];
+  return [...baseKeywords, ...extra];
 }

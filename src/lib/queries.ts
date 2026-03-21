@@ -396,3 +396,36 @@ export function getShopsSeekingReviews(prefectureSlug: string, limit: number = 1
 export function isValidPrefecture(slug: string): boolean {
   return slug in PREFECTURE_MAP;
 }
+
+// Get popular girls in the same area (by review count), for girl detail page
+export function getPopularGirlsInArea(areaId: number, excludeGirlId: number, limit: number = 4): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    JOIN areas a ON s.area_id = a.id
+    ${GIRL_STATS_JOIN}
+    WHERE s.area_id = ? AND g.id != ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) > 0
+    ORDER BY rs.review_count DESC, real_pct DESC
+    LIMIT ?
+  `).all(areaId, excludeGirlId, limit) as Girl[];
+}
+
+// Get other girls in same shop for girl detail page (more results, review-few-first)
+export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: number, limit: number = 6): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
+    ORDER BY COALESCE(rs.review_count, 0) ASC, g.name
+    LIMIT ?
+  `).all(shopId, excludeGirlId, limit) as Girl[];
+}
+
+// Get area_id for a shop
+export function getShopAreaId(shopId: number): number | undefined {
+  const row = db.prepare('SELECT area_id FROM shops WHERE id = ?').get(shopId) as { area_id: number } | undefined;
+  return row?.area_id;
+}

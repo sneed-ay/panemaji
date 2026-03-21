@@ -1,9 +1,8 @@
 import { getShopById, getGirlsByShop, getReviewsByShop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
-import PanelRatingBar from '@/components/PanelRatingBar';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
-import GirlImage from '@/components/GirlImage';
+import GirlSortFilter from '@/components/GirlSortFilter';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +52,24 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const jiraiCount = shop.jirai_count || 0;
   const totalReviews = shop.review_count || 0;
 
+  // Serialize girls for client component
+  const girlsData = girls.map((g) => ({
+    id: g.id,
+    name: g.name,
+    age: g.age,
+    height: g.height,
+    bust: g.bust,
+    waist: g.waist,
+    hip: g.hip,
+    cup: g.cup,
+    image_url: g.image_url,
+    review_count: g.review_count || 0,
+    panel_match_count: g.panel_match_count || 0,
+    panel_diff_count: g.panel_diff_count || 0,
+    jirai_count: g.jirai_count || 0,
+    real_pct: g.real_pct ?? -1,
+  }));
+
   // JSON-LD LocalBusiness structured data
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -87,26 +104,46 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
         <span className="text-gray-800 break-words">{shop.name}</span>
       </nav>
 
-      {/* Shop Header */}
+      {/* Shop Header - Enhanced */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{shop.name}</h2>
-            <div className="flex items-center gap-2 sm:gap-3 mt-2">
+            <div className="flex items-center gap-2 sm:gap-3 mt-2 flex-wrap">
               <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded shrink-0">
                 {shop.category}
               </span>
-              <span className="text-gray-500 text-xs sm:text-sm">{shop.area_name}</span>
+              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2.5 py-0.5 rounded-full font-medium shrink-0">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {shop.area_name}
+              </span>
             </div>
             {shop.description && (
               <p className="text-gray-600 mt-2 text-sm break-words">{shop.description}</p>
+            )}
+            {/* External Link */}
+            {shop.source_url && (
+              <a
+                href={shop.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs hover:bg-gray-200 transition-colors no-underline"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                シティヘブンで見る
+              </a>
             )}
           </div>
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} size="lg" />
             <div className="text-right">
               <p className="text-xs sm:text-sm text-gray-500">
-                在籍 <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.girl_count}</span> 人
+                在籍 <span className="text-2xl sm:text-3xl text-blue-600 font-bold">{shop.girl_count}</span> 人
               </p>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 口コミ <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.review_count}</span> 件
@@ -184,66 +221,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
         </form>
       </div>
 
-      {/* Girls List */}
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-base sm:text-xl font-bold text-gray-800 min-w-0">
-          在籍一覧
-          {query && <span className="text-sm sm:text-base text-gray-500 ml-2 break-words">「{query}」の検索結果</span>}
-        </h3>
-        <p className="text-xs sm:text-sm text-gray-500 shrink-0">{girls.length}人 / リアル度順</p>
-      </div>
-
-      {girls.length === 0 ? (
-        <p className="text-gray-500 bg-white rounded-lg shadow p-8 text-center">
-          {query ? '該当する女性が見つかりませんでした' : '女性データはまだありません'}
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {girls.map((girl) => (
-            <a
-              key={girl.id}
-              href={`/girl/${girl.id}`}
-              className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden no-underline"
-            >
-              <div className="p-3 sm:p-4">
-                <div className="flex items-start gap-3">
-                  <GirlImage src={girl.image_url} alt={girl.name} size={80} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">{girl.name}</h4>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
-                          {girl.age}歳
-                          {girl.height && ` T${girl.height}`}
-                          {girl.bust && girl.cup && ` B${girl.bust}(${girl.cup})`}
-                          {girl.waist && ` W${girl.waist}`}
-                          {girl.hip && ` H${girl.hip}`}
-                        </p>
-                      </div>
-                      <div className="shrink-0">
-                        <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-gray-400">口コミ {girl.review_count || 0}件</span>
-                      {(girl.review_count || 0) === 0 && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">口コミ募集中</span>
-                      )}
-                    </div>
-                    <div className="mt-2">
-                      <PanelRatingBar
-                        matchCount={girl.panel_match_count || 0}
-                        diffCount={girl.panel_diff_count || 0}
-                        jiraiCount={girl.jirai_count || 0}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
+      {/* Girls List with Sort/Filter */}
+      <GirlSortFilter girls={girlsData} query={query} />
     </div>
   );
 }
