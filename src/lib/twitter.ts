@@ -1,7 +1,16 @@
 import { TwitterApi } from 'twitter-api-v2';
 import db from './db';
 
+// ===== 新Xアカウント情報 =====
+// 旧アカウントがBANされたため、以下の新アカウントに切り替え予定
+// ID: @aichan_ura_ai
+// メアド: ura_ai@sneed.jp
+// ステータス: X Developer PortalでOAuth認証をやり直す必要あり
+// TODO: OAuth認証完了後、下記のAPIキーを新アカウントのものに差し替えること
+// ================================
+
 // Hardcoded credentials - env vars on Render are unreliable
+// ※旧アカウント(BAN済み)のキー。新アカウントのOAuth設定完了後に差し替え
 const TWITTER_CONFIG = {
   appKey: 'HGGhQIAWtSJl4NDxxvRMxCmVb',
   appSecret: 'AyBk6nngIq5kkq9lNC7dfSdNMFsebNZk4qQjLMC2HrXi7rAjVv',

@@ -64,6 +64,8 @@ export default function RootLayout({
         <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <meta name="google-site-verification" content="PSaa2abLK1zBpmEGM4_h6DlO0YcBdtgnI4xwSY429wY" />
 
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ec4899" />
         <link rel="icon" href="/favicon.ico" sizes="48x48" type="image/x-icon" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -103,7 +105,9 @@ export default function RootLayout({
         </header>
         <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
         <footer className="bg-gray-800 text-gray-400 text-center py-4 sm:py-6 mt-8 sm:mt-12 text-xs sm:text-sm px-3">
-          <div className="flex justify-center gap-4 mb-2">
+          <div className="flex justify-center flex-wrap gap-4 mb-2">
+            <a href="/guide/how-to-use" className="hover:text-white transition-colors">使い方</a>
+            <a href="/guide/panemaji-checker" className="hover:text-white transition-colors">パネマジ見分け方</a>
             <a href="/terms" className="hover:text-white transition-colors">利用規約</a>
             <a href="/contact" className="hover:text-white transition-colors">お問い合わせ</a>
           </div>
