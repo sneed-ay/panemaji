@@ -5,15 +5,14 @@ BUNDLED_DB="./panemaji.db"
 
 mkdir -p "$DB_DIR"
 
-if [ ! -f "$DB_PATH" ]; then
-  echo "📦 First deploy: copying database to $DB_PATH..."
-  if [ -f "$BUNDLED_DB" ]; then
-    cp "$BUNDLED_DB" "$DB_PATH"
-    echo "✅ Database initialized on persistent disk"
-  else
-    echo "⚠️ No source database found, app will create empty DB"
-  fi
-else
+# Force update: deploy 47-prefecture DB (reviews merged)
+if [ -f "$BUNDLED_DB" ]; then
+  echo "🗾 Deploying 47-prefecture database..."
+  cp "$BUNDLED_DB" "$DB_PATH"
+  echo "✅ Database updated"
+fi
+
+if false; then
   DISK_SIZE=$(du -h "$DB_PATH" | cut -f1)
   REVIEW_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM reviews;" 2>/dev/null || echo "?")
   GIRL_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM girls WHERE is_active=1;" 2>/dev/null || echo "?")
