@@ -35,13 +35,14 @@ export const metadata: Metadata = {
     locale: "ja_JP",
     siteName: "パネマジ掲示板",
     url: "https://panemaji.com",
-    images: [{ url: "https://panemaji.com/icon-512.png", width: 512, height: 512 }],
+    images: [{ url: "https://panemaji.com/ogp-banner.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "パネマジ掲示板｜風俗パネル写真の口コミ・評価サイト",
     description:
       "パネマジ掲示板 - パネル写真と実物が一致しているか口コミでチェック。全国3,000店舗以上を網羅。",
+    images: ["https://panemaji.com/ogp-banner.png"],
   },
   icons: null,
   alternates: {
