@@ -21,11 +21,11 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
       description,
       url: `https://panemaji.com/girl/${params.id}`,
       siteName: 'パネマジ掲示板',
-      images: [{ url: ogImage, width: 512, height: 512 }],
+      images: [{ url: ogImage }],
       type: 'article',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${girl.name}（${girl.shop_name}）のリアル度・口コミ`,
       description,
       images: [ogImage],
