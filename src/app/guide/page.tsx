@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { getTopShopsForArticles } from "@/lib/queries";
+
+export const revalidate = 86400; // ISR: 24 hours
 
 export const metadata: Metadata = {
   title: "コラム・ガイド一覧｜パネマジ掲示板",
@@ -26,7 +29,7 @@ type Article = {
   href: string;
   title: string;
   summary: string;
-  category: "area" | "howto" | "column";
+  category: "area" | "howto" | "column" | "shop";
 };
 
 const articles: Article[] = [
@@ -61,12 +64,14 @@ const categoryLabels = {
   area: "エリア別ガイド",
   howto: "ハウツー",
   column: "コラム",
+  shop: "店舗別",
 } as const;
 
 const categoryColors = {
   area: "bg-blue-100 text-blue-700",
   howto: "bg-green-100 text-green-700",
   column: "bg-purple-100 text-purple-700",
+  shop: "bg-orange-100 text-orange-700",
 } as const;
 
 function ArticleCard({ article }: { article: Article }) {
@@ -91,6 +96,20 @@ export default function GuidePage() {
   const howtoArticles = articles.filter((a) => a.category === "howto");
   const columnArticles = articles.filter((a) => a.category === "column");
 
+  // Dynamic shop articles from DB
+  let shopArticles: Article[] = [];
+  try {
+    const topShops = getTopShopsForArticles(20);
+    shopArticles = topShops.map((shop) => ({
+      href: `/guide/shop/${shop.id}`,
+      title: `${shop.name}のパネマジ度・口コミまとめ`,
+      summary: `${shop.area_name || ''}エリア。在籍${shop.girl_count || 0}人、口コミ${shop.review_count || 0}件。`,
+      category: "shop" as const,
+    }));
+  } catch {
+    // DB not available during build - empty is fine
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <nav className="text-sm text-gray-500 mb-6">
@@ -105,6 +124,21 @@ export default function GuidePage() {
       <p className="text-gray-500 text-sm mb-8">
         パネマジ対策やエリア別ガイドなど、デリヘル利用に役立つ情報をお届けします
       </p>
+
+      {/* 店舗別ガイド */}
+      {shopArticles.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="inline-block w-1 h-6 bg-orange-500 rounded"></span>
+            人気店舗のパネマジ解説
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {shopArticles.map((article) => (
+              <ArticleCard key={article.href} article={article} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* エリア別ガイド */}
       <section className="mb-10">

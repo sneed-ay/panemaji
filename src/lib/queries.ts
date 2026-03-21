@@ -429,3 +429,101 @@ export function getShopAreaId(shopId: number): number | undefined {
   const row = db.prepare('SELECT area_id FROM shops WHERE id = ?').get(shopId) as { area_id: number } | undefined;
   return row?.area_id;
 }
+
+// --- Shop Article Queries ---
+
+// Top shops for article generation (by review_count + girl_count)
+export function getTopShopsForArticles(limit: number = 200): Shop[] {
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, a.prefecture, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.is_active = 1
+    ORDER BY (COALESCE(rc.review_count, 0) * 2 + COALESCE(gc.girl_count, 0)) DESC
+    LIMIT ?
+  `).all(limit) as Shop[];
+}
+
+// Full article data for a single shop
+export type ShopArticleData = {
+  shop: Shop & { prefecture: string };
+  reviewDistribution: { panel_match: number; panel_diff: number; jirai: number; total: number };
+  latestReviewsWithComment: Review[];
+  topRealGirls: Girl[];
+  girlsWithNoReviews: Girl[];
+  relatedShops: Shop[];
+};
+
+export function getShopArticleData(shopId: number): ShopArticleData | null {
+  // Shop with area and prefecture
+  const shop = db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, a.prefecture, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.id = ?
+  `).get(shopId) as (Shop & { prefecture: string }) | undefined;
+
+  if (!shop) return null;
+
+  const reviewDistribution = {
+    panel_match: shop.panel_match_count || 0,
+    panel_diff: shop.panel_diff_count || 0,
+    jirai: shop.jirai_count || 0,
+    total: shop.review_count || 0,
+  };
+
+  // Latest reviews with comments (top 5)
+  const latestReviewsWithComment = db.prepare(`
+    SELECT r.*, g.name as girl_name, s.name as shop_name
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    JOIN shops s ON g.shop_id = s.id
+    WHERE g.shop_id = ? AND r.comment IS NOT NULL AND r.comment != ''
+    ORDER BY r.created_at DESC
+    LIMIT 5
+  `).all(shopId) as Review[];
+
+  // Top real girls (by panel match rate, min 1 review)
+  const topRealGirls = db.prepare(`
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.shop_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) >= 1
+    ORDER BY real_pct DESC, rs.review_count DESC
+    LIMIT 5
+  `).all(shopId) as Girl[];
+
+  // Girls with no reviews (for "review wanted" section)
+  const girlsWithNoReviews = db.prepare(`
+    SELECT g.*, s.name as shop_name
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    LEFT JOIN reviews r ON r.girl_id = g.id
+    WHERE g.shop_id = ? AND g.is_active = 1 AND r.id IS NULL
+    ORDER BY g.name
+    LIMIT 10
+  `).all(shopId) as Girl[];
+
+  // Related shops (same area, excluding current)
+  const relatedShops = db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.area_id = ? AND s.id != ? AND s.is_active = 1
+    ORDER BY COALESCE(rc.review_count, 0) DESC
+    LIMIT 5
+  `).all(shop.area_id, shopId) as Shop[];
+
+  return {
+    shop,
+    reviewDistribution,
+    latestReviewsWithComment,
+    topRealGirls,
+    girlsWithNoReviews,
+    relatedShops,
+  };
+}
