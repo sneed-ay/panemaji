@@ -5,8 +5,8 @@ import db from './db';
 const TWITTER_CONFIG = {
   appKey: 'HGGhQIAWtSJl4NDxxvRMxCmVb',
   appSecret: 'AyBk6nngIq5kkq9lNC7dfSdNMFsebNZk4qQjLMC2HrXi7rAjVv',
-  accessToken: '2034953824427982848-7tUIvauvyXFrxJcv6YxqUFM32bxs6A',
-  accessSecret: 'cTtk9BQHPvzAh8KPR0IqKkitrAfPOtHGo6MzvlCa7sH7S',
+  accessToken: '2035202106597285891-0gxs1jo60zQubdH5LvcRdR9MEionAV',
+  accessSecret: 'HMllldHQKJycTMCNQrqfWrHG4RneoboGWSHyZ3mf6inS2',
 };
 
 const TWEET_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
