@@ -1,21 +1,12 @@
 import { TwitterApi } from 'twitter-api-v2';
 import db from './db';
 
-// ===== 新Xアカウント情報 =====
-// 旧アカウントがBANされたため、以下の新アカウントに切り替え予定
-// ID: @aichan_ura_ai
-// メアド: ura_ai@sneed.jp
-// ステータス: X Developer PortalでOAuth認証をやり直す必要あり
-// TODO: OAuth認証完了後、下記のAPIキーを新アカウントのものに差し替えること
-// ================================
-
-// Hardcoded credentials - env vars on Render are unreliable
-// ※旧アカウント(BAN済み)のキー。新アカウントのOAuth設定完了後に差し替え
+// X account: @aichan_ura_ai (ura_ai@sneed.jp)
 const TWITTER_CONFIG = {
   appKey: 'HGGhQIAWtSJl4NDxxvRMxCmVb',
   appSecret: 'AyBk6nngIq5kkq9lNC7dfSdNMFsebNZk4qQjLMC2HrXi7rAjVv',
-  accessToken: '2035202106597285891-0gxs1jo60zQubdH5LvcRdR9MEionAV',
-  accessSecret: 'HMllldHQKJycTMCNQrqfWrHG4RneoboGWSHyZ3mf6inS2',
+  accessToken: '1992923099453661184-vty2JWmgdljvFQAXZatGneHJVBAOet',
+  accessSecret: 'ifdy60XNn129xEyrlmph0kYfAtci5jCwI9rJXpFC3tS1X',
 };
 
 const TWEET_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -47,10 +38,6 @@ function recordTweetTime(): void {
  * Post a tweet (text only, OGP card handles the image via link preview)
  */
 export async function postTweet(text: string): Promise<void> {
-  // X account suspended - disable posting until new account is set up
-  console.log('[Twitter] Posting disabled (account suspended)');
-  return;
-
   try {
     console.log('[Twitter] Posting tweet...');
 
