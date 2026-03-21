@@ -108,6 +108,7 @@ export default function RootLayout({
           <div className="flex justify-center flex-wrap gap-4 mb-2">
             <a href="/guide/how-to-use" className="hover:text-white transition-colors">使い方</a>
             <a href="/guide/panemaji-checker" className="hover:text-white transition-colors">パネマジ見分け方</a>
+            <a href="/guide" className="hover:text-white transition-colors">コラム・ガイド</a>
             <a href="/terms" className="hover:text-white transition-colors">利用規約</a>
             <a href="/contact" className="hover:text-white transition-colors">お問い合わせ</a>
           </div>
