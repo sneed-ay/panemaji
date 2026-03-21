@@ -31,7 +31,7 @@ export default function AreaPage({ params }: { params: { slug: string } }) {
       <nav className="text-xs sm:text-sm text-gray-500">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
-        <a href={`/?pref=${prefSlug}`} className="hover:text-blue-600">{prefName}</a>
+        <a href={`/${prefSlug}`} className="hover:text-blue-600">{prefName}</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-800">{area.name}</span>
       </nav>
