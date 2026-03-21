@@ -1,6 +1,7 @@
 import { getAreasByPrefecture, getStatsByPrefecture, getLatestReviews, getPrefectures, getRegionOrder, prefectureSlugToName, getShopsSeekingReviews } from '@/lib/queries';
 import type { Prefecture } from '@/lib/queries';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
+import PrefectureSelector from '@/components/PrefectureSelector';
 
 
 type Props = {
@@ -25,35 +26,11 @@ export default function HomeContent({ prefSlug }: Props) {
   return (
     <div className="space-y-8">
       {/* Prefecture Tabs grouped by region */}
-      <div className="bg-white rounded-lg shadow p-3 sm:p-4">
-        <div className="space-y-3">
-          {regionOrder.map((region) => (
-            <div key={region}>
-              <h3 className="text-xs sm:text-sm font-bold text-gray-500 mb-1.5 pl-1">{region}</h3>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {prefsByRegion[region].map((pref) => {
-                  const isActive = pref.slug === prefSlug;
-                  return (
-                    <a
-                      key={pref.slug}
-                      href={`/${pref.slug}`}
-                      className={`
-                        inline-block px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors no-underline
-                        ${isActive
-                          ? 'bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                        }
-                      `}
-                    >
-                      {pref.name}
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <PrefectureSelector
+        prefSlug={prefSlug}
+        prefsByRegion={prefsByRegion}
+        regionOrder={regionOrder}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4">
@@ -106,7 +83,7 @@ export default function HomeContent({ prefSlug }: Props) {
       {/* Areas */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
-          {prefName}デリヘル パネマジチェック - エリアから探す
+          {prefName}風俗 パネマジチェック - エリアから探す
         </h2>
         {areas.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -215,22 +192,22 @@ export default function HomeContent({ prefSlug }: Props) {
 function getPopularKeywords(prefName: string): string[] {
   const baseKeywords = [
     `${prefName} パネマジ`,
-    `${prefName} デリヘル 口コミ`,
+    `${prefName} 風俗 口コミ`,
     `${prefName} パネル通り`,
   ];
   const areaKeywords: Record<string, string[]> = {
-    '東京': ['新宿 パネマジ', '池袋 デリヘル 口コミ', '五反田 パネル通り', '渋谷 デリヘル', '錦糸町 パネマジ', '新橋 口コミ'],
-    '神奈川': ['横浜 パネマジ', '川崎 デリヘル 口コミ', '関内 パネル通り'],
-    '大阪': ['梅田 パネマジ', '難波 デリヘル 口コミ', '日本橋 パネル通り'],
-    '愛知': ['名古屋 パネマジ', '栄 デリヘル 口コミ', '名駅 パネル通り'],
-    '福岡': ['博多 パネマジ', '中洲 デリヘル 口コミ', '天神 パネル通り'],
-    '北海道': ['札幌 パネマジ', 'すすきの デリヘル 口コミ'],
-    '宮城': ['仙台 パネマジ', '仙台 デリヘル 口コミ'],
-    '埼玉': ['大宮 パネマジ', '大宮 デリヘル 口コミ'],
-    '千葉': ['千葉 パネマジ', '船橋 デリヘル 口コミ'],
-    '京都': ['京都 パネマジ', '祇園 デリヘル 口コミ'],
-    '兵庫': ['神戸 パネマジ', '三宮 デリヘル 口コミ'],
-    '広島': ['広島 パネマジ', '広島 デリヘル 口コミ'],
+    '東京': ['新宿 パネマジ', '池袋 風俗 口コミ', '五反田 パネル通り', '渋谷 風俗', '錦糸町 パネマジ', '新橋 口コミ'],
+    '神奈川': ['横浜 パネマジ', '川崎 風俗 口コミ', '関内 パネル通り'],
+    '大阪': ['梅田 パネマジ', '難波 風俗 口コミ', '日本橋 パネル通り'],
+    '愛知': ['名古屋 パネマジ', '栄 風俗 口コミ', '名駅 パネル通り'],
+    '福岡': ['博多 パネマジ', '中洲 風俗 口コミ', '天神 パネル通り'],
+    '北海道': ['札幌 パネマジ', 'すすきの 風俗 口コミ'],
+    '宮城': ['仙台 パネマジ', '仙台 風俗 口コミ'],
+    '埼玉': ['大宮 パネマジ', '大宮 風俗 口コミ'],
+    '千葉': ['千葉 パネマジ', '船橋 風俗 口コミ'],
+    '京都': ['京都 パネマジ', '祇園 風俗 口コミ'],
+    '兵庫': ['神戸 パネマジ', '三宮 風俗 口コミ'],
+    '広島': ['広島 パネマジ', '広島 風俗 口コミ'],
   };
   const extra = areaKeywords[prefName] || [];
   return [...baseKeywords, ...extra];

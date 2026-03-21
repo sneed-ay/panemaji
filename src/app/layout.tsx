@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s｜パネマジ掲示板",
   },
   description:
-    "パネマジ掲示板は、風俗嬢のパネル写真と実物が一致しているか口コミでチェックできるサイト。全国46都道府県のデリヘル3,000店舗以上・14万人以上の女性を網羅。リアル度をみんなで共有しよう。",
+    "パネマジ掲示板は、風俗嬢のパネル写真と実物が一致しているか口コミでチェックできるサイト。全国46都道府県の風俗3,000店舗以上・14万人以上の女性を網羅。リアル度をみんなで共有しよう。",
   keywords: [
     "パネマジ",
     "パネマジ掲示板",
@@ -112,7 +112,7 @@ export default function RootLayout({
             <a href="/terms" className="hover:text-white transition-colors">利用規約</a>
             <a href="/contact" className="hover:text-white transition-colors">お問い合わせ</a>
           </div>
-          <p>&copy; 2026 パネマジ掲示板 - デリヘル パネマジ口コミサイト</p>
+          <p>&copy; 2026 パネマジ掲示板 - 風俗 パネマジ口コミサイト</p>
         </footer>
       </body>
     </html>

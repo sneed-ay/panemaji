@@ -14,7 +14,7 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const girlCount = shop.girl_count || 0;
   const realPct = shop.real_pct != null && shop.real_pct >= 0 ? shop.real_pct : null;
   const title = `${shop.name}のパネマジ度・口コミ一覧 | ${shop.area_name || '東京'}`;
-  const description = `${shop.name}の在籍嬢のパネマジ度を口コミでチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人。${reviewCount > 0 ? `口コミ${reviewCount}件。` : ''}${shop.area_name || '東京'}のデリヘル口コミ。`;
+  const description = `${shop.name}の在籍嬢のパネマジ度を口コミでチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人。${reviewCount > 0 ? `口コミ${reviewCount}件。` : ''}${shop.area_name || '東京'}の風俗口コミ。`;
   return {
     title,
     description,
@@ -76,7 +76,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     '@type': 'LocalBusiness',
     name: shop.name,
     url: `https://panemaji.com/shop/${shop.id}`,
-    description: shop.description || `${shop.area_name}エリアのデリヘル「${shop.name}」`,
+    description: shop.description || `${shop.area_name}エリアの風俗店「${shop.name}」`,
     ...(shop.area_name ? { areaServed: shop.area_name } : {}),
     ...(typeof shop.review_count === 'number' && shop.review_count > 0 && typeof shop.real_pct === 'number' && shop.real_pct >= 0 ? {
       aggregateRating: {

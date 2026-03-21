@@ -11,7 +11,7 @@ export function generateMetadata({ searchParams }: { searchParams: { pref?: stri
   const prefName = prefectureSlugToName(prefSlug);
   return {
     title: `${prefName}のパネマジランキング`,
-    description: `${prefName}のデリヘル パネル通り率ランキング・パネル詐欺率ランキング。口コミに基づくリアル度で女性・店舗をランキング。`,
+    description: `${prefName}の風俗 パネル通り率ランキング・パネル詐欺率ランキング。口コミに基づくリアル度で女性・店舗をランキング。`,
   };
 }
 
