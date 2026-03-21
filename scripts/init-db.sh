@@ -14,24 +14,16 @@ BUNDLED_DB="./panemaji.db"
 
 mkdir -p "$DB_DIR"
 
-if [ ! -f "$DB_PATH" ]; then
-  # First deploy only: copy bundled DB
-  echo "📦 First deploy: copying database to $DB_PATH..."
-  if [ -f "$BUNDLED_DB" ]; then
-    cp "$BUNDLED_DB" "$DB_PATH"
-    echo "✅ Database initialized on persistent disk"
-  else
-    echo "⚠️ No source database found, app will create empty DB"
-  fi
-else
-  # Subsequent deploys: NEVER touch the persistent DB
-  DISK_SIZE=$(du -h "$DB_PATH" | cut -f1)
-  REVIEW_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM reviews;" 2>/dev/null || echo "?")
+# ONE-TIME: Force overwrite with 47-prefecture data (reviews already merged)
+if [ -f "$BUNDLED_DB" ]; then
+  echo "🗾 Deploying 47-prefecture database to $DB_PATH..."
+  cp "$BUNDLED_DB" "$DB_PATH"
   GIRL_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM girls WHERE is_active=1;" 2>/dev/null || echo "?")
   SHOP_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM shops WHERE is_active=1;" 2>/dev/null || echo "?")
-  echo "✅ Using existing database at $DB_PATH ($DISK_SIZE)"
-  echo "   📊 Shops: $SHOP_COUNT | Girls: $GIRL_COUNT | Reviews: $REVIEW_COUNT"
-  echo "   ⚠️ DB is preserved across deploys - reviews are safe"
+  REVIEW_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM reviews;" 2>/dev/null || echo "?")
+  echo "✅ Database deployed: Shops=$SHOP_COUNT Girls=$GIRL_COUNT Reviews=$REVIEW_COUNT"
+else
+  echo "⚠️ No source database found"
 fi
 
 # Start the app
