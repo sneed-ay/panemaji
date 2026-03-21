@@ -1,4 +1,4 @@
-import { getAreaBySlug, getShopsByArea, prefectureNameToSlug } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureSlugToName } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import type { Metadata } from 'next';
@@ -8,9 +8,10 @@ export const dynamic = 'force-dynamic';
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const area = getAreaBySlug(params.slug);
   if (!area) return {};
+  const prefDisplayName = prefectureSlugToName(area.prefecture);
   return {
     title: `${area.name}のデリヘル リアル度口コミ一覧`,
-    description: `${area.prefecture} ${area.name}エリアのデリヘル店舗のリアル度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
+    description: `${prefDisplayName} ${area.name}エリアのデリヘル店舗のリアル度・口コミをチェック。パネル写真と実物の一致度がわかる。`,
   };
 }
 
@@ -19,14 +20,15 @@ export default function AreaPage({ params }: { params: { slug: string } }) {
   if (!area) notFound();
 
   const shops = getShopsByArea(area.id);
-  const prefSlug = prefectureNameToSlug(area.prefecture);
+  const prefSlug = area.prefecture; // DB stores English code which is the slug
+  const prefName = prefectureSlugToName(prefSlug);
 
   return (
     <div className="space-y-6">
       <nav className="text-xs sm:text-sm text-gray-500">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
-        <a href={`/?pref=${prefSlug}`} className="hover:text-blue-600">{area.prefecture}</a>
+        <a href={`/?pref=${prefSlug}`} className="hover:text-blue-600">{prefName}</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
         <span className="text-gray-800">{area.name}</span>
       </nav>

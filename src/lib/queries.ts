@@ -10,33 +10,81 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
 export type Prefecture = {
   name: string;
   slug: string;
+  region: string;
 };
 
-const PREFECTURE_SLUG_MAP: Record<string, string> = {
-  '東京': 'tokyo',
-  '神奈川': 'kanagawa',
-  '埼玉': 'saitama',
-  '千葉': 'chiba',
+const PREFECTURE_MAP: Record<string, { name: string; region: string }> = {
+  hokkaido: { name: '北海道', region: '北海道・東北' },
+  aomori: { name: '青森', region: '北海道・東北' },
+  iwate: { name: '岩手', region: '北海道・東北' },
+  miyagi: { name: '宮城', region: '北海道・東北' },
+  akita: { name: '秋田', region: '北海道・東北' },
+  yamagata: { name: '山形', region: '北海道・東北' },
+  fukushima: { name: '福島', region: '北海道・東北' },
+  ibaraki: { name: '茨城', region: '関東' },
+  tochigi: { name: '栃木', region: '関東' },
+  gunma: { name: '群馬', region: '関東' },
+  saitama: { name: '埼玉', region: '関東' },
+  chiba: { name: '千葉', region: '関東' },
+  tokyo: { name: '東京', region: '関東' },
+  kanagawa: { name: '神奈川', region: '関東' },
+  niigata: { name: '新潟', region: '中部' },
+  toyama: { name: '富山', region: '中部' },
+  ishikawa: { name: '石川', region: '中部' },
+  fukui: { name: '福井', region: '中部' },
+  yamanashi: { name: '山梨', region: '中部' },
+  nagano: { name: '長野', region: '中部' },
+  gifu: { name: '岐阜', region: '中部' },
+  shizuoka: { name: '静岡', region: '中部' },
+  aichi: { name: '愛知', region: '中部' },
+  mie: { name: '三重', region: '近畿' },
+  shiga: { name: '滋賀', region: '近畿' },
+  kyoto: { name: '京都', region: '近畿' },
+  osaka: { name: '大阪', region: '近畿' },
+  hyogo: { name: '兵庫', region: '近畿' },
+  nara: { name: '奈良', region: '近畿' },
+  wakayama: { name: '和歌山', region: '近畿' },
+  tottori: { name: '鳥取', region: '中国・四国' },
+  shimane: { name: '島根', region: '中国・四国' },
+  okayama: { name: '岡山', region: '中国・四国' },
+  hiroshima: { name: '広島', region: '中国・四国' },
+  yamaguchi: { name: '山口', region: '中国・四国' },
+  tokushima: { name: '徳島', region: '中国・四国' },
+  kagawa: { name: '香川', region: '中国・四国' },
+  ehime: { name: '愛媛', region: '中国・四国' },
+  kochi: { name: '高知', region: '中国・四国' },
+  fukuoka: { name: '福岡', region: '九州・沖縄' },
+  saga: { name: '佐賀', region: '九州・沖縄' },
+  nagasaki: { name: '長崎', region: '九州・沖縄' },
+  kumamoto: { name: '熊本', region: '九州・沖縄' },
+  oita: { name: '大分', region: '九州・沖縄' },
+  miyazaki: { name: '宮崎', region: '九州・沖縄' },
+  kagoshima: { name: '鹿児島', region: '九州・沖縄' },
+  okinawa: { name: '沖縄', region: '九州・沖縄' },
 };
 
-const SLUG_PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(PREFECTURE_SLUG_MAP).map(([k, v]) => [v, k])
-);
+const REGION_ORDER = ['北海道・東北', '関東', '中部', '近畿', '中国・四国', '九州・沖縄'];
 
 export function getPrefectures(): Prefecture[] {
-  const rows = db.prepare('SELECT DISTINCT prefecture FROM areas ORDER BY prefecture').all() as { prefecture: string }[];
-  return rows.map(r => ({
-    name: r.prefecture,
-    slug: PREFECTURE_SLUG_MAP[r.prefecture] || r.prefecture,
+  // Return all 47 prefectures from PREFECTURE_MAP (ordered by map key insertion order)
+  return Object.entries(PREFECTURE_MAP).map(([slug, info]) => ({
+    name: info.name,
+    slug,
+    region: info.region,
   }));
 }
 
+export function getRegionOrder(): string[] {
+  return REGION_ORDER;
+}
+
 export function prefectureSlugToName(slug: string): string {
-  return SLUG_PREFECTURE_MAP[slug] || '東京';
+  return PREFECTURE_MAP[slug]?.name || '東京';
 }
 
 export function prefectureNameToSlug(name: string): string {
-  return PREFECTURE_SLUG_MAP[name] || 'tokyo';
+  const entry = Object.entries(PREFECTURE_MAP).find(([, v]) => v.name === name);
+  return entry ? entry[0] : 'tokyo';
 }
 
 // Areas
@@ -44,8 +92,8 @@ export function getAllAreas(): Area[] {
   return db.prepare('SELECT * FROM areas ORDER BY id').all() as Area[];
 }
 
-export function getAreasByPrefecture(prefecture: string): Area[] {
-  return db.prepare('SELECT * FROM areas WHERE prefecture = ? ORDER BY id').all(prefecture) as Area[];
+export function getAreasByPrefecture(prefectureSlug: string): Area[] {
+  return db.prepare('SELECT * FROM areas WHERE prefecture = ? ORDER BY id').all(prefectureSlug) as Area[];
 }
 
 export function getAreaBySlug(slug: string): Area | undefined {
@@ -226,11 +274,11 @@ export function getStats() {
   `).get() as { shopCount: number; girlCount: number; reviewCount: number };
 }
 
-export function getStatsByPrefecture(prefecture: string) {
+export function getStatsByPrefecture(prefectureSlug: string) {
   return db.prepare(`
     SELECT
       (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ?) as shopCount,
       (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ?) as girlCount,
       (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ?) as reviewCount
-  `).get(prefecture, prefecture, prefecture) as { shopCount: number; girlCount: number; reviewCount: number };
+  `).get(prefectureSlug, prefectureSlug, prefectureSlug) as { shopCount: number; girlCount: number; reviewCount: number };
 }
