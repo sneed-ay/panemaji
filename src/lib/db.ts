@@ -1,15 +1,17 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import { existsSync } from 'fs';
 
 let _db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (_db) return _db;
 
-  // During build on Render, DB file may not exist - try to open, fall through if missing
-
   // Support persistent disk: use DB_PATH env var if set, fallback to cwd
-  const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'panemaji.db');
+  // During build, /data/ disk may not be mounted, so try DB_PATH first, fallback to ./panemaji.db
+  const envPath = process.env.DB_PATH;
+  const cwdPath = path.join(process.cwd(), 'panemaji.db');
+  const dbPath = (envPath && existsSync(envPath)) ? envPath : cwdPath;
   _db = new Database(dbPath);
   _db.pragma('journal_mode = WAL');
   _db.pragma('busy_timeout = 5000');

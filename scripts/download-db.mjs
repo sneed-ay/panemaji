@@ -62,15 +62,8 @@ async function main() {
     throw new Error('DB integrity check failed');
   }
 
-  // Also copy to runtime DB path if different (e.g. /data/panemaji.db on Render)
-  if (RUNTIME_DB_PATH !== DB_PATH) {
-    const dir = RUNTIME_DB_PATH.substring(0, RUNTIME_DB_PATH.lastIndexOf('/'));
-    if (dir) fs.mkdirSync(dir, { recursive: true });
-    fs.copyFileSync(DB_PATH, RUNTIME_DB_PATH);
-    console.log('  Copied to runtime path:', RUNTIME_DB_PATH);
-  }
-
-  console.log('✅ Database ready for build AND runtime');
+  // Runtime copy handled by init-db.sh at startup (disk not available during build)
+  console.log('✅ Database ready for build');
 }
 
 main().catch(e => {
