@@ -10,7 +10,9 @@ import zlib from 'zlib';
 import Database from 'better-sqlite3';
 
 const DB_URL = 'https://github.com/sneed-ay/panemaji/releases/download/db-v6/panemaji.db.gz';
+// Download to both ./panemaji.db (for build) AND DB_PATH env (for runtime)
 const DB_PATH = './panemaji.db';
+const RUNTIME_DB_PATH = process.env.DB_PATH || DB_PATH;
 
 function download(url) {
   return new Promise((resolve, reject) => {
@@ -59,7 +61,16 @@ async function main() {
   if (check.integrity_check !== 'ok') {
     throw new Error('DB integrity check failed');
   }
-  console.log('✅ Database ready');
+
+  // Also copy to runtime DB path if different (e.g. /data/panemaji.db on Render)
+  if (RUNTIME_DB_PATH !== DB_PATH) {
+    const dir = RUNTIME_DB_PATH.substring(0, RUNTIME_DB_PATH.lastIndexOf('/'));
+    if (dir) fs.mkdirSync(dir, { recursive: true });
+    fs.copyFileSync(DB_PATH, RUNTIME_DB_PATH);
+    console.log('  Copied to runtime path:', RUNTIME_DB_PATH);
+  }
+
+  console.log('✅ Database ready for build AND runtime');
 }
 
 main().catch(e => {
