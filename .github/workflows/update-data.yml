@@ -1,0 +1,190 @@
+name: Weekly Data Update
+
+on:
+  schedule:
+    # 毎週月曜 3:00 UTC (12:00 JST)
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      region:
+        description: '特定リージョンのみ更新 (空欄=全国)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - '北海道'
+          - '東北'
+          - '関東'
+          - '中部'
+          - '近畿'
+          - '中国'
+          - '四国'
+          - '九州'
+      force:
+        description: '全店舗を強制再取得'
+        required: false
+        type: boolean
+        default: false
+
+# 同時実行を防止
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300  # 5時間制限
+
+    permissions:
+      contents: write  # Releases へのアップロードに必要
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Puppeteer
+        run: |
+          npx puppeteer browsers install chrome
+          echo "PUPPETEER_EXECUTABLE_PATH=$(find $HOME/.cache/puppeteer -name 'chrome' -type f | head -1)" >> $GITHUB_ENV
+
+      - name: Download current DB from latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Downloading current database..."
+          # 最新リリースからDBを取得
+          ASSET_URL=$(gh release view --json assets -q '.assets[] | select(.name=="panemaji.db.gz") | .url' 2>/dev/null || echo "")
+          if [ -n "$ASSET_URL" ]; then
+            gh release download --pattern 'panemaji.db.gz' --clobber 2>/dev/null || true
+            if [ -f panemaji.db.gz ]; then
+              gunzip -f panemaji.db.gz
+              echo "Database downloaded and extracted"
+              ls -lh panemaji.db
+            else
+              echo "Warning: Could not download DB, will create new one"
+            fi
+          else
+            echo "No existing release found, will create new DB"
+          fi
+
+      - name: Run data update
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          if [ -n "${{ github.event.inputs.region }}" ]; then
+            ARGS="$ARGS --region ${{ github.event.inputs.region }}"
+          fi
+          echo "Running: node scripts/update-all.mjs $ARGS"
+          node scripts/update-all.mjs $ARGS
+
+      - name: Compress DB
+        run: |
+          cp panemaji.db panemaji.db.bak
+          gzip -9 -k panemaji.db
+          echo "DB_SIZE=$(ls -lh panemaji.db | awk '{print $5}')" >> $GITHUB_ENV
+          echo "DB_GZ_SIZE=$(ls -lh panemaji.db.gz | awk '{print $5}')" >> $GITHUB_ENV
+
+      - name: Get DB stats for release notes
+        id: stats
+        run: |
+          node -e "
+            const Database = require('better-sqlite3');
+            const db = new Database('./panemaji.db');
+            const shops = db.prepare('SELECT COUNT(*) as c FROM shops WHERE is_active=1').get().c;
+            const girls = db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active=1').get().c;
+            const prefs = db.prepare('SELECT COUNT(DISTINCT prefecture) as c FROM areas WHERE prefecture IS NOT NULL').get().c;
+            const reviews = db.prepare('SELECT COUNT(*) as c FROM reviews').get().c;
+            db.close();
+            console.log('SHOPS=' + shops);
+            console.log('GIRLS=' + girls);
+            console.log('PREFS=' + prefs);
+            console.log('REVIEWS=' + reviews);
+          " >> $GITHUB_OUTPUT
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="db-latest"
+          DATE=$(date +%Y-%m-%d)
+          TITLE="DB Update ${DATE}"
+          NOTES="## Weekly Data Update - ${DATE}
+
+          | Metric | Value |
+          |--------|-------|
+          | Prefectures | ${{ steps.stats.outputs.PREFS }} |
+          | Active Shops | ${{ steps.stats.outputs.SHOPS }} |
+          | Active Girls | ${{ steps.stats.outputs.GIRLS }} |
+          | Reviews | ${{ steps.stats.outputs.REVIEWS }} |
+          | DB Size | ${DB_SIZE} (${DB_GZ_SIZE} compressed) |
+
+          Updated by GitHub Actions workflow."
+
+          # 既存リリースを削除して再作成
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          gh release create "$TAG" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            --latest \
+            panemaji.db.gz
+
+      - name: Also update versioned release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # バージョン付きリリースも作成（履歴保持用）
+          DATE=$(date +%Y%m%d)
+          TAG="db-${DATE}"
+          gh release create "$TAG" \
+            --title "DB Snapshot ${DATE}" \
+            --notes "Automated weekly snapshot" \
+            panemaji.db.gz 2>/dev/null || echo "Versioned release already exists, skipping"
+
+      - name: Update download URL in download-db.mjs
+        run: |
+          # download-db.mjs の URL を db-latest に更新
+          sed -i "s|releases/download/db-v[0-9]*/panemaji.db.gz|releases/download/db-latest/panemaji.db.gz|g" scripts/download-db.mjs || true
+
+      - name: Commit updated download URL if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/download-db.mjs
+          git diff --staged --quiet || git commit -m "chore: update DB download URL to db-latest"
+          git push || true
+
+      - name: Trigger Render deploy
+        if: success()
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "Triggering Render deploy..."
+            curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+            echo ""
+            echo "Deploy triggered successfully"
+          else
+            echo "RENDER_DEPLOY_HOOK_URL secret not set, skipping deploy trigger"
+            echo "To enable auto-deploy:"
+            echo "  1. Go to Render Dashboard > panemaji > Settings > Deploy Hook"
+            echo "  2. Copy the Deploy Hook URL"
+            echo "  3. Add it as a GitHub secret: RENDER_DEPLOY_HOOK_URL"
+          fi
+
+      - name: Upload DB as artifact (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: panemaji-db-${{ github.run_number }}
+          path: panemaji.db.gz
+          retention-days: 7
