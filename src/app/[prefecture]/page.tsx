@@ -1,5 +1,5 @@
 import HomeContent from '@/components/HomeContent';
-import { isValidPrefecture, prefectureSlugToName } from '@/lib/queries';
+import { isValidPrefecture, isValidCategory, prefectureSlugToName } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -14,11 +14,12 @@ export function generateMetadata({ params }: { params: { prefecture: string } })
   };
 }
 
-export default function PrefecturePage({ params }: { params: { prefecture: string } }) {
+export default function PrefecturePage({ params, searchParams }: { params: { prefecture: string }; searchParams: { cat?: string } }) {
   // Only handle valid prefecture slugs; let other routes pass through
   if (!isValidPrefecture(params.prefecture)) {
     notFound();
   }
 
-  return <HomeContent prefSlug={params.prefecture} />;
+  const catSlug = searchParams.cat && isValidCategory(searchParams.cat) ? searchParams.cat : undefined;
+  return <HomeContent prefSlug={params.prefecture} catSlug={catSlug} />;
 }

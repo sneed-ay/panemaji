@@ -65,6 +65,46 @@ const PREFECTURE_MAP: Record<string, { name: string; region: string }> = {
 
 const REGION_ORDER = ['北海道・東北', '関東', '中部', '近畿', '中国・四国', '九州・沖縄'];
 
+// Category mapping (URL slug -> DB value)
+export const CATEGORY_MAP: Record<string, string> = {
+  deriheru: 'デリヘル',
+  menesu: 'メンズエステ',
+  soap: 'ソープ',
+  health: 'ヘルス',
+  esthe: 'エステ・アロマ',
+  hotelhel: 'ホテヘル',
+  sekkyaba: 'セクキャバ',
+};
+
+export const CATEGORY_TABS = [
+  { slug: '', label: 'すべて' },
+  { slug: 'deriheru', label: 'デリヘル' },
+  { slug: 'menesu', label: 'メンエス' },
+  { slug: 'soap', label: 'ソープ' },
+  { slug: 'health', label: 'ヘルス' },
+  { slug: 'esthe', label: 'エステ' },
+  { slug: 'hotelhel', label: 'ホテヘル' },
+] as const;
+
+export const CATEGORY_COLORS: Record<string, string> = {
+  'デリヘル': 'bg-pink-100 text-pink-700',
+  'メンズエステ': 'bg-purple-100 text-purple-700',
+  'ソープ': 'bg-blue-100 text-blue-700',
+  'ヘルス': 'bg-green-100 text-green-700',
+  'エステ・アロマ': 'bg-teal-100 text-teal-700',
+  'ホテヘル': 'bg-orange-100 text-orange-700',
+  'セクキャバ': 'bg-red-100 text-red-700',
+};
+
+export function isValidCategory(slug: string): boolean {
+  return slug in CATEGORY_MAP;
+}
+
+function categoryToDbValue(catSlug?: string): string | undefined {
+  if (!catSlug) return undefined;
+  return CATEGORY_MAP[catSlug];
+}
+
 export function getPrefectures(): Prefecture[] {
   // Return all 47 prefectures from PREFECTURE_MAP (ordered by map key insertion order)
   return Object.entries(PREFECTURE_MAP).map(([slug, info]) => ({
@@ -92,7 +132,17 @@ export function getAllAreas(): Area[] {
   return db.prepare('SELECT * FROM areas ORDER BY id').all() as Area[];
 }
 
-export function getAreasByPrefecture(prefectureSlug: string): Area[] {
+export function getAreasByPrefecture(prefectureSlug: string, catSlug?: string): Area[] {
+  const catValue = categoryToDbValue(catSlug);
+  if (catValue) {
+    // Only return areas that have at least one active shop in this category
+    return db.prepare(`
+      SELECT DISTINCT a.* FROM areas a
+      JOIN shops s ON s.area_id = a.id
+      WHERE a.prefecture = ? AND s.is_active = 1 AND s.category = ?
+      ORDER BY a.id
+    `).all(prefectureSlug, catValue) as Area[];
+  }
   return db.prepare('SELECT * FROM areas WHERE prefecture = ? ORDER BY id').all(prefectureSlug) as Area[];
 }
 
@@ -132,15 +182,18 @@ const SHOP_STATS_COLS = `
 `;
 
 // Shops (only active shops)
-export function getShopsByArea(areaId: number): Shop[] {
+export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
+  const catValue = categoryToDbValue(catSlug);
+  const catFilter = catValue ? ' AND s.category = ?' : '';
+  const params = catValue ? [areaId, catValue] : [areaId];
   return db.prepare(`
     SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
-    WHERE s.area_id = ? AND s.is_active = 1
+    WHERE s.area_id = ? AND s.is_active = 1${catFilter}
     ORDER BY real_pct DESC, review_count DESC, s.name
-  `).all(areaId) as Shop[];
+  `).all(...params) as Shop[];
 }
 
 export function getShopById(id: number): Shop | undefined {
@@ -310,7 +363,16 @@ export function getStats() {
   `).get() as { shopCount: number; girlCount: number; reviewCount: number };
 }
 
-export function getStatsByPrefecture(prefectureSlug: string) {
+export function getStatsByPrefecture(prefectureSlug: string, catSlug?: string) {
+  const catValue = categoryToDbValue(catSlug);
+  if (catValue) {
+    return db.prepare(`
+      SELECT
+        (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ? AND s.category = ?) as shopCount,
+        (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ? AND s.category = ?) as girlCount,
+        (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ? AND s.category = ?) as reviewCount
+    `).get(prefectureSlug, catValue, prefectureSlug, catValue, prefectureSlug, catValue) as { shopCount: number; girlCount: number; reviewCount: number };
+  }
   return db.prepare(`
     SELECT
       (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ?) as shopCount,
@@ -339,31 +401,37 @@ export function getPrefectureSlugs(): string[] {
 // Ranking queries
 
 // Top girls by real_pct (panel match rate) - requires minimum reviews
-export function getTopRealGirls(prefectureSlug: string, limit: number = 20): Girl[] {
+export function getTopRealGirls(prefectureSlug: string, limit: number = 20, catSlug?: string): Girl[] {
+  const catValue = categoryToDbValue(catSlug);
+  const catFilter = catValue ? ' AND s.category = ?' : '';
+  const params = catValue ? [prefectureSlug, catValue, limit] : [prefectureSlug, limit];
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
-    WHERE g.is_active = 1 AND a.prefecture = ? AND COALESCE(rs.review_count, 0) >= 3
+    WHERE g.is_active = 1 AND a.prefecture = ?${catFilter} AND COALESCE(rs.review_count, 0) >= 3
     ORDER BY real_pct DESC, rs.review_count DESC
     LIMIT ?
-  `).all(prefectureSlug, limit) as Girl[];
+  `).all(...params) as Girl[];
 }
 
 // Worst girls by real_pct (panel fraud rate) - requires minimum reviews
-export function getWorstRealGirls(prefectureSlug: string, limit: number = 20): Girl[] {
+export function getWorstRealGirls(prefectureSlug: string, limit: number = 20, catSlug?: string): Girl[] {
+  const catValue = categoryToDbValue(catSlug);
+  const catFilter = catValue ? ' AND s.category = ?' : '';
+  const params = catValue ? [prefectureSlug, catValue, limit] : [prefectureSlug, limit];
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
-    WHERE g.is_active = 1 AND a.prefecture = ? AND COALESCE(rs.review_count, 0) >= 3
+    WHERE g.is_active = 1 AND a.prefecture = ?${catFilter} AND COALESCE(rs.review_count, 0) >= 3
     ORDER BY real_pct ASC, rs.review_count DESC
     LIMIT ?
-  `).all(prefectureSlug, limit) as Girl[];
+  `).all(...params) as Girl[];
 }
 
 // Top shops by real_pct - requires minimum reviews

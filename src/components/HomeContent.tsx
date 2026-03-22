@@ -3,11 +3,13 @@ import type { Prefecture } from '@/lib/queries';
 import type { Girl } from '@/lib/db';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import PrefectureSelector from '@/components/PrefectureSelector';
+import CategoryTabs from '@/components/CategoryTabs';
 import GirlImage from '@/components/GirlImage';
 
 
 type Props = {
   prefSlug: string;
+  catSlug?: string;
 };
 
 const MEDAL_COLORS: Record<number, { bg: string; border: string; text: string; label: string }> = {
@@ -46,15 +48,15 @@ function RankingCard({ girl, rank }: { girl: Girl; rank: number }) {
   );
 }
 
-export default function HomeContent({ prefSlug }: Props) {
+export default function HomeContent({ prefSlug, catSlug }: Props) {
   const prefName = prefectureSlugToName(prefSlug);
   const prefectures = getPrefectures();
   const regionOrder = getRegionOrder();
-  const areas = getAreasByPrefecture(prefSlug);
-  const stats = getStatsByPrefecture(prefSlug);
+  const areas = getAreasByPrefecture(prefSlug, catSlug);
+  const stats = getStatsByPrefecture(prefSlug, catSlug);
   const latestReviews = getLatestReviews(10);
-  const topGirls = getTopRealGirls(prefSlug, 5);
-  const worstGirls = getWorstRealGirls(prefSlug, 5);
+  const topGirls = getTopRealGirls(prefSlug, 5, catSlug);
+  const worstGirls = getWorstRealGirls(prefSlug, 5, catSlug);
 
   // Group prefectures by region
   const prefsByRegion: Record<string, Prefecture[]> = {};
@@ -69,6 +71,12 @@ export default function HomeContent({ prefSlug }: Props) {
         prefSlug={prefSlug}
         prefsByRegion={prefsByRegion}
         regionOrder={regionOrder}
+      />
+
+      {/* Category Tabs */}
+      <CategoryTabs
+        currentCat={catSlug || ''}
+        basePath={`/${prefSlug}`}
       />
 
       {/* Stats */}
@@ -86,7 +94,7 @@ export default function HomeContent({ prefSlug }: Props) {
       {/* Quick Links */}
       <div className="flex gap-2 sm:gap-3">
         <a
-          href={`/ranking?pref=${prefSlug}`}
+          href={`/ranking?pref=${prefSlug}${catSlug ? `&cat=${catSlug}` : ''}`}
           className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg shadow p-3 sm:p-4 text-center no-underline hover:shadow-md transition-shadow"
         >
           <p className="text-lg sm:text-xl">&#x1F3C6;</p>
@@ -133,7 +141,7 @@ export default function HomeContent({ prefSlug }: Props) {
             </div>
             <div className="mt-4 text-center">
               <a
-                href={`/ranking?pref=${prefSlug}`}
+                href={`/ranking?pref=${prefSlug}${catSlug ? `&cat=${catSlug}` : ''}`}
                 className="inline-block text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
                 ランキングをもっと見る &rarr;
@@ -159,7 +167,7 @@ export default function HomeContent({ prefSlug }: Props) {
             </div>
             <div className="mt-4 text-center">
               <a
-                href={`/ranking?pref=${prefSlug}&tab=worst`}
+                href={`/ranking?pref=${prefSlug}&tab=worst${catSlug ? `&cat=${catSlug}` : ''}`}
                 className="inline-block text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
                 ランキングをもっと見る &rarr;
@@ -181,7 +189,7 @@ export default function HomeContent({ prefSlug }: Props) {
             {areas.map((area) => (
               <a
                 key={area.id}
-                href={`/area/${area.slug}`}
+                href={`/area/${area.slug}${catSlug ? `?cat=${catSlug}` : ''}`}
                 className="block bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg p-3 text-center transition-colors no-underline"
               >
                 <span className="text-gray-800 font-medium text-sm">{area.name}</span>

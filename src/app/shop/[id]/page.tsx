@@ -1,4 +1,4 @@
-import { getShopById, getGirlsByShop, getReviewsByShop } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getReviewsByShop, CATEGORY_COLORS } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
@@ -110,7 +110,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{shop.name}</h2>
             <div className="flex items-center gap-2 sm:gap-3 mt-2 flex-wrap">
-              <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded shrink-0">
+              <span className={`inline-block text-xs px-2 py-0.5 rounded shrink-0 ${CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700'}`}>
                 {shop.category}
               </span>
               <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2.5 py-0.5 rounded-full font-medium shrink-0">

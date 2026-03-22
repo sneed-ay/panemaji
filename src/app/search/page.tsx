@@ -1,4 +1,4 @@
-import { searchShops } from '@/lib/queries';
+import { searchShops, CATEGORY_COLORS } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic'; // Search must remain dynamic (user-specific query params)
 
@@ -51,7 +51,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q?: strin
                 <div className="min-w-0">
                   <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">{shop.name}</h3>
                   <div className="flex items-center gap-2 sm:gap-3 mt-1">
-                    <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded shrink-0">
+                    <span className={`inline-block text-xs px-2 py-0.5 rounded shrink-0 ${CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700'}`}>
                       {shop.category}
                     </span>
                     <span className="text-gray-500 text-xs sm:text-sm">{shop.area_name}</span>
