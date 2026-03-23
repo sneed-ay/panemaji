@@ -9,7 +9,7 @@ import fs from 'fs';
 import zlib from 'zlib';
 import Database from 'better-sqlite3';
 
-const DB_URL = 'https://github.com/sneed-ay/panemaji/releases/download/db-v6/panemaji.db.gz';
+const DB_URL = 'https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaji.db.gz';
 // Download to both ./panemaji.db (for build) AND DB_PATH env (for runtime)
 const DB_PATH = './panemaji.db';
 const RUNTIME_DB_PATH = process.env.DB_PATH || DB_PATH;
