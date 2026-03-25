@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     "デリヘル エリア別",
     "風俗 ガイド",
     "メンエス ガイド",
+    "メンエス 選び方",
+    "メンエス 料金 相場",
+    "メンエス パネマジ",
     "風俗 料金 相場",
     "デリヘル ソープ 違い",
     "吉原 ソープ",
@@ -33,7 +36,7 @@ type Article = {
   href: string;
   title: string;
   summary: string;
-  category: "area" | "howto" | "column" | "shop" | "special" | "compare";
+  category: "area" | "howto" | "column" | "shop" | "special" | "compare" | "menesu";
 };
 
 const articles: Article[] = [
@@ -70,6 +73,15 @@ const articles: Article[] = [
   { href: "/guide/nenmatsu-nenshi-fuzoku", title: "年末年始の風俗事情｜繁忙期のパネマジ率と賢い利用法", summary: "季節による風俗業界の変化、繁忙期のリスクと対策。", category: "special" },
   { href: "/guide/yoshiwara-soap-guide", title: "吉原ソープ完全攻略ガイド｜初心者からリピーターまで", summary: "吉原の歴史、店のランク分け、料金相場、パネマジ事情を解説。", category: "special" },
   { href: "/guide/gotanda-menesu", title: "五反田メンエス激戦区の歩き方｜おすすめの探し方", summary: "五反田のメンエス事情と失敗しない選び方のコツ。", category: "special" },
+  // メンエス特集
+  { href: "/guide/menesu-nagare", title: "メンズエステの施術の流れ完全解説｜入店から退店まで", summary: "予約方法、入店の流れ、施術内容、マナー、チップ事情まで網羅。", category: "menesu" },
+  { href: "/guide/menesu-kiwadoi", title: "メンエスの際どいサービスとは？｜初心者が知るべきNG行為", summary: "グレーゾーンの解説、やってはいけないこと、店選びの重要性。", category: "menesu" },
+  { href: "/guide/menesu-erabikata", title: "失敗しないメンエスの選び方｜口コミ・写真の見方", summary: "セラピスト選びのコツ、パネマジの見分け方、口コミの読み方。", category: "menesu" },
+  { href: "/guide/shinjuku-menesu", title: "新宿メンエス完全ガイド｜エリア別の特徴と人気店の探し方", summary: "新宿のメンエス事情、エリア分類、料金相場を解説。", category: "menesu" },
+  { href: "/guide/ikebukuro-menesu", title: "池袋メンエスガイド｜初心者におすすめの探し方", summary: "池袋のメンエス事情とコスパの良い探し方。", category: "menesu" },
+  { href: "/guide/ginza-menesu", title: "銀座・新橋メンエスの特徴｜ビジネスマン御用達エリア解説", summary: "高級店が多い銀座・新橋エリアの特徴と料金相場。", category: "menesu" },
+  { href: "/guide/menesu-ryoukin-souba", title: "メンエスの料金相場まとめ｜コース別・エリア別の価格帯", summary: "60分/90分/120分の相場、エリアによる違い、オプション料金。", category: "menesu" },
+  { href: "/guide/menesu-panemaji", title: "メンエスのパネマジ事情｜セラピスト写真の実態と対策", summary: "メンエス特有のパネマジ傾向、デリヘルとの違い。", category: "menesu" },
   // 比較・ランキング系
   { href: "/guide/deriheru-vs-soap", title: "デリヘルとソープの違い完全比較｜料金・サービス・パネマジ率", summary: "各業態の特徴を料金・サービス・パネマジ率で比較。", category: "compare" },
   { href: "/guide/menesu-vs-esthe", title: "メンエスとエステの違い｜初心者が知るべき業態別の特徴", summary: "業態の違い、サービス内容、パネマジの傾向を解説。", category: "compare" },
@@ -83,6 +95,7 @@ const categoryLabels = {
   shop: "店舗別",
   special: "特集",
   compare: "比較・まとめ",
+  menesu: "メンエス特集",
 } as const;
 
 const categoryColors = {
@@ -92,6 +105,7 @@ const categoryColors = {
   shop: "bg-orange-100 text-orange-700",
   special: "bg-red-100 text-red-700",
   compare: "bg-cyan-100 text-cyan-700",
+  menesu: "bg-pink-100 text-pink-700",
 } as const;
 
 function ArticleCard({ article }: { article: Article }) {
@@ -112,6 +126,7 @@ function ArticleCard({ article }: { article: Article }) {
 }
 
 export default function GuidePage() {
+  const menesuArticles = articles.filter((a) => a.category === "menesu");
   const specialArticles = articles.filter((a) => a.category === "special");
   const compareArticles = articles.filter((a) => a.category === "compare");
   const areaArticles = articles.filter((a) => a.category === "area");
@@ -161,6 +176,19 @@ export default function GuidePage() {
           </div>
         </section>
       )}
+
+      {/* メンエス特集 */}
+      <section className="mb-10">
+        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <span className="inline-block w-1 h-6 bg-pink-500 rounded"></span>
+          メンエス特集
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {menesuArticles.map((article) => (
+            <ArticleCard key={article.href} article={article} />
+          ))}
+        </div>
+      </section>
 
       {/* 特集記事 */}
       <section className="mb-10">
