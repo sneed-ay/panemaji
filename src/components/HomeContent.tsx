@@ -1,6 +1,6 @@
-import { getAreasByPrefecture, getLatestReviews, getPrefectures, getRegionOrder, getTopRealGirls } from '@/lib/queries';
+import { getAreasByPrefecture, getLatestReviews, getPrefectures, getRegionOrder, getTopRealShops } from '@/lib/queries';
 import type { Prefecture } from '@/lib/queries';
-import type { Girl } from '@/lib/db';
+import type { Shop } from '@/lib/db';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import PrefectureSelector from '@/components/PrefectureSelector';
 import CategoryTabs from '@/components/CategoryTabs';
@@ -12,28 +12,25 @@ type Props = {
   catSlug?: string;
 };
 
-function CompactRankingCard({ girl, rank }: { girl: Girl; rank: number }) {
-  const realPct = girl.real_pct ?? 0;
+function CompactShopRankingCard({ shop, rank }: { shop: Shop; rank: number }) {
+  const realPct = shop.real_pct ?? 0;
+  const rankColors = rank === 0 ? 'bg-yellow-500' : rank === 1 ? 'bg-gray-400' : rank === 2 ? 'bg-orange-400' : 'bg-blue-400';
   return (
     <a
-      href={`/girl/${girl.id}`}
+      href={`/shop/${shop.id}`}
       className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors no-underline"
     >
-      <div className="relative shrink-0">
-        <div className={`absolute -top-1 -left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${rank === 0 ? 'bg-yellow-500' : rank === 1 ? 'bg-gray-400' : rank === 2 ? 'bg-orange-400' : 'bg-blue-400'}`}>
-          {rank + 1}
-        </div>
-        <GirlImage src={girl.image_url} alt={girl.name} size={48} />
+      <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${rankColors}`}>
+        {rank + 1}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-gray-800 truncate">{girl.name}</p>
-        <p className="text-xs text-gray-500 truncate">{girl.shop_name}</p>
+        <p className="text-sm font-bold text-gray-800 truncate">{shop.name}</p>
+        <p className="text-xs text-gray-500 truncate">{shop.area_name} · {shop.girl_count ?? 0}人在籍 · {shop.review_count ?? 0}件口コミ</p>
       </div>
       <div className="shrink-0 text-right">
         <span className={`text-sm font-bold ${realPct >= 70 ? 'text-green-600' : realPct >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
           {realPct}%
         </span>
-        <p className="text-[10px] text-gray-400">{girl.review_count}件</p>
       </div>
     </a>
   );
@@ -44,7 +41,7 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
   const regionOrder = getRegionOrder();
   const areas = getAreasByPrefecture(prefSlug, catSlug);
   const latestReviews = getLatestReviews(5);
-  const topGirls = getTopRealGirls(prefSlug, 5, catSlug);
+  const topShops = getTopRealShops(prefSlug, 5);
 
   // Group prefectures by region
   const prefsByRegion: Record<string, Prefecture[]> = {};
@@ -125,10 +122,10 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
             もっと見る
           </a>
         </div>
-        {topGirls.length > 0 ? (
+        {topShops.length > 0 ? (
           <div className="space-y-2">
-            {topGirls.map((girl, i) => (
-              <CompactRankingCard key={girl.id} girl={girl} rank={i} />
+            {topShops.map((shop, i) => (
+              <CompactShopRankingCard key={shop.id} shop={shop} rank={i} />
             ))}
           </div>
         ) : (
