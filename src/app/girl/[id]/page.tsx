@@ -29,7 +29,7 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
       type: 'article',
     },
     twitter: {
-      card: 'summary_large_image',
+      card: 'summary',
       title,
       description,
       images: [ogImage],
