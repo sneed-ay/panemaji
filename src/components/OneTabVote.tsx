@@ -163,11 +163,10 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
       </div>
 
       {/* Comment Section (always visible, independent from vote) */}
-      {voted && (
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-3">
-          <p className="text-sm font-medium text-gray-700">
-            コメントを残す（任意）
-          </p>
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-3">
+        <p className="text-sm font-medium text-gray-700">
+          💬 コメントを残す（任意）
+        </p>
 
           {commentSent ? (
             <p className="text-sm text-green-600 flex items-center gap-1.5">
@@ -200,7 +199,6 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
             </>
           )}
         </div>
-      )}
     </div>
   );
 }
