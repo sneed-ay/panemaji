@@ -77,7 +77,7 @@ jobs:
             echo "No existing release found, will create new DB"
           fi
 
-      - name: Run data update
+      - name: Run data update pipeline
         run: |
           ARGS=""
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
@@ -86,8 +86,8 @@ jobs:
           if [ -n "${{ github.event.inputs.region }}" ]; then
             ARGS="$ARGS --region ${{ github.event.inputs.region }}"
           fi
-          echo "Running: node scripts/update-all.mjs $ARGS"
-          node scripts/update-all.mjs $ARGS
+          echo "Running: node scripts/pipeline.mjs $ARGS"
+          node scripts/pipeline.mjs $ARGS
 
       - name: Compress DB
         run: |
