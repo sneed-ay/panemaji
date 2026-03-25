@@ -13,6 +13,10 @@ export const metadata: Metadata = {
     "パネマジ 対策",
     "デリヘル エリア別",
     "風俗 ガイド",
+    "メンエス ガイド",
+    "風俗 料金 相場",
+    "デリヘル ソープ 違い",
+    "吉原 ソープ",
   ],
   alternates: { canonical: "https://panemaji.com/guide" },
   openGraph: {
@@ -29,7 +33,7 @@ type Article = {
   href: string;
   title: string;
   summary: string;
-  category: "area" | "howto" | "column" | "shop";
+  category: "area" | "howto" | "column" | "shop" | "special" | "compare";
 };
 
 const articles: Article[] = [
@@ -58,6 +62,18 @@ const articles: Article[] = [
   { href: "/guide/panemaji-trend-2026", title: "2026年のパネマジ事情", summary: "業界トレンドと最新の対策方法を徹底解説。", category: "column" },
   { href: "/guide/panel-kaishu-sagasu", title: "パネル写真の加工修正事情", summary: "店舗の裏側を知ってパネマジを理解する。", category: "column" },
   { href: "/guide/kuchikomi-tokou", title: "口コミ投稿のススメ", summary: "みんなで作るパネマジデータベースに参加しよう。", category: "column" },
+  // 特集系
+  { href: "/guide/av-joyuu-zaiseki", title: "元AV女優が在籍するデリヘル店まとめ｜見つけ方と注意点", summary: "元AV女優が風俗に在籍する理由、探し方のコツ、パネマジリスクを解説。", category: "special" },
+  { href: "/guide/hajimete-menesu", title: "初めてのメンエス完全ガイド｜流れ・マナー・店選びのコツ", summary: "メンエス初心者向けに施術の流れ、セラピスト選び、パネマジの実態を解説。", category: "special" },
+  { href: "/guide/panemaji-kaishuu-gihou", title: "パネル写真の加工テクニック完全解説｜店側の手口を知って騙されない", summary: "写真加工の手法と見破るポイントを徹底解説。", category: "special" },
+  { href: "/guide/kuchikomi-shinjitsu", title: "風俗口コミの真実｜サクラの見分け方と信頼できる口コミの特徴", summary: "サクラ口コミの特徴、ステマの手口、本物の口コミの見分け方。", category: "special" },
+  { href: "/guide/nenmatsu-nenshi-fuzoku", title: "年末年始の風俗事情｜繁忙期のパネマジ率と賢い利用法", summary: "季節による風俗業界の変化、繁忙期のリスクと対策。", category: "special" },
+  { href: "/guide/yoshiwara-soap-guide", title: "吉原ソープ完全攻略ガイド｜初心者からリピーターまで", summary: "吉原の歴史、店のランク分け、料金相場、パネマジ事情を解説。", category: "special" },
+  { href: "/guide/gotanda-menesu", title: "五反田メンエス激戦区の歩き方｜おすすめの探し方", summary: "五反田のメンエス事情と失敗しない選び方のコツ。", category: "special" },
+  // 比較・ランキング系
+  { href: "/guide/deriheru-vs-soap", title: "デリヘルとソープの違い完全比較｜料金・サービス・パネマジ率", summary: "各業態の特徴を料金・サービス・パネマジ率で比較。", category: "compare" },
+  { href: "/guide/menesu-vs-esthe", title: "メンエスとエステの違い｜初心者が知るべき業態別の特徴", summary: "業態の違い、サービス内容、パネマジの傾向を解説。", category: "compare" },
+  { href: "/guide/fuzoku-ryoukin-souba", title: "風俗の料金相場まとめ｜業態別・エリア別の価格帯", summary: "各業態の料金相場とエリアによる違いを徹底解説。", category: "compare" },
 ];
 
 const categoryLabels = {
@@ -65,6 +81,8 @@ const categoryLabels = {
   howto: "ハウツー",
   column: "コラム",
   shop: "店舗別",
+  special: "特集",
+  compare: "比較・まとめ",
 } as const;
 
 const categoryColors = {
@@ -72,6 +90,8 @@ const categoryColors = {
   howto: "bg-green-100 text-green-700",
   column: "bg-purple-100 text-purple-700",
   shop: "bg-orange-100 text-orange-700",
+  special: "bg-red-100 text-red-700",
+  compare: "bg-cyan-100 text-cyan-700",
 } as const;
 
 function ArticleCard({ article }: { article: Article }) {
@@ -92,6 +112,8 @@ function ArticleCard({ article }: { article: Article }) {
 }
 
 export default function GuidePage() {
+  const specialArticles = articles.filter((a) => a.category === "special");
+  const compareArticles = articles.filter((a) => a.category === "compare");
   const areaArticles = articles.filter((a) => a.category === "area");
   const howtoArticles = articles.filter((a) => a.category === "howto");
   const columnArticles = articles.filter((a) => a.category === "column");
@@ -139,6 +161,32 @@ export default function GuidePage() {
           </div>
         </section>
       )}
+
+      {/* 特集記事 */}
+      <section className="mb-10">
+        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <span className="inline-block w-1 h-6 bg-red-500 rounded"></span>
+          特集記事
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {specialArticles.map((article) => (
+            <ArticleCard key={article.href} article={article} />
+          ))}
+        </div>
+      </section>
+
+      {/* 比較・まとめ */}
+      <section className="mb-10">
+        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <span className="inline-block w-1 h-6 bg-cyan-500 rounded"></span>
+          比較・まとめ
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {compareArticles.map((article) => (
+            <ArticleCard key={article.href} article={article} />
+          ))}
+        </div>
+      </section>
 
       {/* エリア別ガイド */}
       <section className="mb-10">
