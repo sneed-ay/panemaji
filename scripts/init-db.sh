@@ -7,20 +7,20 @@ DB_URL="https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaj
 
 mkdir -p "$DB_DIR"
 
-# Check current DB girl count using Node.js
-CURRENT_GIRLS=$(node -e "
+# Check current DB review count using Node.js
+CURRENT_REVIEWS=$(node -e "
 try {
   const Database = require('better-sqlite3');
   const db = new Database('$DB_PATH');
-  console.log(db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active=1').get().c);
+  console.log(db.prepare('SELECT COUNT(*) as c FROM reviews').get().c);
   db.close();
 } catch(e) { console.log('0'); }
 " 2>/dev/null || echo "0")
 
-echo "📊 Current DB: $CURRENT_GIRLS girls"
+echo "📊 Current DB: $CURRENT_REVIEWS reviews"
 
-# Download if DB is missing/outdated (< 100k girls means old data)
-if [ "$CURRENT_GIRLS" -lt 100000 ] 2>/dev/null; then
+# Download if DB is missing/outdated (< 20k reviews means old data)
+if [ "$CURRENT_REVIEWS" -lt 20000 ] 2>/dev/null; then
   echo "🗾 Downloading latest database..."
 
   # Backup user reviews (not ext-trend) from existing DB
