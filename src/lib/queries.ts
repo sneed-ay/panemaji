@@ -140,10 +140,10 @@ export function getAreasByPrefecture(prefectureSlug: string, catSlug?: string): 
       SELECT DISTINCT a.* FROM areas a
       JOIN shops s ON s.area_id = a.id
       WHERE a.prefecture = ? AND s.is_active = 1 AND s.category = ?
-      ORDER BY a.id
+      ORDER BY a.display_order, a.id
     `).all(prefectureSlug, catValue) as Area[];
   }
-  return db.prepare('SELECT * FROM areas WHERE prefecture = ? ORDER BY id').all(prefectureSlug) as Area[];
+  return db.prepare('SELECT * FROM areas WHERE prefecture = ? ORDER BY display_order, id').all(prefectureSlug) as Area[];
 }
 
 export function getAreaBySlug(slug: string): Area | undefined {

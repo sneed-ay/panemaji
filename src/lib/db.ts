@@ -109,6 +109,11 @@ function getDb(): Database.Database {
     _db.exec("UPDATE areas SET prefecture = '神奈川' WHERE id >= 27 AND id <= 37");
   }
 
+  // Add display_order column to areas if missing
+  if (!areaCols.includes('display_order')) {
+    _db.exec('ALTER TABLE areas ADD COLUMN display_order INTEGER DEFAULT 999');
+  }
+
   // Optimize SQLite for read-heavy workload
   _db.pragma('cache_size = -20000'); // 20MB cache
   _db.pragma('temp_store = MEMORY');
