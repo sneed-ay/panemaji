@@ -15,18 +15,27 @@ function getRandomNoteImage(): string {
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
-/** 忍者AdMax (SP 320x100) */
+/** 忍者AdMax (SP 320x100) - iframe方式でdocument.write対応 */
 function NinjaAdMaxBanner() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const script = document.createElement('script');
-    script.src = AD_CONFIG.ninjaAdmax.scriptSrc;
-    el.appendChild(script);
-    return () => { if (el) el.innerHTML = ''; };
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><style>body{margin:0;padding:0;overflow:hidden;display:flex;justify-content:center;}</style></head><body><script src="${AD_CONFIG.ninjaAdmax.scriptSrc}"><\/script></body></html>`);
+    doc.close();
   }, []);
-  return <div ref={containerRef} className="inline-block" />;
+  return (
+    <iframe
+      ref={iframeRef}
+      className="border-0 mx-auto block"
+      style={{ width: '320px', height: '100px' }}
+      scrolling="no"
+      title="ad"
+    />
+  );
 }
 
 /** Note自社広告バナー */
