@@ -32,16 +32,13 @@ function isDismissed(size: AdSize): boolean {
 
 function dismissAd(size: AdSize): void {
   try {
-    // Hide for 24 hours
     const expiry = Date.now() + 24 * 60 * 60 * 1000;
     localStorage.setItem(getDismissKey(size), String(expiry));
-  } catch {
-    // localStorage unavailable
-  }
+  } catch {}
 }
 
-/** Pick a random rectangle image variant */
-function getRandomRectangle(): string {
+/** Pick a random ad image from the 4 patterns */
+function getRandomAd(): string {
   const variants = AD_CONFIG.images.rectangle;
   return variants[Math.floor(Math.random() * variants.length)];
 }
@@ -49,15 +46,14 @@ function getRandomRectangle(): string {
 export default function AdBanner({ size, className = '' }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [rectangleSrc, setRectangleSrc] = useState<string>('');
+  const [adSrc, setAdSrc] = useState<string>('');
 
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
     if (isDismissed(size)) return;
     setVisible(true);
-    if (size === 'rectangle') {
-      setRectangleSrc(getRandomRectangle());
-    }
+    // All sizes use random pattern from the 4 SP banners
+    setAdSrc(getRandomAd());
   }, [size]);
 
   const handleDismiss = useCallback(() => {
@@ -69,41 +65,29 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     setImgError(true);
   }, []);
 
-  if (!AD_CONFIG.enabled || !visible || imgError) return null;
+  if (!AD_CONFIG.enabled || !visible || imgError || !adSrc) return null;
 
   const link = getAdLink(size);
 
   if (size === 'header') {
     return (
-      <div className={`relative bg-gray-100 text-center py-2 ${className}`}>
+      <div className={`relative bg-gray-900 text-center py-1 ${className}`}>
         <a
           href={link}
           target="_blank"
           rel="noopener noreferrer sponsored"
-          className="inline-block"
+          className="inline-block w-full max-w-3xl px-2"
         >
-          {/* PC: 728x90 */}
           <img
-            src={AD_CONFIG.images.header_pc}
-            alt="note記事をチェック"
-            width={728}
-            height={90}
-            className="hidden md:inline-block max-w-full h-auto"
-            onError={handleImgError}
-          />
-          {/* SP: 320x100 */}
-          <img
-            src={AD_CONFIG.images.header_sp}
-            alt="note記事をチェック"
-            width={320}
-            height={100}
-            className="inline-block md:hidden max-w-full h-auto"
+            src={adSrc}
+            alt="裏垢戦略をチェック"
+            className="w-full h-auto rounded"
             onError={handleImgError}
           />
         </a>
         <button
           onClick={handleDismiss}
-          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white rounded-full text-xs leading-none transition-colors"
+          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full text-xs leading-none transition-colors"
           aria-label="広告を閉じる"
         >
           &times;
@@ -113,21 +97,18 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   }
 
   if (size === 'rectangle') {
-    if (!rectangleSrc) return null;
     return (
       <div className={`text-center my-4 ${className}`}>
         <a
           href={link}
           target="_blank"
           rel="noopener noreferrer sponsored"
-          className="inline-block"
+          className="inline-block w-full max-w-lg px-2"
         >
           <img
-            src={rectangleSrc}
-            alt="note記事をチェック"
-            width={300}
-            height={250}
-            className="max-w-full h-auto rounded-lg shadow"
+            src={adSrc}
+            alt="裏垢戦略をチェック"
+            className="w-full h-auto rounded-lg shadow"
             onError={handleImgError}
           />
         </a>
@@ -138,26 +119,24 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   if (size === 'footer') {
     return (
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-gray-100 text-center py-1 md:hidden ${className}`}
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-gray-900 text-center py-1 md:hidden ${className}`}
       >
         <a
           href={link}
           target="_blank"
           rel="noopener noreferrer sponsored"
-          className="inline-block"
+          className="inline-block w-full max-w-md px-2"
         >
           <img
-            src={AD_CONFIG.images.footer_sp}
-            alt="note記事をチェック"
-            width={320}
-            height={50}
-            className="max-w-full h-auto"
+            src={adSrc}
+            alt="裏垢戦略をチェック"
+            className="w-full h-auto"
             onError={handleImgError}
           />
         </a>
         <button
           onClick={handleDismiss}
-          className="absolute top-0 right-1 w-5 h-5 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white rounded-full text-[10px] leading-none transition-colors"
+          className="absolute top-0 right-1 w-5 h-5 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full text-[10px] leading-none transition-colors"
           aria-label="広告を閉じる"
         >
           &times;

@@ -4,16 +4,18 @@
  */
 export const AD_CONFIG = {
   enabled: true,
-  link: 'https://note.com/kaito_ura/all',
+  link: 'https://note.com/kaito_ura/n/n5a879e870165',
   images: {
-    header_pc: '/ad/note-728x90.png',
-    header_sp: '/ad/note-320x100.png',
+    // SP 320x100 banners (4 patterns, random display)
+    header_pc: '/ad/sp-ad1.jpg',
+    header_sp: '/ad/sp-ad1.jpg',
     rectangle: [
-      '/ad/note-300x250.png',
-      '/ad/note-300x250-v2.png',
-      '/ad/note-300x250-v3.png',
+      '/ad/sp-ad1.jpg',
+      '/ad/sp-ad2.jpg',
+      '/ad/sp-ad3.jpg',
+      '/ad/sp-ad4.jpg',
     ],
-    footer_sp: '/ad/note-320x50.png',
+    footer_sp: '/ad/sp-ad1.jpg',
   },
   utm: {
     source: 'panemaji',
