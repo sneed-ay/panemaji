@@ -1,4 +1,5 @@
 import React from "react";
+import AdBanner from "@/components/AdBanner";
 
 type RelatedLink = {
   href: string;
@@ -42,6 +43,9 @@ export default function ArticleLayout({
 
         <div className="space-y-10 text-gray-700 text-sm sm:text-base leading-relaxed">
           {children}
+
+          {/* Ad Banner */}
+          <AdBanner size="rectangle" />
 
           {/* CTA */}
           <section className="text-center">

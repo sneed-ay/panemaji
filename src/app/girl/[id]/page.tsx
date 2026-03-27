@@ -4,6 +4,7 @@ import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
 import ShareButtons from '@/components/ShareButtons';
 import GirlPageClient from './GirlPageClient';
+import AdBanner from '@/components/AdBanner';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -238,6 +239,8 @@ export default function GirlPage({ params }: { params: { id: string } }) {
           review_count: g.review_count || 0,
         }))}
       />
+
+      <AdBanner size="rectangle" />
 
       {/* Other Girls in Same Shop */}
       {otherGirls.length > 0 && (

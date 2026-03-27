@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import GirlImage from '@/components/GirlImage';
 import RealScore from '@/components/RealScore';
 import PanelRatingBar from '@/components/PanelRatingBar';
+import AdBanner from '@/components/AdBanner';
 
 type GirlData = {
   id: number;
@@ -112,48 +113,54 @@ export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; qu
         </p>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sorted.map((girl) => (
-            <a
-              key={girl.id}
-              href={`/girl/${girl.id}`}
-              className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden no-underline"
-            >
-              <div className="p-3 sm:p-4">
-                <div className="flex items-start gap-3">
-                  <GirlImage src={girl.image_url} alt={girl.name} size={80} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">{girl.name}</h4>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
-                          {girl.age}歳
-                          {girl.height && ` T${girl.height}`}
-                          {girl.bust && girl.cup && ` B${girl.bust}(${girl.cup})`}
-                          {girl.waist && ` W${girl.waist}`}
-                          {girl.hip && ` H${girl.hip}`}
-                        </p>
+          {sorted.map((girl, index) => (
+            <React.Fragment key={girl.id}>
+              <a
+                href={`/girl/${girl.id}`}
+                className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden no-underline"
+              >
+                <div className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <GirlImage src={girl.image_url} alt={girl.name} size={80} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">{girl.name}</h4>
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
+                            {girl.age}歳
+                            {girl.height && ` T${girl.height}`}
+                            {girl.bust && girl.cup && ` B${girl.bust}(${girl.cup})`}
+                            {girl.waist && ` W${girl.waist}`}
+                            {girl.hip && ` H${girl.hip}`}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
+                        </div>
                       </div>
-                      <div className="shrink-0">
-                        <RealScore pct={girl.real_pct ?? -1} reviewCount={girl.review_count || 0} />
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-gray-400">口コミ {girl.review_count || 0}件</span>
+                        {(girl.review_count || 0) === 0 && (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">口コミ募集中</span>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-gray-400">口コミ {girl.review_count || 0}件</span>
-                      {(girl.review_count || 0) === 0 && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">口コミ募集中</span>
-                      )}
-                    </div>
-                    <div className="mt-2">
-                      <PanelRatingBar
-                        matchCount={girl.panel_match_count || 0}
-                        diffCount={girl.panel_diff_count || 0}
-                        jiraiCount={girl.jirai_count || 0}
-                      />
+                      <div className="mt-2">
+                        <PanelRatingBar
+                          matchCount={girl.panel_match_count || 0}
+                          diffCount={girl.panel_diff_count || 0}
+                          jiraiCount={girl.jirai_count || 0}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </a>
+              </a>
+              {(index + 1) % 5 === 0 && (
+                <div className="col-span-1 sm:col-span-2 lg:col-span-3">
+                  <AdBanner size="rectangle" />
+                </div>
+              )}
+            </React.Fragment>
           ))}
         </div>
       ) : (
