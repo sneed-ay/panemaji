@@ -6,304 +6,137 @@ import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 type AdSize = 'header' | 'rectangle' | 'footer';
 type AdType = 'note' | 'ninja';
 
-const AD_POSITIONS: AdSize[] = ['header', 'rectangle', 'footer'];
-
 interface AdBannerProps {
   size: AdSize;
   className?: string;
 }
 
-const DISMISS_KEY_PREFIX = 'ad_dismissed_';
+const AD_POSITIONS: AdSize[] = ['header', 'rectangle', 'footer'];
 
-function getDismissKey(size: AdSize): string {
-  return `${DISMISS_KEY_PREFIX}${size}`;
-}
-
-function isDismissed(size: AdSize): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const raw = localStorage.getItem(getDismissKey(size));
-    if (!raw) return false;
-    const expiry = parseInt(raw, 10);
-    if (Date.now() < expiry) return true;
-    localStorage.removeItem(getDismissKey(size));
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-function dismissAd(size: AdSize): void {
-  try {
-    const expiry = Date.now() + 24 * 60 * 60 * 1000;
-    localStorage.setItem(getDismissKey(size), String(expiry));
-  } catch {}
-}
-
-/** Pick a random ad image from the 4 patterns */
 function getRandomNoteImage(): string {
   const variants = AD_CONFIG.noteAd.images;
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
-/** Determine ad type based on note:ninja ratio (1:2) */
 function pickAdType(): AdType {
   if (!AD_CONFIG.ninjaAdmax.enabled) return 'note';
   const total = AD_CONFIG.noteRatio + AD_CONFIG.ninjaRatio;
-  const threshold = AD_CONFIG.noteRatio / total; // 0.33
-  return Math.random() < threshold ? 'note' : 'ninja';
+  return Math.random() < AD_CONFIG.noteRatio / total ? 'note' : 'ninja';
 }
 
 /**
- * Get the active ad position for the current page.
- * Uses a module-level cache so all instances on the same page get the same value.
+ * Randomly pick ONE position per page view.
+ * Uses sessionStorage to persist across re-renders but reset on new page.
  */
-let _cachedActivePosition: AdSize | null = null;
-let _cachedAdType: AdType | null = null;
-
 function getActivePosition(): AdSize {
-  if (_cachedActivePosition) return _cachedActivePosition;
-  _cachedActivePosition = AD_POSITIONS[Math.floor(Math.random() * AD_POSITIONS.length)];
-  return _cachedActivePosition;
+  if (typeof window === 'undefined') return 'header';
+  try {
+    const key = 'ad_active_pos_' + window.location.pathname;
+    const cached = sessionStorage.getItem(key);
+    if (cached && AD_POSITIONS.includes(cached as AdSize)) return cached as AdSize;
+    const pos = AD_POSITIONS[Math.floor(Math.random() * AD_POSITIONS.length)];
+    sessionStorage.setItem(key, pos);
+    return pos;
+  } catch {
+    return AD_POSITIONS[Math.floor(Math.random() * AD_POSITIONS.length)];
+  }
 }
 
-function getAdType(): AdType {
-  if (_cachedAdType) return _cachedAdType;
-  _cachedAdType = pickAdType();
-  return _cachedAdType;
-}
-
-/** Ninja AdMax component - dynamically loads script on client side */
-function NinjaAdMaxBanner({ size, className, onDismiss }: { size: AdSize; className: string; onDismiss: () => void }) {
+function NinjaAdMaxBanner({ onDismiss }: { onDismiss: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const el = containerRef.current;
+    if (!el) return;
     const script = document.createElement('script');
     script.src = AD_CONFIG.ninjaAdmax.scriptSrc;
-    container.appendChild(script);
-
-    return () => {
-      // Cleanup on unmount
-      if (container) {
-        container.innerHTML = '';
-      }
-    };
+    el.appendChild(script);
+    return () => { if (el) el.innerHTML = ''; };
   }, []);
 
-  if (size === 'header') {
-    return (
-      <div className={`relative bg-gray-900 text-center py-1 ${className}`}>
-        <div ref={containerRef} className="inline-block w-full max-w-3xl px-2" />
-        <button
-          onClick={onDismiss}
-          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full text-xs leading-none transition-colors"
-          aria-label="広告を閉じる"
-        >
-          &times;
-        </button>
-      </div>
-    );
-  }
+  return (
+    <div className="relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3">
+      <div className="text-[10px] text-gray-400 mb-1">PR</div>
+      <div ref={containerRef} className="inline-block" />
+      <button onClick={onDismiss}
+        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-full text-xs"
+        aria-label="閉じる">×</button>
+    </div>
+  );
+}
 
-  if (size === 'rectangle') {
-    return (
-      <div className={`text-center my-4 ${className}`}>
-        <div ref={containerRef} className="inline-block w-full max-w-lg px-2" />
-      </div>
-    );
-  }
+function NoteAdBanner({ adSrc, size, onDismiss, onImgError }: {
+  adSrc: string; size: AdSize; onDismiss: () => void; onImgError: () => void;
+}) {
+  const link = getAdLink(size);
+  const handleClick = () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any;
+      if (w.gtag) w.gtag('event', 'ad_click', { ad_size: size, ad_type: 'note', ad_image: adSrc, ad_page: window.location.pathname });
+    } catch {}
+  };
 
-  if (size === 'footer') {
-    return (
-      <div className={`fixed bottom-0 left-0 right-0 z-50 bg-gray-900 text-center py-1 md:hidden ${className}`}>
-        <div ref={containerRef} className="inline-block w-full max-w-md px-2" />
-        <button
-          onClick={onDismiss}
-          className="absolute top-0 right-1 w-5 h-5 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full text-[10px] leading-none transition-colors"
-          aria-label="広告を閉じる"
-        >
-          &times;
-        </button>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3">
+      <div className="text-[10px] text-gray-400 mb-1">PR</div>
+      <a href={link} target="_blank" rel="noopener noreferrer sponsored"
+        className="inline-block w-full max-w-lg px-2" onClick={handleClick}>
+        <img src={adSrc} alt="裏垢戦略をチェック" className="w-full h-auto rounded-lg" onError={onImgError} />
+      </a>
+      <button onClick={onDismiss}
+        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-full text-xs"
+        aria-label="閉じる">×</button>
+    </div>
+  );
 }
 
 export default function AdBanner({ size, className = '' }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [adSrc, setAdSrc] = useState<string>('');
-  const [isActive, setIsActive] = useState(false);
+  const [adSrc, setAdSrc] = useState('');
   const [adType, setAdType] = useState<AdType>('note');
 
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
 
-    // Determine which single position should show the ad on this page
+    // Only show if this position was randomly selected for this page
     const activePos = getActivePosition();
-
-    // Only show if this instance's position matches the chosen one
     if (activePos !== size) return;
 
-    setIsActive(true);
+    // Check dismiss (24hr)
+    try {
+      const raw = localStorage.getItem(`ad_dismissed_${size}`);
+      if (raw && Date.now() < parseInt(raw, 10)) return;
+    } catch {}
 
-    if (isDismissed(size)) return;
-
-    const chosenType = getAdType();
+    const chosenType = pickAdType();
     setAdType(chosenType);
-
-    if (chosenType === 'note') {
-      const src = getRandomNoteImage();
-      setAdSrc(src);
-      // Send GA4 impression event for note ad
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = window as any;
-        if (w.gtag) {
-          w.gtag('event', 'ad_impression', {
-            ad_size: size,
-            ad_type: 'note',
-            ad_image: src,
-            ad_link: AD_CONFIG.noteAd.link,
-          });
-        }
-      } catch {}
-    } else {
-      // Send GA4 impression event for ninja ad
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = window as any;
-        if (w.gtag) {
-          w.gtag('event', 'ad_impression', {
-            ad_size: size,
-            ad_type: 'ninja_admax',
-          });
-        }
-      } catch {}
-    }
-
+    if (chosenType === 'note') setAdSrc(getRandomNoteImage());
     setVisible(true);
-  }, [size]);
 
-  const handleDismiss = useCallback(() => {
-    dismissAd(size);
-    setVisible(false);
-  }, [size]);
-
-  const handleImgError = useCallback(() => {
-    setImgError(true);
-  }, []);
-
-  const handleClick = useCallback(() => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
-      if (w.gtag) {
-        w.gtag('event', 'ad_click', {
-          ad_size: size,
-          ad_type: 'note',
-          ad_image: adSrc,
-          ad_link: AD_CONFIG.noteAd.link,
-          ad_page: window.location.pathname,
-        });
-      }
+      if (w.gtag) w.gtag('event', 'ad_impression', { ad_size: size, ad_type: chosenType });
     } catch {}
-  }, [size, adSrc]);
+  }, [size]);
 
-  if (!AD_CONFIG.enabled || !visible || !isActive) return null;
+  const handleDismiss = useCallback(() => {
+    setVisible(false);
+    try { localStorage.setItem(`ad_dismissed_${size}`, String(Date.now() + 86400000)); } catch {}
+  }, [size]);
 
-  // Ninja AdMax ad
-  if (adType === 'ninja') {
-    return <NinjaAdMaxBanner size={size} className={className} onDismiss={handleDismiss} />;
-  }
+  if (!AD_CONFIG.enabled || !visible) return null;
 
-  // Note ad (existing behavior)
-  if (imgError || !adSrc) return null;
-
-  const link = getAdLink(size);
-
-  if (size === 'header') {
-    return (
-      <div className={`relative bg-gray-900 text-center py-1 ${className}`}>
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          className="inline-block w-full max-w-3xl px-2"
-          onClick={handleClick}
-        >
-          <img
-            src={adSrc}
-            alt="裏垢戦略をチェック"
-            className="w-full h-auto rounded"
-            onError={handleImgError}
-          />
-        </a>
-        <button
-          onClick={handleDismiss}
-          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full text-xs leading-none transition-colors"
-          aria-label="広告を閉じる"
-        >
-          &times;
-        </button>
-      </div>
-    );
-  }
-
-  if (size === 'rectangle') {
-    return (
-      <div className={`text-center my-4 ${className}`}>
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          className="inline-block w-full max-w-lg px-2"
-          onClick={handleClick}
-        >
-          <img
-            src={adSrc}
-            alt="裏垢戦略をチェック"
-            className="w-full h-auto rounded-lg shadow"
-            onError={handleImgError}
-          />
-        </a>
-      </div>
-    );
-  }
-
-  if (size === 'footer') {
-    return (
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-gray-900 text-center py-1 md:hidden ${className}`}
-      >
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          className="inline-block w-full max-w-md px-2"
-          onClick={handleClick}
-        >
-          <img
-            src={adSrc}
-            alt="裏垢戦略をチェック"
-            className="w-full h-auto"
-            onError={handleImgError}
-          />
-        </a>
-        <button
-          onClick={handleDismiss}
-          className="absolute top-0 right-1 w-5 h-5 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full text-[10px] leading-none transition-colors"
-          aria-label="広告を閉じる"
-        >
-          &times;
-        </button>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className={className}>
+      {adType === 'ninja' ? (
+        <NinjaAdMaxBanner onDismiss={handleDismiss} />
+      ) : (
+        !imgError && adSrc ? (
+          <NoteAdBanner adSrc={adSrc} size={size} onDismiss={handleDismiss} onImgError={() => setImgError(true)} />
+        ) : null
+      )}
+    </div>
+  );
 }
