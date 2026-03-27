@@ -65,6 +65,17 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     setImgError(true);
   }, []);
 
+  const handleClick = useCallback(() => {
+    // Send GA4 event
+    if (typeof window !== 'undefined' && typeof (window as Record<string, unknown>).gtag === 'function') {
+      (window as Record<string, (...args: unknown[]) => void>).gtag('event', 'ad_click', {
+        ad_size: size,
+        ad_image: adSrc,
+        ad_destination: AD_CONFIG.link,
+      });
+    }
+  }, [size, adSrc]);
+
   if (!AD_CONFIG.enabled || !visible || imgError || !adSrc) return null;
 
   const link = getAdLink(size);
@@ -77,6 +88,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
           target="_blank"
           rel="noopener noreferrer sponsored"
           className="inline-block w-full max-w-3xl px-2"
+          onClick={handleClick}
         >
           <img
             src={adSrc}
@@ -104,6 +116,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
           target="_blank"
           rel="noopener noreferrer sponsored"
           className="inline-block w-full max-w-lg px-2"
+          onClick={handleClick}
         >
           <img
             src={adSrc}
@@ -126,6 +139,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
           target="_blank"
           rel="noopener noreferrer sponsored"
           className="inline-block w-full max-w-md px-2"
+          onClick={handleClick}
         >
           <img
             src={adSrc}
