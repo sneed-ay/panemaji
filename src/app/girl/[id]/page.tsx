@@ -61,7 +61,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
   const jsonLdReviews = reviews.map((r) => ({
     '@type': 'Review' as const,
     author: { '@type': 'Person' as const, name: '匿名ユーザー' },
-    datePublished: r.created_at?.split(' ')[0] || r.visit_date,
+    datePublished: r.created_at?.substring(0, 10) || r.visit_date,
     reviewRating: {
       '@type': 'Rating' as const,
       ratingValue: ratingMap[r.panel_rating] || 3,

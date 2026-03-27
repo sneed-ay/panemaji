@@ -194,7 +194,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
                   )}
                 </div>
                 <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
-                  {review.created_at?.split(' ')[0] || review.created_at}
+                  {review.created_at?.substring(0, 10) || review.created_at}
                 </span>
               </div>
             ))}

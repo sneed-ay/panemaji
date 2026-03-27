@@ -164,7 +164,7 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
                   )}
                 </div>
                 <span className="text-[10px] text-gray-400 whitespace-nowrap shrink-0">
-                  {review.created_at?.split(' ')[0] || review.created_at}
+                  {review.created_at?.substring(0, 10) || review.created_at}
                 </span>
               </div>
             ))}

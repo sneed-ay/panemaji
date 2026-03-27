@@ -99,7 +99,7 @@ export default function GirlPageClient({ girlId, girlName, shopName, initialRevi
                 <div className="flex items-center justify-between mb-2 gap-2">
                   <PanelRatingBadge rating={review.panel_rating} />
                   <span className="text-xs text-gray-400 shrink-0">
-                    {review.created_at?.split(' ')[0] || review.created_at}
+                    {review.created_at?.substring(0, 10) || review.created_at}
                   </span>
                 </div>
                 {review.comment && (

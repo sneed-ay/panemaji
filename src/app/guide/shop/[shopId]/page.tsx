@@ -239,7 +239,7 @@ export default function ShopArticlePage({ params }: { params: { shopId: string }
                           {review.girl_name}
                         </a>
                         <span className="text-xs text-gray-400 ml-auto">
-                          {review.created_at?.split(' ')[0] || review.created_at}
+                          {review.created_at?.substring(0, 10) || review.created_at}
                         </span>
                       </div>
                       <p className="text-gray-600 text-sm">{review.comment}</p>
