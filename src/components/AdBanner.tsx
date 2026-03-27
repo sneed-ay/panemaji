@@ -51,9 +51,21 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
     if (isDismissed(size)) return;
+    const src = getRandomAd();
+    setAdSrc(src);
     setVisible(true);
-    // All sizes use random pattern from the 4 SP banners
-    setAdSrc(getRandomAd());
+    // Send GA4 impression event
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any;
+      if (w.gtag) {
+        w.gtag('event', 'ad_impression', {
+          ad_size: size,
+          ad_image: src,
+          ad_link: AD_CONFIG.link,
+        });
+      }
+    } catch {}
   }, [size]);
 
   const handleDismiss = useCallback(() => {
@@ -66,14 +78,19 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   }, []);
 
   const handleClick = useCallback(() => {
-    // Send GA4 event
-    if (typeof window !== 'undefined' && typeof (window as Record<string, unknown>).gtag === 'function') {
-      (window as Record<string, (...args: unknown[]) => void>).gtag('event', 'ad_click', {
-        ad_size: size,
-        ad_image: adSrc,
-        ad_destination: AD_CONFIG.link,
-      });
-    }
+    // Send GA4 click event with link info for per-link tracking
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any;
+      if (w.gtag) {
+        w.gtag('event', 'ad_click', {
+          ad_size: size,
+          ad_image: adSrc,
+          ad_link: AD_CONFIG.link,
+          ad_page: window.location.pathname,
+        });
+      }
+    } catch {}
   }, [size, adSrc]);
 
   if (!AD_CONFIG.enabled || !visible || imgError || !adSrc) return null;
