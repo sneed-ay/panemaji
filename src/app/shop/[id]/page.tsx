@@ -1,8 +1,9 @@
-import { getShopById, getGirlsByShop, getReviewsByShop, CATEGORY_COLORS } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getReviewsByShop, getShopComments, CATEGORY_COLORS } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
+import ShopBBS from '@/components/ShopBBS';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const query = searchParams.q || '';
   const girls = getGirlsByShop(shopId, query || undefined);
   const latestReviews = getReviewsByShop(shopId, 5);
+  const shopComments = getShopComments(shopId, 20);
 
   const matchCount = shop.panel_match_count || 0;
   const diffCount = shop.panel_diff_count || 0;
@@ -223,6 +225,9 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
       {/* Girls List with Sort/Filter */}
       <GirlSortFilter girls={girlsData} query={query} />
+
+      {/* Shop BBS */}
+      <ShopBBS shopId={shopId} initialComments={shopComments} />
     </div>
   );
 }

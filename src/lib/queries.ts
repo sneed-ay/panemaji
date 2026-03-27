@@ -1,4 +1,4 @@
-import db, { Area, Shop, Girl, Review } from './db';
+import db, { Area, Shop, Girl, Review, ShopComment } from './db';
 import { seedIfEmpty } from './seed';
 
 // Skip seed during build phase
@@ -496,6 +496,35 @@ export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: numbe
 export function getShopAreaId(shopId: number): number | undefined {
   const row = db.prepare('SELECT area_id FROM shops WHERE id = ?').get(shopId) as { area_id: number } | undefined;
   return row?.area_id;
+}
+
+// --- Shop Comments (BBS) ---
+
+export function getShopComments(shopId: number, limit: number = 20): ShopComment[] {
+  return db.prepare(`
+    SELECT * FROM shop_comments
+    WHERE shop_id = ?
+    ORDER BY created_at ASC
+    LIMIT ?
+  `).all(shopId, limit) as ShopComment[];
+}
+
+export function addShopComment(shopId: number, comment: string, browserId: string | null): ShopComment {
+  const result = db.prepare(
+    'INSERT INTO shop_comments (shop_id, comment, browser_id) VALUES (?, ?, ?)'
+  ).run(shopId, comment, browserId);
+  return db.prepare('SELECT * FROM shop_comments WHERE id = ?').get(result.lastInsertRowid) as ShopComment;
+}
+
+export function getShopCommentCount(shopId: number): number {
+  return (db.prepare('SELECT COUNT(*) as c FROM shop_comments WHERE shop_id = ?').get(shopId) as { c: number }).c;
+}
+
+export function getLastShopCommentTime(shopId: number, browserId: string): string | null {
+  const row = db.prepare(
+    'SELECT created_at FROM shop_comments WHERE shop_id = ? AND browser_id = ? ORDER BY created_at DESC LIMIT 1'
+  ).get(shopId, browserId) as { created_at: string } | undefined;
+  return row?.created_at || null;
 }
 
 // --- Shop Article Queries ---

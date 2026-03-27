@@ -5,6 +5,8 @@ import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
 
+const AD_POSITIONS: AdSize[] = ['header', 'rectangle', 'footer'];
+
 interface AdBannerProps {
   size: AdSize;
   className?: string;
@@ -43,13 +45,36 @@ function getRandomAd(): string {
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
+/**
+ * Get the active ad position for the current page.
+ * Uses a module-level cache so all instances on the same page get the same value.
+ * Resets on each page load (new random pick).
+ */
+let _cachedActivePosition: AdSize | null = null;
+
+function getActivePosition(): AdSize {
+  if (_cachedActivePosition) return _cachedActivePosition;
+  _cachedActivePosition = AD_POSITIONS[Math.floor(Math.random() * AD_POSITIONS.length)];
+  return _cachedActivePosition;
+}
+
 export default function AdBanner({ size, className = '' }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [adSrc, setAdSrc] = useState<string>('');
+  const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
+
+    // Determine which single position should show the ad on this page
+    const activePos = getActivePosition();
+
+    // Only show if this instance's position matches the chosen one
+    if (activePos !== size) return;
+
+    setIsActive(true);
+
     if (isDismissed(size)) return;
     const src = getRandomAd();
     setAdSrc(src);
@@ -78,7 +103,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   }, []);
 
   const handleClick = useCallback(() => {
-    // Send GA4 click event with link info for per-link tracking
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
@@ -93,7 +117,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     } catch {}
   }, [size, adSrc]);
 
-  if (!AD_CONFIG.enabled || !visible || imgError || !adSrc) return null;
+  if (!AD_CONFIG.enabled || !visible || imgError || !adSrc || !isActive) return null;
 
   const link = getAdLink(size);
 

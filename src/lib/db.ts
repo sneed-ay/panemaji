@@ -85,6 +85,16 @@ function getDb(): Database.Database {
       message TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS shop_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL,
+      comment TEXT NOT NULL,
+      browser_id TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (shop_id) REFERENCES shops(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_shop_comments_shop ON shop_comments(shop_id);
   `);
 
   // Add twitter_url column if missing
@@ -183,6 +193,14 @@ export type Girl = {
   panel_diff_count?: number;
   jirai_count?: number;
   real_pct?: number;
+};
+
+export type ShopComment = {
+  id: number;
+  shop_id: number;
+  comment: string;
+  browser_id: string | null;
+  created_at: string;
 };
 
 export type Review = {
