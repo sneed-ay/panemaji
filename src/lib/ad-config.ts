@@ -14,9 +14,9 @@ export const AD_CONFIG = {
       campaign: 'note_ad',
     },
   },
-  // 忍者AdMax（外部広告ネットワーク）
+  // 忍者AdMax（外部広告ネットワーク）- 審査完了後にtrueに変更
   ninjaAdmax: {
-    enabled: true,
+    enabled: false,
     scriptSrc: 'https://adm.shinobi.jp/s/6fd6c506b10e1accd8bd7a507c384683',
   },
   // note:忍者 = 1:2 の割合
