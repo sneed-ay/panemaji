@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
-type AdType = 'note' | 'exoclick' | 'juicyads';
+type AdType = 'note' | 'ninja' | 'exoclick' | 'juicyads';
 
 interface AdBannerProps {
   size: AdSize;
@@ -23,12 +23,17 @@ function pickAdType(): AdType {
   // noteは常に候補
   candidates.push({ type: 'note', weight: AD_CONFIG.noteRatio });
 
-  // ExoClick: enabled かつ zoneId が設定済みの場合のみ
+  // 忍者AdMax
+  if (AD_CONFIG.ninjaAdmax.enabled && AD_CONFIG.ninjaAdmax.zoneId) {
+    candidates.push({ type: 'ninja', weight: AD_CONFIG.ninjaRatio });
+  }
+
+  // ExoClick
   if (AD_CONFIG.exoclick.enabled && AD_CONFIG.exoclick.zoneId) {
     candidates.push({ type: 'exoclick', weight: AD_CONFIG.exoclickRatio });
   }
 
-  // JuicyAds: enabled かつ zoneId が設定済みの場合のみ
+  // JuicyAds
   if (AD_CONFIG.juicyads.enabled && AD_CONFIG.juicyads.zoneId) {
     candidates.push({ type: 'juicyads', weight: AD_CONFIG.juicyadsRatio });
   }
@@ -40,6 +45,25 @@ function pickAdType(): AdType {
     if (rand <= 0) return c.type;
   }
   return 'note'; // fallback
+}
+
+/** 忍者AdMax広告バナー - iframe方式 */
+function NinjaAdMaxBanner() {
+  const { ninjaAdmax } = AD_CONFIG;
+  const html = `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;}</style></head><body>
+<script src="https://adm.shinobi.jp/s/${ninjaAdmax.zoneId}" type="text/javascript"></script>
+</body></html>`;
+
+  return (
+    <div className="flex justify-center">
+      <iframe
+        srcDoc={html}
+        style={{ width: 320, height: 100, border: 'none', overflow: 'hidden' }}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        scrolling="no"
+      />
+    </div>
+  );
 }
 
 /** ExoClick広告バナー - iframe方式（SPAでも安定動作） */
@@ -145,6 +169,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
+        {adType === 'ninja' && <NinjaAdMaxBanner />}
         {adType === 'exoclick' && <ExoClickBanner />}
         {adType === 'juicyads' && <JuicyAdsBanner />}
         {adType === 'note' && <NoteAdImage size={size} />}

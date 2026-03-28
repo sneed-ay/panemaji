@@ -1,5 +1,8 @@
-# ExoClick - アカウント登録後にエントリを追加
-# exoclick.com, PUBLISHER_ID, DIRECT
+# 忍者AdMax
+adm.shinobi.jp,229417,DIRECT
 
-# JuicyAds - アカウント登録後にエントリを追加
-# juicyads.com, PUBLISHER_ID, DIRECT
+# ExoClick
+exoclick.com,1092402,DIRECT
+
+# JuicyAds
+juicyads.com,313678,DIRECT
