@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
@@ -42,40 +42,25 @@ function pickAdType(): AdType {
   return 'note'; // fallback
 }
 
-/** ExoClick広告バナー */
+/** ExoClick広告バナー - iframe方式（SPAでも安定動作） */
 function ExoClickBanner() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
+  const { exoclick } = AD_CONFIG;
+  const html = `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;}</style></head><body>
+<script async type="application/javascript" src="${exoclick.scriptUrl}"></script>
+<ins class="eas6a97888e2" data-zoneid="${exoclick.zoneId}"></ins>
+<script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+</body></html>`;
 
-  useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
-    loadedRef.current = true;
-
-    const container = containerRef.current;
-    const { exoclick } = AD_CONFIG;
-
-    // スクリプトタグを挿入
-    const providerScript = document.createElement('script');
-    providerScript.type = 'application/javascript';
-    providerScript.src = exoclick.scriptUrl;
-    container.appendChild(providerScript);
-
-    // ins要素を挿入
-    const ins = document.createElement('ins');
-    ins.className = 'adsbyexoclick';
-    ins.style.display = 'inline-block';
-    ins.style.width = '300px';
-    ins.style.height = '250px';
-    ins.dataset.zoneid = exoclick.zoneId;
-    container.appendChild(ins);
-
-    // push呼び出し
-    const pushScript = document.createElement('script');
-    pushScript.textContent = '(adsbyexoclick = window.adsbyexoclick || []).push({});';
-    container.appendChild(pushScript);
-  }, []);
-
-  return <div ref={containerRef} className="flex justify-center" />;
+  return (
+    <div className="flex justify-center">
+      <iframe
+        srcDoc={html}
+        style={{ width: 300, height: 250, border: 'none', overflow: 'hidden' }}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        scrolling="no"
+      />
+    </div>
+  );
 }
 
 /** JuicyAds広告バナー - iframe方式（SPAでも動作する） */

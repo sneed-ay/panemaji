@@ -12,10 +12,10 @@ export const AD_CONFIG = {
     utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
   },
 
-  // ExoClick（成人向けアドネットワーク）- サイト認証待ち
+  // ExoClick（成人向けアドネットワーク）
   exoclick: {
-    enabled: false,
-    zoneId: '', // 認証完了後に設定
+    enabled: true,
+    zoneId: '5884574',
     scriptUrl: 'https://a.magsrv.com/ad-provider.js',
   },
 
@@ -26,9 +26,9 @@ export const AD_CONFIG = {
     scriptUrl: 'https://poweredby.jads.co/js/jads.js',
   },
 
-  // 配信比率: note:juicyads = 1:1 (ExoClick認証待ち)
+  // 配信比率: note:exoclick:juicyads = 1:1:1
   noteRatio: 1,
-  exoclickRatio: 0,
+  exoclickRatio: 1,
   juicyadsRatio: 1,
 };
 
