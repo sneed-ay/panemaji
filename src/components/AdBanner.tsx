@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
+type AdType = 'note' | 'exoclick' | 'juicyads';
 
 interface AdBannerProps {
   size: AdSize;
@@ -15,27 +16,97 @@ function getRandomNoteImage(): string {
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
-/** 忍者AdMax (SP 320x100) - iframe方式でdocument.write対応 */
-function NinjaAdMaxBanner() {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+/** 配信比率に基づいて広告タイプを選択（zoneId未設定のネットワークはスキップ） */
+function pickAdType(): AdType {
+  const candidates: { type: AdType; weight: number }[] = [];
+
+  // noteは常に候補
+  candidates.push({ type: 'note', weight: AD_CONFIG.noteRatio });
+
+  // ExoClick: enabled かつ zoneId が設定済みの場合のみ
+  if (AD_CONFIG.exoclick.enabled && AD_CONFIG.exoclick.zoneId) {
+    candidates.push({ type: 'exoclick', weight: AD_CONFIG.exoclickRatio });
+  }
+
+  // JuicyAds: enabled かつ zoneId が設定済みの場合のみ
+  if (AD_CONFIG.juicyads.enabled && AD_CONFIG.juicyads.zoneId) {
+    candidates.push({ type: 'juicyads', weight: AD_CONFIG.juicyadsRatio });
+  }
+
+  const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+  let rand = Math.random() * totalWeight;
+  for (const c of candidates) {
+    rand -= c.weight;
+    if (rand <= 0) return c.type;
+  }
+  return 'note'; // fallback
+}
+
+/** ExoClick広告バナー */
+function ExoClickBanner() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) return;
-    doc.open();
-    doc.write(`<!DOCTYPE html><html><head><style>body{margin:0;padding:0;overflow:hidden;display:flex;justify-content:center;}</style></head><body><script src="${AD_CONFIG.ninjaAdmax.scriptSrc}"><\/script></body></html>`);
-    doc.close();
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+
+    const container = containerRef.current;
+    const { exoclick } = AD_CONFIG;
+
+    // スクリプトタグを挿入
+    const providerScript = document.createElement('script');
+    providerScript.type = 'application/javascript';
+    providerScript.src = exoclick.scriptUrl;
+    container.appendChild(providerScript);
+
+    // ins要素を挿入
+    const ins = document.createElement('ins');
+    ins.className = 'adsbyexoclick';
+    ins.style.display = 'inline-block';
+    ins.style.width = '300px';
+    ins.style.height = '250px';
+    ins.dataset.zoneid = exoclick.zoneId;
+    container.appendChild(ins);
+
+    // push呼び出し
+    const pushScript = document.createElement('script');
+    pushScript.textContent = '(adsbyexoclick = window.adsbyexoclick || []).push({});';
+    container.appendChild(pushScript);
   }, []);
-  return (
-    <iframe
-      ref={iframeRef}
-      className="border-0 mx-auto block"
-      style={{ width: '320px', height: '100px' }}
-      scrolling="no"
-      title="ad"
-    />
-  );
+
+  return <div ref={containerRef} className="flex justify-center" />;
+}
+
+/** JuicyAds広告バナー */
+function JuicyAdsBanner() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+
+    const container = containerRef.current;
+    const { juicyads } = AD_CONFIG;
+
+    // スクリプトタグを挿入
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.dataset.cfasync = 'false';
+    script.async = true;
+    script.src = juicyads.scriptUrl;
+    container.appendChild(script);
+
+    // ins要素を挿入
+    const ins = document.createElement('ins');
+    ins.id = juicyads.zoneId;
+    ins.dataset.width = '300';
+    ins.dataset.height = '250';
+    container.appendChild(ins);
+  }, []);
+
+  return <div ref={containerRef} className="flex justify-center" />;
 }
 
 /** Note自社広告バナー */
@@ -64,7 +135,7 @@ function NoteAdImage({ size }: { size: AdSize }) {
 
 export default function AdBanner({ size, className = '' }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [adType, setAdType] = useState<AdType>('note');
 
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
@@ -75,17 +146,17 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
       if (raw && Date.now() < parseInt(raw, 10)) return;
     } catch {}
 
-    // Detect mobile
-    setIsMobile(window.innerWidth < 768);
+    const picked = pickAdType();
+    setAdType(picked);
     setVisible(true);
 
     // GA impression
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
-      if (w.gtag) w.gtag('event', 'ad_impression', { ad_size: size, ad_type: isMobile ? 'ninja_admax' : 'note' });
+      if (w.gtag) w.gtag('event', 'ad_impression', { ad_size: size, ad_type: picked });
     } catch {}
-  }, [size, isMobile]);
+  }, [size]);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
@@ -94,14 +165,13 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
 
   if (!AD_CONFIG.enabled || !visible) return null;
 
-  // SP: 忍者AdMax (note:忍者 = 1:2)、PC: note広告のみ
-  const showNinja = isMobile && AD_CONFIG.ninjaAdmax.enabled && Math.random() > 0.33;
-
   return (
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
-        {showNinja ? <NinjaAdMaxBanner /> : <NoteAdImage size={size} />}
+        {adType === 'exoclick' && <ExoClickBanner />}
+        {adType === 'juicyads' && <JuicyAdsBanner />}
+        {adType === 'note' && <NoteAdImage size={size} />}
       </div>
       <button onClick={handleDismiss}
         className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-full text-xs"

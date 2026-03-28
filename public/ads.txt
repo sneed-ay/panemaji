@@ -1,7 +1,5 @@
-adm.shinobi.jp,229417,DIRECT
-33across.com,0010b00002Mq2FYAAZ,RESELLER,bbea06d9c4d2853c
-33across.com,0013300001r0t9mAAA,RESELLER,bbea06d9c4d2853c
-33across.com,0014000001aXjnGAAS,RESELLER,bbea06d9c4d2853c
-google.com,pub-1062972861553303,RESELLER,f08c47fec0942fa0
-google.com,pub-3769010358500643,RESELLER,f08c47fec0942fa0
-google.com,pub-9341661452948405,RESELLER,f08c47fec0942fa0
+# ExoClick - アカウント登録後にエントリを追加
+# exoclick.com, PUBLISHER_ID, DIRECT
+
+# JuicyAds - アカウント登録後にエントリを追加
+# juicyads.com, PUBLISHER_ID, DIRECT
