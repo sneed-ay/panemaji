@@ -47,8 +47,30 @@ function pickAdType(): AdType {
   return 'note'; // fallback
 }
 
+/** 外部広告の共通ラッパー - 読み込み失敗時にnoteにフォールバック */
+function ExternalAdWithFallback({ size, children }: { size: AdSize; children: React.ReactNode }) {
+  const [showFallback, setShowFallback] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // 4秒後に広告が表示されたかチェック。iframe/img/canvasがなければフォールバック
+    const timer = setTimeout(() => {
+      if (!containerRef.current) return;
+      const hasContent = containerRef.current.querySelector('iframe, img, canvas, svg, [class*="ad"]');
+      const height = containerRef.current.offsetHeight;
+      if (!hasContent || height < 50) {
+        setShowFallback(true);
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showFallback) return <NoteAdImage size={size} />;
+  return <div ref={containerRef}>{children}</div>;
+}
+
 /** 忍者AdMax広告バナー - direct script injection */
-function NinjaAdMaxBanner() {
+function NinjaAdMaxBanner({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
 
@@ -63,11 +85,15 @@ function NinjaAdMaxBanner() {
     container.appendChild(script);
   }, []);
 
-  return <div ref={containerRef} className="flex justify-center min-h-[100px]" />;
+  return (
+    <ExternalAdWithFallback size={size}>
+      <div ref={containerRef} className="flex justify-center" />
+    </ExternalAdWithFallback>
+  );
 }
 
 /** ExoClick広告バナー - direct script injection */
-function ExoClickBanner() {
+function ExoClickBanner({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
 
@@ -93,11 +119,15 @@ function ExoClickBanner() {
     container.appendChild(init);
   }, []);
 
-  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
+  return (
+    <ExternalAdWithFallback size={size}>
+      <div ref={containerRef} className="flex justify-center" />
+    </ExternalAdWithFallback>
+  );
 }
 
 /** JuicyAds広告バナー - direct script injection */
-function JuicyAdsBanner() {
+function JuicyAdsBanner({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
 
@@ -124,7 +154,11 @@ function JuicyAdsBanner() {
     container.appendChild(init);
   }, []);
 
-  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
+  return (
+    <ExternalAdWithFallback size={size}>
+      <div ref={containerRef} className="flex justify-center" />
+    </ExternalAdWithFallback>
+  );
 }
 
 /** Note自社広告バナー */
@@ -187,9 +221,9 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
-        {adType === 'ninja' && <NinjaAdMaxBanner />}
-        {adType === 'exoclick' && <ExoClickBanner />}
-        {adType === 'juicyads' && <JuicyAdsBanner />}
+        {adType === 'ninja' && <NinjaAdMaxBanner size={size} />}
+        {adType === 'exoclick' && <ExoClickBanner size={size} />}
+        {adType === 'juicyads' && <JuicyAdsBanner size={size} />}
         {adType === 'note' && <NoteAdImage size={size} />}
       </div>
       <button onClick={handleDismiss}
