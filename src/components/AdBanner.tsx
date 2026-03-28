@@ -78,41 +78,26 @@ function ExoClickBanner() {
   return <div ref={containerRef} className="flex justify-center" />;
 }
 
-/** JuicyAds広告バナー */
+/** JuicyAds広告バナー - iframe方式（SPAでも動作する） */
 function JuicyAdsBanner() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
+  const { juicyads } = AD_CONFIG;
+  const html = `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;}</style></head><body>
+<!-- JuicyAds v3.0 -->
+<script type="text/javascript" data-cfasync="false" async src="${juicyads.scriptUrl}"></script>
+<ins id="${juicyads.zoneId}" data-width="300" data-height="250"></ins>
+<script type="text/javascript">(window.adsbyjuicy = window.adsbyjuicy || []).push({'adzone':${juicyads.zoneId}});</script>
+</body></html>`;
 
-  useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
-    loadedRef.current = true;
-
-    const container = containerRef.current;
-    const { juicyads } = AD_CONFIG;
-
-    // スクリプトタグを挿入
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.dataset.cfasync = 'false';
-    script.async = true;
-    script.src = juicyads.scriptUrl;
-    container.appendChild(script);
-
-    // ins要素を挿入
-    const ins = document.createElement('ins');
-    ins.id = juicyads.zoneId;
-    ins.dataset.width = '300';
-    ins.dataset.height = '250';
-    container.appendChild(ins);
-
-    // push呼び出しスクリプト（JuicyAds v3.0必須）
-    const pushScript = document.createElement('script');
-    pushScript.type = 'text/javascript';
-    pushScript.textContent = `(window.adsbyjuicy = window.adsbyjuicy || []).push({'adzone':${juicyads.zoneId}});`;
-    container.appendChild(pushScript);
-  }, []);
-
-  return <div ref={containerRef} className="flex justify-center" />;
+  return (
+    <div className="flex justify-center">
+      <iframe
+        srcDoc={html}
+        style={{ width: 300, height: 250, border: 'none', overflow: 'hidden' }}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        scrolling="no"
+      />
+    </div>
+  );
 }
 
 /** Note自社広告バナー */
