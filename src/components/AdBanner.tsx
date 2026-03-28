@@ -104,6 +104,12 @@ function JuicyAdsBanner() {
     ins.dataset.width = '300';
     ins.dataset.height = '250';
     container.appendChild(ins);
+
+    // push呼び出しスクリプト（JuicyAds v3.0必須）
+    const pushScript = document.createElement('script');
+    pushScript.type = 'text/javascript';
+    pushScript.textContent = `(window.adsbyjuicy = window.adsbyjuicy || []).push({'adzone':${juicyads.zoneId}});`;
+    container.appendChild(pushScript);
   }, []);
 
   return <div ref={containerRef} className="flex justify-center" />;
