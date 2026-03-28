@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
@@ -47,66 +47,84 @@ function pickAdType(): AdType {
   return 'note'; // fallback
 }
 
-/** 忍者AdMax広告バナー - iframe方式 */
+/** 忍者AdMax広告バナー - direct script injection */
 function NinjaAdMaxBanner() {
-  const { ninjaAdmax } = AD_CONFIG;
-  const html = `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;}</style></head><body>
-<script src="https://adm.shinobi.jp/s/${ninjaAdmax.zoneId}" type="text/javascript"></script>
-</body></html>`;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
 
-  return (
-    <div className="flex justify-center">
-      <iframe
-        srcDoc={html}
-        style={{ width: 320, height: 100, border: 'none', overflow: 'hidden' }}
-        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-        scrolling="no"
-      />
-    </div>
-  );
+  useEffect(() => {
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+    const container = containerRef.current;
+    const { ninjaAdmax } = AD_CONFIG;
+    const script = document.createElement('script');
+    script.src = `https://adm.shinobi.jp/s/${ninjaAdmax.zoneId}`;
+    script.type = 'text/javascript';
+    container.appendChild(script);
+  }, []);
+
+  return <div ref={containerRef} className="flex justify-center min-h-[100px]" />;
 }
 
-/** ExoClick広告バナー - iframe方式（SPAでも安定動作） */
+/** ExoClick広告バナー - direct script injection */
 function ExoClickBanner() {
-  const { exoclick } = AD_CONFIG;
-  const html = `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;}</style></head><body>
-<script async type="application/javascript" src="${exoclick.scriptUrl}"></script>
-<ins class="eas6a97888e2" data-zoneid="${exoclick.zoneId}"></ins>
-<script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
-</body></html>`;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
 
-  return (
-    <div className="flex justify-center">
-      <iframe
-        srcDoc={html}
-        style={{ width: 300, height: 250, border: 'none', overflow: 'hidden' }}
-        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-        scrolling="no"
-      />
-    </div>
-  );
+  useEffect(() => {
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+    const container = containerRef.current;
+    const { exoclick } = AD_CONFIG;
+
+    const script = document.createElement('script');
+    script.src = exoclick.scriptUrl;
+    script.async = true;
+    script.type = 'application/javascript';
+    container.appendChild(script);
+
+    const ins = document.createElement('ins');
+    ins.className = 'eas6a97888e2';
+    ins.dataset.zoneid = exoclick.zoneId;
+    container.appendChild(ins);
+
+    const init = document.createElement('script');
+    init.textContent = '(AdProvider = window.AdProvider || []).push({"serve": {}});';
+    container.appendChild(init);
+  }, []);
+
+  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
 }
 
-/** JuicyAds広告バナー - iframe方式（SPAでも動作する） */
+/** JuicyAds広告バナー - direct script injection */
 function JuicyAdsBanner() {
-  const { juicyads } = AD_CONFIG;
-  const html = `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;justify-content:center;}</style></head><body>
-<!-- JuicyAds v3.0 -->
-<script type="text/javascript" data-cfasync="false" async src="${juicyads.scriptUrl}"></script>
-<ins id="${juicyads.zoneId}" data-width="300" data-height="250"></ins>
-<script type="text/javascript">(window.adsbyjuicy = window.adsbyjuicy || []).push({'adzone':${juicyads.zoneId}});</script>
-</body></html>`;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
 
-  return (
-    <div className="flex justify-center">
-      <iframe
-        srcDoc={html}
-        style={{ width: 300, height: 250, border: 'none', overflow: 'hidden' }}
-        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-        scrolling="no"
-      />
-    </div>
-  );
+  useEffect(() => {
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+    const container = containerRef.current;
+    const { juicyads } = AD_CONFIG;
+
+    const script = document.createElement('script');
+    script.src = juicyads.scriptUrl;
+    script.async = true;
+    script.dataset.cfasync = 'false';
+    container.appendChild(script);
+
+    const ins = document.createElement('ins');
+    ins.id = juicyads.zoneId;
+    ins.dataset.width = '300';
+    ins.dataset.height = '250';
+    container.appendChild(ins);
+
+    const init = document.createElement('script');
+    init.textContent = `(window.adsbyjuicy = window.adsbyjuicy || []).push({'adzone':${juicyads.zoneId}});`;
+    container.appendChild(init);
+  }, []);
+
+  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
 }
 
 /** Note自社広告バナー */
