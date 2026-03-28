@@ -65,6 +65,7 @@ export default function RootLayout({
       <head>
         <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <meta name="google-site-verification" content="PSaa2abLK1zBpmEGM4_h6DlO0YcBdtgnI4xwSY429wY" />
+        <meta name="juicyads-site-verification" content="c3797979fbf983b489abba36968255d9" />
 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ec4899" />
