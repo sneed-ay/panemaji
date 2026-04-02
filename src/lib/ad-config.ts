@@ -1,43 +1,27 @@
 /**
- * Ad configuration: note(自社) + 忍者AdMax + ExoClick + JuicyAds
- * 1週間テスト運用（2026-03-28〜04-04）後に勝者を残す
- * Set enabled to false to hide all ads site-wide.
+ * Ad configuration: note(自社広告)のみ配信
+ * 外部ネットワーク（忍者/ExoClick/JuicyAds）は全て停止
  */
 export const AD_CONFIG = {
   enabled: true,
 
-  // 自社広告（note誘導）
+  // 自社広告（note誘導）- 100%配信
   noteAd: {
     link: 'https://note.com/kaito_ura/n/n5a879e870165',
     images: ['/ad/sp-ad1.jpg', '/ad/sp-ad2.jpg', '/ad/sp-ad3.jpg', '/ad/sp-ad4.jpg'],
     utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
   },
 
-  // 忍者AdMax（日本国内DSP連携）
-  ninjaAdmax: {
-    enabled: true,
-    zoneId: '229417',
-  },
+  // 外部ネットワークは全て無効
+  ninjaAdmax: { enabled: false, zoneId: '229417' },
+  exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
+  juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // ExoClick（成人向けアドネットワーク）
-  exoclick: {
-    enabled: true,
-    zoneId: '5884574',
-    scriptUrl: 'https://a.magsrv.com/ad-provider.js',
-  },
-
-  // JuicyAds（成人向けアドネットワーク）
-  juicyads: {
-    enabled: true,
-    zoneId: '1114086',
-    scriptUrl: 'https://poweredby.jads.co/js/jads.js',
-  },
-
-  // 配信比率: note:ninja:exoclick:juicyads = 1:1:1:1
+  // note 100%配信
   noteRatio: 1,
-  ninjaRatio: 1,
-  exoclickRatio: 1,
-  juicyadsRatio: 1,
+  ninjaRatio: 0,
+  exoclickRatio: 0,
+  juicyadsRatio: 0,
 };
 
 /** Build the full ad link with UTM parameters */
