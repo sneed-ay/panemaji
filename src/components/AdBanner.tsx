@@ -171,7 +171,7 @@ function NoteAdImage({ size }: { size: AdSize }) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
-      if (w.gtag) w.gtag('event', 'ad_click', { ad_size: size, ad_type: 'note', ad_page: window.location.pathname });
+      if (w.gtag) w.gtag('event', 'banner_click', { ad_size: size, ad_type: 'note', ad_page: window.location.pathname });
     } catch {}
   };
 
@@ -206,7 +206,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
-      if (w.gtag) w.gtag('event', 'ad_impression', { ad_size: size, ad_type: picked });
+      if (w.gtag) w.gtag('event', 'banner_view', { ad_size: size, ad_type: picked });
     } catch {}
   }, [size]);
 
