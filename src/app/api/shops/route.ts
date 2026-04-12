@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import db from '@/lib/db';
 
 export async function GET() {
-  const db = getDb();
   const rows = db.prepare(`
     SELECT s.id, s.name, s.category, a.name as area_name, a.prefecture
     FROM shops s
