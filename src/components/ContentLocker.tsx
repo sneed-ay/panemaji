@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AD_CONFIG } from '@/lib/ad-config';
 
 const UNLOCK_KEY = 'content_unlocked';
 
@@ -39,17 +38,10 @@ interface ContentLockerProps {
 }
 
 export default function ContentLocker({ children, reviewCount }: ContentLockerProps) {
-  const [unlocked, setUnlocked] = useState(true); // SSRデフォルト
-  const scriptLoaded = useRef(false);
+  const [unlocked, setUnlocked] = useState(true);
 
   useEffect(() => {
     setUnlocked(isUnlocked());
-  }, []);
-
-  // AdMavenスクリプトをロック状態のページにロード
-  // 外部リンク（/unlock）クリック時にAdMavenがフルページロッカーを表示
-  useEffect(() => {
-    // Single Link方式: スクリプト注入不要（リンク先がAdMavenロッカーページ）
   }, []);
 
   // GA tracking
