@@ -49,15 +49,8 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
   // AdMavenスクリプトをロック状態のページにロード
   // 外部リンク（/unlock）クリック時にAdMavenがフルページロッカーを表示
   useEffect(() => {
-    if (unlocked || reviewCount === 0 || scriptLoaded.current) return;
-    if (!AD_CONFIG.adMaven.enabled) return;
-    scriptLoaded.current = true;
-
-    const script = document.createElement('script');
-    script.src = AD_CONFIG.adMaven.scriptUrl;
-    script.dataset.cfasync = 'false';
-    document.head.appendChild(script);
-  }, [unlocked, reviewCount]);
+    // Single Link方式: スクリプト注入不要（リンク先がAdMavenロッカーページ）
+  }, []);
 
   // GA tracking
   const trackUnlockClick = () => {
@@ -95,10 +88,11 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
             短い広告を見ると24時間すべての口コミが閲覧できます
           </p>
 
-          {/* AdMavenがインターセプトする外部リンク */}
+          {/* AdMaven Single Link → ロッカーページ → /unlock にリダイレクト */}
           <a
-            href="https://panemaji.com/unlock"
+            href="https://ultra-links.net/s?gnGY7kq8"
             onClick={trackUnlockClick}
+            rel="noopener noreferrer"
             className="block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-center no-underline"
           >
             ▶ 口コミを見る（広告が表示されます）
