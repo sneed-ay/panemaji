@@ -55,39 +55,27 @@ function pickAdType(): AdType {
 }
 
 /** FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動） */
-function FanzaWidget({ size, context }: { size: AdSize; context?: AdContext }) {
+function FanzaWidget({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
   const [showFallback, setShowFallback] = useState(false);
-
-  const dimensions = size === 'header' || size === 'footer'
-    ? { w: 300, h: 250 } : { w: 300, h: 250 };
-
-  const keyword = buildFanzaKeyword(context);
 
   useEffect(() => {
     if (loadedRef.current || !containerRef.current) return;
     loadedRef.current = true;
     const container = containerRef.current;
-    const { fanza } = AD_CONFIG;
 
-    // DMMウィジェット: script方式
-    const widgetId = `dmm-widget-${size}-${Date.now()}`;
-    const div = document.createElement('div');
-    div.id = widgetId;
-    container.appendChild(div);
+    // DMM公式 placement.js 方式
+    const ins = document.createElement('ins');
+    ins.className = 'dmm-widget-placement';
+    ins.dataset.id = '700d7d51a632d919255af456a6e3ced7';
+    ins.style.background = 'transparent';
+    container.appendChild(ins);
 
     const script = document.createElement('script');
-    const params = new URLSearchParams({
-      affiliate_id: `${fanza.affiliateId}-998`,
-      site: fanza.service,
-      service: fanza.defaultFloor,
-      floor: fanza.defaultFloor,
-      size: `${dimensions.w}x${dimensions.h}`,
-      type: 'responsive',
-    });
-    if (keyword) params.set('keyword', keyword);
-    script.src = `https://widget-view.dmm.co.jp/js/widget_api.js?${params.toString()}`;
+    script.src = 'https://widget-view.dmm.co.jp/js/placement.js';
+    script.className = 'dmm-widget-scripts';
+    script.dataset.id = '700d7d51a632d919255af456a6e3ced7';
     script.async = true;
     container.appendChild(script);
 
@@ -99,7 +87,7 @@ function FanzaWidget({ size, context }: { size: AdSize; context?: AdContext }) {
       }
     }, 6000);
     return () => clearTimeout(timer);
-  }, [dimensions.w, dimensions.h, keyword]);
+  }, []);
 
   if (showFallback) return <NoteAdImage size={size} />;
   return <div ref={containerRef} className="flex justify-center" />;
@@ -201,7 +189,7 @@ export default function AdBanner({ size, className = '', context }: AdBannerProp
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
-        {adType === 'fanza' && <FanzaWidget size={size} context={context} />}
+        {adType === 'fanza' && <FanzaWidget size={size} />}
         {adType === 'note' && <NoteAdImage size={size} />}
         {adType === 'adstir' && <AdstirBanner size={size} />}
       </div>
