@@ -28,12 +28,12 @@ export const AD_CONFIG = {
     scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
   },
 
-  // Adsterra（Social Bar + Popunder）- 登録後にzoneId設定
+  // Adsterra（Social Bar + Popunder）
   adsterra: {
-    enabled: false, // zoneId取得後にtrueに変更
-    socialBarZoneId: '', // Social Bar用ゾーンID
-    popunderZoneId: '',  // Popunder用ゾーンID
-    popunderFrequencyHours: 24, // ポップアンダー頻度（時間）
+    enabled: true,
+    socialBarZoneId: '29042260',
+    popunderZoneId: '29042259',
+    popunderFrequencyHours: 24,
   },
 
   // fam.（オーバーレイ広告）- 審査通過後に設定
