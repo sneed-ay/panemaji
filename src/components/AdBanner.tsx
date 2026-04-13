@@ -54,7 +54,7 @@ function FanzaWidget() {
     loadedRef.current = true;
     const container = containerRef.current;
 
-    // DMM公式 placement.js 方式（ins要素をbodyに追加してからscriptをロード）
+    // DMM公式 placement.js 方式
     const dataId = '700d7d51a632d919255af456a6e3ced7';
     const ins = document.createElement('ins');
     ins.className = 'dmm-widget-placement';
@@ -62,13 +62,12 @@ function FanzaWidget() {
     ins.style.background = 'transparent';
     container.appendChild(ins);
 
-    // placement.jsはドキュメント全体のins要素をスキャンするため、
-    // scriptはbodyに追加して確実にins要素が先にDOMに存在するようにする
+    // cache-busterで毎回再ロードしins要素をスキャンさせる
     const script = document.createElement('script');
-    script.src = 'https://widget-view.dmm.co.jp/js/placement.js';
+    script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
     script.className = 'dmm-widget-scripts';
     script.dataset.id = dataId;
-    document.body.appendChild(script);
+    container.appendChild(script);
 
     // placement.jsの読み込み・描画完了まで待つ（フォールバックなし）
     // ins要素をDOMに残し続けないとplacement.jsが動作しない
