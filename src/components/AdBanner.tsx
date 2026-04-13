@@ -45,10 +45,9 @@ function pickAdType(): AdType {
 }
 
 /** FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動） */
-function FanzaWidget({ size }: { size: AdSize }) {
+function FanzaWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
-  const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     if (loadedRef.current || !containerRef.current) return;
@@ -71,18 +70,13 @@ function FanzaWidget({ size }: { size: AdSize }) {
     script.dataset.id = dataId;
     document.body.appendChild(script);
 
-    const timer = setTimeout(() => {
-      if (!containerRef.current) return;
-      const hasContent = containerRef.current.querySelector('iframe, img, a[href*="dmm"]');
-      if (!hasContent) {
-        setShowFallback(true);
-      }
-    }, 6000);
-    return () => clearTimeout(timer);
+    // placement.jsの読み込み・描画完了まで待つ（フォールバックなし）
+    // ins要素をDOMに残し続けないとplacement.jsが動作しない
+    return () => {};
   }, []);
 
-  if (showFallback) return <NoteAdImage size={size} />;
-  return <div ref={containerRef} className="flex justify-center" />;
+  // フォールバックせず常にins要素を保持（placement.jsが非同期で描画）
+  return <div ref={containerRef} className="flex justify-center min-h-[50px]" />;
 }
 
 /** adstir SSP広告バナー */
@@ -181,7 +175,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
-        {adType === 'fanza' && <FanzaWidget size={size} />}
+        {adType === 'fanza' && <FanzaWidget />}
         {adType === 'note' && <NoteAdImage size={size} />}
         {adType === 'adstir' && <AdstirBanner size={size} />}
       </div>
