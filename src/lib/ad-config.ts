@@ -20,9 +20,9 @@ export const AD_CONFIG = {
     defaultFloor: 'videoa',
   },
 
-  // adstir SSP広告
+  // adstir SSP広告（審査通過後にenabledをtrueに戻す）
   adstir: {
-    enabled: true,
+    enabled: false,
     appId: 'MEDIA-da9880ba',
     spot: 1,
     scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
@@ -47,10 +47,10 @@ export const AD_CONFIG = {
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // バナー配信比率: FANZA高め 2:1:1
+  // バナー配信比率: FANZA 67% / note 33%（adstir審査通過まで）
   fanzaRatio: 2,
   noteRatio: 1,
-  adstirRatio: 1,
+  adstirRatio: 0,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,
