@@ -7,6 +7,7 @@ import PanelRatingBadge from '@/components/PanelRatingBadge';
 import GirlImage from '@/components/GirlImage';
 import type { Review } from '@/lib/db';
 import { AdsterraSocialBar } from '@/components/AdsterraAds';
+import ContentLocker from '@/components/ContentLocker';
 
 type OtherGirl = {
   id: number;
@@ -83,37 +84,38 @@ export default function GirlPageClient({ girlId, girlName, shopName, initialRevi
         </div>
       )}
 
-      {/* Reviews List */}
+      {/* Reviews List with Content Locker */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h3 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
           口コミ一覧（{reviews.length}件）
         </h3>
 
-        {reviews.length === 0 ? (
-          <p className="text-gray-400 text-center py-8">
-            まだ口コミはありません。最初の投稿者になりましょう！
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {reviews.map((review, index) => (
-              <React.Fragment key={review.id}>
-                <div className="border border-gray-100 rounded-lg p-3 sm:p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-2 gap-2">
-                    <PanelRatingBadge rating={review.panel_rating} />
-                    <span className="text-xs text-gray-400 shrink-0">
-                      {review.created_at?.substring(0, 10) || review.created_at}
-                    </span>
+        <ContentLocker reviewCount={reviews.length}>
+          {reviews.length === 0 ? (
+            <p className="text-gray-400 text-center py-8">
+              まだ口コミはありません。最初の投稿者になりましょう！
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map((review, index) => (
+                <React.Fragment key={review.id}>
+                  <div className="border border-gray-100 rounded-lg p-3 sm:p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <PanelRatingBadge rating={review.panel_rating} />
+                      <span className="text-xs text-gray-400 shrink-0">
+                        {review.created_at?.substring(0, 10) || review.created_at}
+                      </span>
+                    </div>
+                    {review.comment && (
+                      <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base">{review.comment}</p>
+                    )}
                   </div>
-                  {review.comment && (
-                    <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base">{review.comment}</p>
-                  )}
-                </div>
-                {/* 口コミ3件目の後にAdsterra Social Bar */}
-                {index === 2 && <AdsterraSocialBar />}
-              </React.Fragment>
-            ))}
-          </div>
-        )}
+                  {index === 2 && <AdsterraSocialBar />}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </ContentLocker>
       </div>
     </div>
   );
