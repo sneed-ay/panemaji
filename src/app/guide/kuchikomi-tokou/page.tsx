@@ -40,7 +40,7 @@ export default function KuchikomiTokouPage() {
         </p>
         <p>
           あなたが口コミを投稿することで、次にその女性を指名しようとしている人の判断材料になります。
-          「パネル通り」だった場合も「パネル詐欺」だった場合も、どちらの情報も等しく価値があります。
+          「パネル通り」だった場合も「盛りすぎ」だった場合も、どちらの情報も等しく価値があります。
         </p>
       </section>
 
@@ -91,7 +91,7 @@ export default function KuchikomiTokouPage() {
             <span className="flex-shrink-0 w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</span>
             <div>
               <h3 className="font-bold mb-1">3つのボタンから選んでタップ</h3>
-              <p>「パネル通り」「許せる」「パネル詐欺」の中から、あなたの感想に合ったものを選ぶだけ。</p>
+              <p>「パネル通り」「許せる」「盛りすぎ」の中から、あなたの感想に合ったものを選ぶだけ。</p>
             </div>
           </div>
           <div className="flex gap-3 items-start">

@@ -93,11 +93,26 @@ export default function GirlPage({ params }: { params: { id: string } }) {
     } : {}),
   };
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'トップ', item: 'https://panemaji.com' },
+      { '@type': 'ListItem', position: 2, name: girl.area_name || 'エリア', item: `https://panemaji.com/area/${girl.area_slug}` },
+      { '@type': 'ListItem', position: 3, name: girl.shop_name, item: `https://panemaji.com/shop/${girl.shop_id}` },
+      { '@type': 'ListItem', position: 4, name: girl.name, item: `https://panemaji.com/girl/${girl.id}` },
+    ],
+  };
+
   return (
     <div className="space-y-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
         <a href="/" className="hover:text-blue-600">トップ</a>
@@ -212,7 +227,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                   textColor="text-yellow-700"
                 />
                 <VoteBreakdownRow
-                  label="パネル詐欺"
+                  label="盛りすぎ"
                   count={jiraiCount}
                   total={totalVotes}
                   color="bg-red-500"
@@ -240,7 +255,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
         }))}
       />
 
-      <AdBanner size="rectangle" />
+      <AdBanner placement="inline" />
 
       {/* Other Girls in Same Shop */}
       {otherGirls.length > 0 && (

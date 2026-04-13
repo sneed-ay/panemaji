@@ -133,7 +133,7 @@ export default function PanemajiCheckerPage() {
                 </h3>
                 <p>
                   パネマジ掲示板のような口コミサイトで、他のユーザーの評価を確認するのが最も確実な方法です。
-                  「パネル通り」「許せる範囲」「パネル詐欺」といった評価を参考にすれば、
+                  「パネル通り」「許せる範囲」「盛りすぎ」といった評価を参考にすれば、
                   事前にパネマジの度合いを把握できます。
                 </p>
               </div>
@@ -191,7 +191,7 @@ export default function PanemajiCheckerPage() {
               <p>
                 <span className="font-semibold">使い方はかんたん：</span>
                 都道府県やエリアから店舗を探し、気になる女性のページで他の人の口コミをチェック。
-                ワンタップで「パネル通り」「許せる」「パネル詐欺」の投票ができます。
+                ワンタップで「パネル通り」「許せる」「盛りすぎ」の投票ができます。
               </p>
               <p>
                 <span className="font-semibold">ランキングも要チェック：</span>

@@ -29,13 +29,18 @@ export default function ShinjukuDeriheruPage() {
       title="新宿デリヘルのパネマジ事情と優良店の選び方"
       subtitle="激戦区・新宿で写真通りの子を見つけるポイント"
       breadcrumb="新宿デリヘル"
+      slug="shinjuku-deriheru"
+      datePublished="2025-01-15"
+      dateModified="2026-04-12"
+      description="新宿エリアのデリヘルにおけるパネマジ事情を徹底解説。パネル写真と実物の一致度が高い優良店の選び方。"
       ctaHref="/area/shinjuku"
       ctaLabel="新宿エリアの口コミをチェック →"
       relatedLinks={[
         { href: "/guide/ikebukuro-deriheru", label: "池袋デリヘルのパネマジ度を徹底チェック" },
         { href: "/guide/shibuya-deriheru", label: "渋谷デリヘルでパネル通りの子を見つけるコツ" },
-        { href: "/guide/panemaji-taisaku", label: "パネマジ対策完全マニュアル" },
+        { href: "/guide/shinjuku-menesu", label: "新宿メンエス完全ガイド" },
         { href: "/guide/panemaji-checker", label: "パネマジの見分け方ガイド" },
+        { href: "/guide/gotanda-deriheru", label: "五反田デリヘル パネマジ回避の完全ガイド" },
       ]}
     >
       <section>

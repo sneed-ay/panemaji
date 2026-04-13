@@ -190,7 +190,7 @@ export default function ShopArticlePage({ params }: { params: { shopId: string }
                   <div className="space-y-3">
                     <DistributionRow label="パネル通り" count={reviewDistribution.panel_match} total={totalReviews} color="bg-green-500" />
                     <DistributionRow label="許せる" count={reviewDistribution.panel_diff} total={totalReviews} color="bg-yellow-400" />
-                    <DistributionRow label="パネル詐欺" count={reviewDistribution.jirai} total={totalReviews} color="bg-red-500" />
+                    <DistributionRow label="盛りすぎ" count={reviewDistribution.jirai} total={totalReviews} color="bg-red-500" />
                   </div>
                   {realPct !== null && (
                     <div className="text-center py-3 bg-gray-50 rounded-lg">
@@ -501,7 +501,7 @@ function generatePanemajiAnalysis(
   const jiraiPct = totalReviews > 0 ? Math.round((distribution.jirai / totalReviews) * 100) : 0;
 
   if (jiraiPct >= 30) {
-    analysis.push(`「パネル詐欺」評価が${jiraiPct}%とやや多い点は注意が必要です。パネル通り率が高いキャストを個別に選んで指名するのが賢い利用法です。`);
+    analysis.push(`「盛りすぎ」評価が${jiraiPct}%とやや多い点は注意が必要です。パネル通り率が高いキャストを個別に選んで指名するのが賢い利用法です。`);
   } else if (matchPct >= 60) {
     analysis.push(`「パネル通り」評価が${matchPct}%を占めており、全体的にパネル写真の信頼度が高い店舗です。フリー（指名なし）でも比較的安心して利用できるでしょう。`);
   }
@@ -537,7 +537,7 @@ function RatingLabel({ rating }: { rating: string }) {
   const labels: Record<string, { text: string; cls: string }> = {
     panel_match: { text: 'パネル通り', cls: 'bg-green-100 text-green-700' },
     panel_diff: { text: '許せる', cls: 'bg-yellow-100 text-yellow-700' },
-    jirai: { text: 'パネル詐欺', cls: 'bg-red-100 text-red-700' },
+    jirai: { text: '盛りすぎ', cls: 'bg-red-100 text-red-700' },
   };
   const info = labels[rating] || labels.panel_diff;
   return (

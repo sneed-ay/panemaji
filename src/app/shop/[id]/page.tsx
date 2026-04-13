@@ -1,9 +1,8 @@
-import { getShopById, getGirlsByShop, getReviewsByShop, getShopComments, CATEGORY_COLORS } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getReviewsByShop, CATEGORY_COLORS } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
-import ShopBBS from '@/components/ShopBBS';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -47,7 +46,6 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const query = searchParams.q || '';
   const girls = getGirlsByShop(shopId, query || undefined);
   const latestReviews = getReviewsByShop(shopId, 5);
-  const shopComments = getShopComments(shopId, 20);
 
   const matchCount = shop.panel_match_count || 0;
   const diffCount = shop.panel_diff_count || 0;
@@ -91,11 +89,25 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     } : {}),
   };
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'トップ', item: 'https://panemaji.com' },
+      { '@type': 'ListItem', position: 2, name: shop.area_name || 'エリア', item: `https://panemaji.com/area/${shop.area_slug}` },
+      { '@type': 'ListItem', position: 3, name: shop.name, item: `https://panemaji.com/shop/${shop.id}` },
+    ],
+  };
+
   return (
     <div className="space-y-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       {/* Breadcrumb */}
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
@@ -164,7 +176,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           <div className="space-y-3">
             <DistributionRow label="パネル通り" count={matchCount} total={totalReviews} color="bg-green-500" />
             <DistributionRow label="許せる" count={diffCount} total={totalReviews} color="bg-yellow-400" />
-            <DistributionRow label="パネル詐欺" count={jiraiCount} total={totalReviews} color="bg-red-500" />
+            <DistributionRow label="盛りすぎ" count={jiraiCount} total={totalReviews} color="bg-red-500" />
             <p className="text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
               全{totalReviews}件の口コミ → 総合パネマジ度 <span className="font-bold text-blue-600">{shop.real_pct != null && shop.real_pct >= 0 ? `${shop.real_pct}%` : '-'}</span>
             </p>
@@ -225,9 +237,6 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
       {/* Girls List with Sort/Filter */}
       <GirlSortFilter girls={girlsData} query={query} />
-
-      {/* Shop BBS */}
-      <ShopBBS shopId={shopId} initialComments={shopComments} />
     </div>
   );
 }

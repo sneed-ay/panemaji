@@ -405,22 +405,34 @@ async function scrapeShops(db, page, prefCode, areas) {
       const subAreas = [...new Set(subAreaMatches)];
       let extraShops = [];
 
-      if (shops.length >= 30 && subAreas.length > 0) {
+      // 全ページネーション取得（30件以上なら次ページがある可能性）
+      if (shops.length >= 30) {
+        for (let pageNum = 2; pageNum <= 20; pageNum++) {
+          try {
+            await delay();
+            const htmlN = await fetchPageWithPuppeteer(page, url + `p${pageNum}/`);
+            const pageShops = parseShopList(htmlN);
+            if (pageShops.length === 0) break;
+            extraShops.push(...pageShops);
+            if (pageShops.length < 30) break;
+          } catch { break; }
+        }
+      }
+
+      if (subAreas.length > 0) {
         for (const subPath of subAreas) {
           try {
             await delay();
             const subHtml = await fetchPageWithPuppeteer(page, `${BASE}${subPath}`);
-            extraShops.push(...parseShopList(subHtml));
+            const subShops = parseShopList(subHtml);
+            for (const s of subShops) {
+              if (!seenHrefsArea.has(s.href)) {
+                seenHrefsArea.add(s.href);
+                extraShops.push(s);
+              }
+            }
           } catch {}
         }
-      }
-
-      if (shops.length >= 30) {
-        try {
-          await delay();
-          const html2 = await fetchPageWithPuppeteer(page, url + 'p2/');
-          extraShops.push(...parseShopList(html2));
-        } catch {}
       }
 
       const allShops = [...shops, ...extraShops];
@@ -430,7 +442,10 @@ async function scrapeShops(db, page, prefCode, areas) {
       for (const shop of allShops) {
         if (seenHrefs.has(shop.href)) continue;
         seenHrefs.add(shop.href);
-        if (shop.category && !shop.category.includes('デリヘル')) continue;
+        // 全カテゴリ（デリヘル、ソープ、ヘルス、エステ、ホテヘル等）を取り込む
+        // 明らかに無関係なカテゴリのみ除外
+        const excludeCats = ['ライブチャット', '出会い系', 'アダルトグッズ'];
+        if (shop.category && excludeCats.some(ex => shop.category.includes(ex))) continue;
 
         const existing = getShopByUrl.get(shop.href);
         if (existing) {
@@ -476,7 +491,8 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   const queryParams = [...areaIds];
 
   if (skipThreshold) {
-    shopQuery += ` AND (last_seen_at IS NULL OR last_seen_at < ?)`;
+    // 差分更新: last_seen_atが古い店舗 OR 嬢が0人の店舗は常に対象
+    shopQuery += ` AND (last_seen_at IS NULL OR last_seen_at < ? OR NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id = shops.id AND g.is_active = 1))`;
     queryParams.push(skipThreshold);
   }
 
@@ -518,16 +534,43 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
     try {
       const html = await fetchPageWithPuppeteer(page, girlListUrl);
       let allScraped = parseGirlList(html);
-      let allImages = await parseImageUrls(page);
+      let allImages = {};
+      if (allScraped.length > 0) {
+        allImages = await parseImageUrls(page);
+      }
 
-      // ページ2確認
-      if (allScraped.length >= 100) {
-        try {
-          await delay();
-          const html2 = await fetchPageWithPuppeteer(page, girlListUrl.replace(/\/$/, '') + '/p2/');
-          allScraped = [...allScraped, ...parseGirlList(html2)];
-          Object.assign(allImages, await parseImageUrls(page));
-        } catch {}
+      // 全ページ取得 — ページあたり件数が不定（30,50,100等）なので
+      // 「前のページで1人以上取得できた」限り次ページを試行する
+      {
+        const firstPageCount = allScraped.length;
+        if (firstPageCount > 0) {
+          let pageNum = 2;
+          let consecutiveEmpty = 0;
+          while (pageNum <= 50) { // 最大50ページ（5000人程度まで対応）
+            try {
+              await delay();
+              const pageUrl = girlListUrl.replace(/\/$/, '') + `/p${pageNum}/`;
+              const htmlN = await fetchPageWithPuppeteer(page, pageUrl);
+              const girlsN = parseGirlList(htmlN);
+              if (girlsN.length === 0) {
+                consecutiveEmpty++;
+                if (consecutiveEmpty >= 2) break; // 2連続空なら終了
+                pageNum++;
+                continue;
+              }
+              consecutiveEmpty = 0;
+              allScraped = [...allScraped, ...girlsN];
+              Object.assign(allImages, await parseImageUrls(page));
+              pageNum++;
+            } catch { break; }
+          }
+        }
+      }
+
+      if (allScraped.length === 0) {
+        shopsDone++;
+        await delay();
+        continue;
       }
 
       const seenIds = new Set();

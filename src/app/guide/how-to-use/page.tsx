@@ -147,7 +147,7 @@ export default function HowToUsePage() {
               <div className="border rounded-lg p-4 border-red-200 bg-red-50">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">😡</span>
-                  <span className="font-bold text-red-700 text-lg">パネル詐欺</span>
+                  <span className="font-bold text-red-700 text-lg">盛りすぎ</span>
                 </div>
                 <p className="text-red-800">
                   パネル写真と実物に大きな差があったという評価です。
@@ -183,7 +183,7 @@ export default function HowToUsePage() {
                 <div>
                   <h3 className="font-bold mb-1">投票ボタンをタップ</h3>
                   <p>
-                    ページに表示されている「パネル通り」「許せる」「パネル詐欺」の
+                    ページに表示されている「パネル通り」「許せる」「盛りすぎ」の
                     3つのボタンから、あなたの感想に合ったものをタップするだけで投票完了です。
                   </p>
                 </div>

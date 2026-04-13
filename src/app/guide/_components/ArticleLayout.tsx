@@ -14,6 +14,10 @@ type Props = {
   relatedLinks: RelatedLink[];
   ctaHref?: string;
   ctaLabel?: string;
+  slug?: string;
+  datePublished?: string;
+  dateModified?: string;
+  description?: string;
 };
 
 export default function ArticleLayout({
@@ -24,9 +28,45 @@ export default function ArticleLayout({
   relatedLinks,
   ctaHref = "/",
   ctaLabel = "パネマジ掲示板で口コミをチェック →",
+  slug,
+  datePublished = "2025-01-01",
+  dateModified = "2026-04-12",
+  description,
 }: Props) {
+  const canonicalUrl = slug ? `https://panemaji.com/guide/${slug}` : "https://panemaji.com/guide";
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "トップ", item: "https://panemaji.com" },
+      { "@type": "ListItem", position: 2, name: "ガイド", item: "https://panemaji.com/guide" },
+      { "@type": "ListItem", position: 3, name: breadcrumb, item: canonicalUrl },
+    ],
+  };
+
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: title,
+    description: description || subtitle,
+    author: { "@type": "Organization", name: "パネマジ掲示板" },
+    publisher: { "@type": "Organization", name: "パネマジ掲示板", url: "https://panemaji.com" },
+    datePublished,
+    dateModified,
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       <nav className="text-sm text-gray-500 mb-6">
         <a href="/" className="hover:text-pink-600">トップ</a>
         <span className="mx-2">/</span>
@@ -45,7 +85,7 @@ export default function ArticleLayout({
           {children}
 
           {/* Ad Banner */}
-          <AdBanner size="rectangle" />
+          <AdBanner placement="inline" />
 
           {/* CTA */}
           <section className="text-center">
