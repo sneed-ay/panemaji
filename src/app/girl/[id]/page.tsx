@@ -255,7 +255,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
         }))}
       />
 
-      <AdBanner placement="inline" />
+      <AdBanner size="rectangle" />
 
       {/* Other Girls in Same Shop */}
       {otherGirls.length > 0 && (

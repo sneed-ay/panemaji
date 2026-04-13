@@ -1,24 +1,43 @@
 /**
- * Ad configuration: note(自社広告)のみ配信
- * 外部ネットワーク（忍者/ExoClick/JuicyAds）は全て停止
+ * Ad configuration: FANZA / note / adstir を配信
+ * FANZA比率高め（2:1:1）
  */
 export const AD_CONFIG = {
   enabled: true,
 
-  // 自社広告（note誘導）- 100%配信
+  // 自社広告（note誘導）
   noteAd: {
     link: 'https://note.com/kaito_ura/n/n5a879e870165',
     images: ['/ad/sp-ad1.jpg', '/ad/sp-ad2.jpg', '/ad/sp-ad3.jpg', '/ad/sp-ad4.jpg'],
     utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
   },
 
-  // 外部ネットワークは全て無効
+  // FANZA動的ウィジェット（DMMアフィリエイト）
+  fanza: {
+    enabled: true,
+    affiliateId: 'shumpo-001',
+    apiId: '3man2sH6YEEYxuKyeefg',
+    service: 'FANZA',
+    floor: 'videoa', // FANZA動画
+  },
+
+  // adstir SSP広告
+  adstir: {
+    enabled: true,
+    appId: 'MEDIA-da9880ba',
+    spot: 1,
+    scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
+  },
+
+  // 旧外部ネットワークは全て無効
   ninjaAdmax: { enabled: false, zoneId: '229417' },
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // note 100%配信
+  // 配信比率: FANZA高め 2:1:1
+  fanzaRatio: 2,
   noteRatio: 1,
+  adstirRatio: 1,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,

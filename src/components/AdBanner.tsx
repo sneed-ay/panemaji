@@ -4,38 +4,27 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
-type AdType = 'note' | 'ninja' | 'exoclick' | 'juicyads';
+type AdType = 'note' | 'fanza' | 'adstir';
 
 interface AdBannerProps {
   size: AdSize;
   className?: string;
 }
 
-function getRandomNoteImage(): string {
-  const variants = AD_CONFIG.noteAd.images;
-  return variants[Math.floor(Math.random() * variants.length)];
+function getRandomImage(images: string[]): string {
+  return images[Math.floor(Math.random() * images.length)];
 }
 
-/** 配信比率に基づいて広告タイプを選択（zoneId未設定のネットワークはスキップ） */
+/** 配信比率に基づいて広告タイプを選択 */
 function pickAdType(): AdType {
   const candidates: { type: AdType; weight: number }[] = [];
 
-  // noteは常に候補
+  if (AD_CONFIG.fanza.enabled) {
+    candidates.push({ type: 'fanza', weight: AD_CONFIG.fanzaRatio });
+  }
   candidates.push({ type: 'note', weight: AD_CONFIG.noteRatio });
-
-  // 忍者AdMax
-  if (AD_CONFIG.ninjaAdmax.enabled && AD_CONFIG.ninjaAdmax.zoneId) {
-    candidates.push({ type: 'ninja', weight: AD_CONFIG.ninjaRatio });
-  }
-
-  // ExoClick
-  if (AD_CONFIG.exoclick.enabled && AD_CONFIG.exoclick.zoneId) {
-    candidates.push({ type: 'exoclick', weight: AD_CONFIG.exoclickRatio });
-  }
-
-  // JuicyAds
-  if (AD_CONFIG.juicyads.enabled && AD_CONFIG.juicyads.zoneId) {
-    candidates.push({ type: 'juicyads', weight: AD_CONFIG.juicyadsRatio });
+  if (AD_CONFIG.adstir.enabled && AD_CONFIG.adstir.appId) {
+    candidates.push({ type: 'adstir', weight: AD_CONFIG.adstirRatio });
   }
 
   const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
@@ -44,16 +33,77 @@ function pickAdType(): AdType {
     rand -= c.weight;
     if (rand <= 0) return c.type;
   }
-  return 'note'; // fallback
+  return 'note';
 }
 
-/** 外部広告の共通ラッパー - 読み込み失敗時にnoteにフォールバック */
-function ExternalAdWithFallback({ size, children }: { size: AdSize; children: React.ReactNode }) {
-  const [showFallback, setShowFallback] = useState(false);
+/** FANZA動的ウィジェット（DMMアフィリエイト） */
+function FanzaWidget({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+  const [showFallback, setShowFallback] = useState(false);
+
+  // サイズに応じたウィジェット寸法
+  const dimensions = size === 'header' || size === 'footer'
+    ? { w: 320, h: 100 } : { w: 300, h: 250 };
 
   useEffect(() => {
-    // 4秒後に広告が表示されたかチェック。iframe/img/canvasがなければフォールバック
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+    const container = containerRef.current;
+    const { fanza } = AD_CONFIG;
+
+    // DMM ウィジェット iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.dmm.co.jp/widget/affiliate/id=${fanza.affiliateId}-998/fn=widget/service=${fanza.service.toLowerCase()}/floor=${fanza.floor}/size=${dimensions.w}_${dimensions.h}/`;
+    iframe.width = String(dimensions.w);
+    iframe.height = String(dimensions.h);
+    iframe.scrolling = 'no';
+    iframe.frameBorder = '0';
+    iframe.style.border = 'none';
+    iframe.style.maxWidth = '100%';
+    container.appendChild(iframe);
+
+    // 6秒後にiframeが読み込まれたかチェック
+    const timer = setTimeout(() => {
+      if (!containerRef.current) return;
+      const hasIframe = containerRef.current.querySelector('iframe');
+      if (!hasIframe || hasIframe.offsetHeight < 30) {
+        setShowFallback(true);
+      }
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [dimensions.w, dimensions.h]);
+
+  if (showFallback) return <NoteAdImage size={size} />;
+
+  return (
+    <div ref={containerRef} className="flex justify-center" />
+  );
+}
+
+/** adstir SSP広告バナー */
+function AdstirBanner({ size }: { size: AdSize }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+  const [showFallback, setShowFallback] = useState(false);
+
+  useEffect(() => {
+    if (loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+    const container = containerRef.current;
+    const { adstir } = AD_CONFIG;
+
+    const varsScript = document.createElement('script');
+    varsScript.type = 'text/javascript';
+    varsScript.textContent = `var adstir_vars = { ver: "4.0", app_id: "${adstir.appId}", ad_spot: ${adstir.spot}, center: true };`;
+    container.appendChild(varsScript);
+
+    const sdkScript = document.createElement('script');
+    sdkScript.type = 'text/javascript';
+    sdkScript.src = adstir.scriptUrl;
+    sdkScript.async = true;
+    container.appendChild(sdkScript);
+
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
       const hasContent = containerRef.current.querySelector('iframe, img, canvas, svg, [class*="ad"]');
@@ -61,109 +111,17 @@ function ExternalAdWithFallback({ size, children }: { size: AdSize; children: Re
       if (!hasContent || height < 50) {
         setShowFallback(true);
       }
-    }, 4000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, []);
 
   if (showFallback) return <NoteAdImage size={size} />;
-  return <div ref={containerRef}>{children}</div>;
-}
-
-/** 忍者AdMax広告バナー - direct script injection */
-function NinjaAdMaxBanner({ size }: { size: AdSize }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
-    loadedRef.current = true;
-    const container = containerRef.current;
-    const { ninjaAdmax } = AD_CONFIG;
-    const script = document.createElement('script');
-    script.src = `https://adm.shinobi.jp/s/${ninjaAdmax.zoneId}`;
-    script.type = 'text/javascript';
-    container.appendChild(script);
-  }, []);
-
-  return (
-    <ExternalAdWithFallback size={size}>
-      <div ref={containerRef} className="flex justify-center" />
-    </ExternalAdWithFallback>
-  );
-}
-
-/** ExoClick広告バナー - direct script injection */
-function ExoClickBanner({ size }: { size: AdSize }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
-    loadedRef.current = true;
-    const container = containerRef.current;
-    const { exoclick } = AD_CONFIG;
-
-    const script = document.createElement('script');
-    script.src = exoclick.scriptUrl;
-    script.async = true;
-    script.type = 'application/javascript';
-    container.appendChild(script);
-
-    const ins = document.createElement('ins');
-    ins.className = 'eas6a97888e2';
-    ins.dataset.zoneid = exoclick.zoneId;
-    container.appendChild(ins);
-
-    const init = document.createElement('script');
-    init.textContent = '(AdProvider = window.AdProvider || []).push({"serve": {}});';
-    container.appendChild(init);
-  }, []);
-
-  return (
-    <ExternalAdWithFallback size={size}>
-      <div ref={containerRef} className="flex justify-center" />
-    </ExternalAdWithFallback>
-  );
-}
-
-/** JuicyAds広告バナー - direct script injection */
-function JuicyAdsBanner({ size }: { size: AdSize }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
-    loadedRef.current = true;
-    const container = containerRef.current;
-    const { juicyads } = AD_CONFIG;
-
-    const script = document.createElement('script');
-    script.src = juicyads.scriptUrl;
-    script.async = true;
-    script.dataset.cfasync = 'false';
-    container.appendChild(script);
-
-    const ins = document.createElement('ins');
-    ins.id = juicyads.zoneId;
-    ins.dataset.width = '300';
-    ins.dataset.height = '250';
-    container.appendChild(ins);
-
-    const init = document.createElement('script');
-    init.textContent = `(window.adsbyjuicy = window.adsbyjuicy || []).push({'adzone':${juicyads.zoneId}});`;
-    container.appendChild(init);
-  }, []);
-
-  return (
-    <ExternalAdWithFallback size={size}>
-      <div ref={containerRef} className="flex justify-center" />
-    </ExternalAdWithFallback>
-  );
+  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
 }
 
 /** Note自社広告バナー */
 function NoteAdImage({ size }: { size: AdSize }) {
-  const [adSrc] = useState(getRandomNoteImage);
+  const [adSrc] = useState(() => getRandomImage(AD_CONFIG.noteAd.images));
   const [imgError, setImgError] = useState(false);
   const link = getAdLink(size);
 
@@ -192,7 +150,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
 
-    // Check dismiss (24hr)
     try {
       const raw = localStorage.getItem(`ad_dismissed_${size}`);
       if (raw && Date.now() < parseInt(raw, 10)) return;
@@ -202,7 +159,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     setAdType(picked);
     setVisible(true);
 
-    // GA impression
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
@@ -221,10 +177,9 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
-        {adType === 'ninja' && <NinjaAdMaxBanner size={size} />}
-        {adType === 'exoclick' && <ExoClickBanner size={size} />}
-        {adType === 'juicyads' && <JuicyAdsBanner size={size} />}
+        {adType === 'fanza' && <FanzaWidget size={size} />}
         {adType === 'note' && <NoteAdImage size={size} />}
+        {adType === 'adstir' && <AdstirBanner size={size} />}
       </div>
       <button onClick={handleDismiss}
         className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-full text-xs"

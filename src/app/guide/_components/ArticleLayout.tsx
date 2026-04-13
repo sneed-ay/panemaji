@@ -85,7 +85,7 @@ export default function ArticleLayout({
           {children}
 
           {/* Ad Banner */}
-          <AdBanner placement="inline" />
+          <AdBanner size="rectangle" />
 
           {/* CTA */}
           <section className="text-center">
