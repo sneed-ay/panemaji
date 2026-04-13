@@ -6,13 +6,31 @@ import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
 type AdSize = 'header' | 'rectangle' | 'footer';
 type AdType = 'note' | 'fanza' | 'adstir';
 
+/** コンテキスト情報（FANZAのキーワード連動用） */
+export interface AdContext {
+  area?: string;    // エリア名 (例: "渋谷")
+  category?: string; // カテゴリ (例: "デリヘル")
+  keyword?: string;  // 追加キーワード
+}
+
 interface AdBannerProps {
   size: AdSize;
   className?: string;
+  context?: AdContext;
 }
 
 function getRandomImage(images: string[]): string {
   return images[Math.floor(Math.random() * images.length)];
+}
+
+/** コンテキストからFANZA検索キーワードを生成 */
+function buildFanzaKeyword(context?: AdContext): string {
+  if (!context) return '';
+  const parts: string[] = [];
+  if (context.area) parts.push(context.area);
+  if (context.category) parts.push(context.category);
+  if (context.keyword) parts.push(context.keyword);
+  return parts.join(' ');
 }
 
 /** 配信比率に基づいて広告タイプを選択 */
@@ -36,15 +54,16 @@ function pickAdType(): AdType {
   return 'note';
 }
 
-/** FANZA動的ウィジェット（DMMアフィリエイト） */
-function FanzaWidget({ size }: { size: AdSize }) {
+/** FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動） */
+function FanzaWidget({ size, context }: { size: AdSize; context?: AdContext }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
   const [showFallback, setShowFallback] = useState(false);
 
-  // サイズに応じたウィジェット寸法
   const dimensions = size === 'header' || size === 'footer'
     ? { w: 320, h: 100 } : { w: 300, h: 250 };
+
+  const keyword = buildFanzaKeyword(context);
 
   useEffect(() => {
     if (loadedRef.current || !containerRef.current) return;
@@ -52,9 +71,14 @@ function FanzaWidget({ size }: { size: AdSize }) {
     const container = containerRef.current;
     const { fanza } = AD_CONFIG;
 
-    // DMM ウィジェット iframe
+    // キーワード付きDMMウィジェットURL
+    let widgetUrl = `https://www.dmm.co.jp/widget/affiliate/id=${fanza.affiliateId}-998/fn=widget/service=${fanza.service.toLowerCase()}/floor=${fanza.defaultFloor}/size=${dimensions.w}_${dimensions.h}/`;
+    if (keyword) {
+      widgetUrl += `keyword=${encodeURIComponent(keyword)}/`;
+    }
+
     const iframe = document.createElement('iframe');
-    iframe.src = `https://www.dmm.co.jp/widget/affiliate/id=${fanza.affiliateId}-998/fn=widget/service=${fanza.service.toLowerCase()}/floor=${fanza.floor}/size=${dimensions.w}_${dimensions.h}/`;
+    iframe.src = widgetUrl;
     iframe.width = String(dimensions.w);
     iframe.height = String(dimensions.h);
     iframe.scrolling = 'no';
@@ -63,7 +87,6 @@ function FanzaWidget({ size }: { size: AdSize }) {
     iframe.style.maxWidth = '100%';
     container.appendChild(iframe);
 
-    // 6秒後にiframeが読み込まれたかチェック
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
       const hasIframe = containerRef.current.querySelector('iframe');
@@ -72,13 +95,10 @@ function FanzaWidget({ size }: { size: AdSize }) {
       }
     }, 6000);
     return () => clearTimeout(timer);
-  }, [dimensions.w, dimensions.h]);
+  }, [dimensions.w, dimensions.h, keyword]);
 
   if (showFallback) return <NoteAdImage size={size} />;
-
-  return (
-    <div ref={containerRef} className="flex justify-center" />
-  );
+  return <div ref={containerRef} className="flex justify-center" />;
 }
 
 /** adstir SSP広告バナー */
@@ -143,7 +163,7 @@ function NoteAdImage({ size }: { size: AdSize }) {
   );
 }
 
-export default function AdBanner({ size, className = '' }: AdBannerProps) {
+export default function AdBanner({ size, className = '', context }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
   const [adType, setAdType] = useState<AdType>('note');
 
@@ -177,7 +197,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
-        {adType === 'fanza' && <FanzaWidget size={size} />}
+        {adType === 'fanza' && <FanzaWidget size={size} context={context} />}
         {adType === 'note' && <NoteAdImage size={size} />}
         {adType === 'adstir' && <AdstirBanner size={size} />}
       </div>

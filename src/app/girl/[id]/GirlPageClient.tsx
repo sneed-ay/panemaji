@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import OneTabVote from '@/components/OneTabVote';
 import ShareButtons from '@/components/ShareButtons';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import GirlImage from '@/components/GirlImage';
 import type { Review } from '@/lib/db';
+import { AdsterraSocialBar } from '@/components/AdsterraAds';
 
 type OtherGirl = {
   id: number;
@@ -94,18 +95,22 @@ export default function GirlPageClient({ girlId, girlName, shopName, initialRevi
           </p>
         ) : (
           <div className="space-y-4">
-            {reviews.map((review) => (
-              <div key={review.id} className="border border-gray-100 rounded-lg p-3 sm:p-4 bg-gray-50">
-                <div className="flex items-center justify-between mb-2 gap-2">
-                  <PanelRatingBadge rating={review.panel_rating} />
-                  <span className="text-xs text-gray-400 shrink-0">
-                    {review.created_at?.substring(0, 10) || review.created_at}
-                  </span>
+            {reviews.map((review, index) => (
+              <React.Fragment key={review.id}>
+                <div className="border border-gray-100 rounded-lg p-3 sm:p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <PanelRatingBadge rating={review.panel_rating} />
+                    <span className="text-xs text-gray-400 shrink-0">
+                      {review.created_at?.substring(0, 10) || review.created_at}
+                    </span>
+                  </div>
+                  {review.comment && (
+                    <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base">{review.comment}</p>
+                  )}
                 </div>
-                {review.comment && (
-                  <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base">{review.comment}</p>
-                )}
-              </div>
+                {/* 口コミ3件目の後にAdsterra Social Bar */}
+                {index === 2 && <AdsterraSocialBar />}
+              </React.Fragment>
             ))}
           </div>
         )}

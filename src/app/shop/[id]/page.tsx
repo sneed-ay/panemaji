@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
+import AdBanner from '@/components/AdBanner';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -234,6 +235,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           </button>
         </form>
       </div>
+
+      <AdBanner size="rectangle" context={{ area: shop.area_name || undefined, category: shop.category || undefined }} />
 
       {/* Girls List with Sort/Filter */}
       <GirlSortFilter girls={girlsData} query={query} />

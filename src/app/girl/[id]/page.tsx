@@ -255,7 +255,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
         }))}
       />
 
-      <AdBanner size="rectangle" />
+      <AdBanner size="rectangle" context={{ area: girl.area_name || undefined }} />
 
       {/* Other Girls in Same Shop */}
       {otherGirls.length > 0 && (

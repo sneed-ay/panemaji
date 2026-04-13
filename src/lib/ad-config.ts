@@ -1,6 +1,5 @@
 /**
- * Ad configuration: FANZA / note / adstir を配信
- * FANZA比率高め（2:1:1）
+ * Ad configuration: FANZA(コンテキスト連動) / note / adstir / Adsterra
  */
 export const AD_CONFIG = {
   enabled: true,
@@ -12,13 +11,13 @@ export const AD_CONFIG = {
     utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
   },
 
-  // FANZA動的ウィジェット（DMMアフィリエイト）
+  // FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動）
   fanza: {
     enabled: true,
     affiliateId: 'shumpo-001',
     apiId: '3man2sH6YEEYxuKyeefg',
     service: 'FANZA',
-    floor: 'videoa', // FANZA動画
+    defaultFloor: 'videoa',
   },
 
   // adstir SSP広告
@@ -29,12 +28,26 @@ export const AD_CONFIG = {
     scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
   },
 
+  // Adsterra（Social Bar + Popunder）- 登録後にzoneId設定
+  adsterra: {
+    enabled: false, // zoneId取得後にtrueに変更
+    socialBarZoneId: '', // Social Bar用ゾーンID
+    popunderZoneId: '',  // Popunder用ゾーンID
+    popunderFrequencyHours: 24, // ポップアンダー頻度（時間）
+  },
+
+  // fam.（オーバーレイ広告）- 審査通過後に設定
+  fam: {
+    enabled: false,
+    zoneId: '',
+  },
+
   // 旧外部ネットワークは全て無効
   ninjaAdmax: { enabled: false, zoneId: '229417' },
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // 配信比率: FANZA高め 2:1:1
+  // バナー配信比率: FANZA高め 2:1:1
   fanzaRatio: 2,
   noteRatio: 1,
   adstirRatio: 1,
