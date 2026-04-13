@@ -20,53 +20,63 @@ function saveUnlock(): void {
   } catch {}
 }
 
-/** ロッカー内広告: noteバナー（確実表示）+ FANZA（非同期） */
+/** ロッカー内広告: Adsterra Social Bar(CPM) + noteバナー + FANZA（非同期） */
 function LockerAd() {
   const fanzaRef = useRef<HTMLDivElement>(null);
+  const adsterraRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
-  const [fanzaLoaded, setFanzaLoaded] = useState(false);
 
   useEffect(() => {
-    if (loadedRef.current || !fanzaRef.current) return;
+    if (loadedRef.current) return;
     loadedRef.current = true;
-    const container = fanzaRef.current;
-    const dataId = '700d7d51a632d919255af456a6e3ced7';
 
-    const ins = document.createElement('ins');
-    ins.className = 'dmm-widget-placement';
-    ins.dataset.id = dataId;
-    ins.style.background = 'transparent';
-    container.appendChild(ins);
+    // Adsterra Social Bar（CPM/CPC収益）
+    if (adsterraRef.current) {
+      const container = adsterraRef.current;
+      const zoneId = '29042260';
+      const div = document.createElement('div');
+      div.id = `container-${zoneId}`;
+      container.appendChild(div);
+      const script = document.createElement('script');
+      script.src = `https://alwingulla.com/${zoneId}/invoke.js`;
+      script.async = true;
+      script.dataset.cfasync = 'false';
+      container.appendChild(script);
+    }
 
-    const script = document.createElement('script');
-    script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
-    script.className = 'dmm-widget-scripts';
-    script.dataset.id = dataId;
-    container.appendChild(script);
-
-    // FANZAが読み込めたかチェック
-    const timer = setTimeout(() => {
-      if (container.querySelector('iframe')) setFanzaLoaded(true);
-    }, 8000);
-    return () => clearTimeout(timer);
+    // FANZA動的ウィジェット（非同期）
+    if (fanzaRef.current) {
+      const container = fanzaRef.current;
+      const dataId = '700d7d51a632d919255af456a6e3ced7';
+      const ins = document.createElement('ins');
+      ins.className = 'dmm-widget-placement';
+      ins.dataset.id = dataId;
+      ins.style.background = 'transparent';
+      container.appendChild(ins);
+      const script = document.createElement('script');
+      script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
+      script.className = 'dmm-widget-scripts';
+      script.dataset.id = dataId;
+      container.appendChild(script);
+    }
   }, []);
 
   return (
-    <div>
-      {/* FANZA（非同期読み込み） */}
-      <div ref={fanzaRef} className={`flex justify-center ${fanzaLoaded ? '' : 'hidden'}`} />
-      {/* noteバナー（FANZA読み込みまでの即時表示 & フォールバック） */}
-      {!fanzaLoaded && (
-        <div className="flex justify-center">
-          <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored">
-            <img
-              src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
-              alt="PR"
-              className="w-full max-w-[300px] h-auto rounded-lg"
-            />
-          </a>
-        </div>
-      )}
+    <div className="space-y-3">
+      {/* Adsterra CPM/CPC広告 */}
+      <div ref={adsterraRef} className="flex justify-center" />
+      {/* FANZA動的ウィジェット */}
+      <div ref={fanzaRef} className="flex justify-center" />
+      {/* noteバナー（常時表示） */}
+      <div className="flex justify-center">
+        <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored">
+          <img
+            src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
+            alt="PR"
+            className="w-full max-w-[300px] h-auto rounded-lg"
+          />
+        </a>
+      </div>
     </div>
   );
 }
