@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { AD_CONFIG } from '@/lib/ad-config';
 
 const UNLOCK_KEY = 'content_unlocked';
 const UNLOCK_DURATION = 86400000; // 24時間
@@ -20,54 +21,77 @@ function saveUnlock(): void {
   } catch {}
 }
 
-/** ロッカー内広告: Adsterra Social Bar(CPM) + noteバナー + FANZA（非同期） */
-function LockerAd() {
-  const fanzaRef = useRef<HTMLDivElement>(null);
-  const adsterraRef = useRef<HTMLDivElement>(null);
+/** AdMaven コンテンツロッカー広告（CPM）*/
+function AdMavenLockerAd() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (loadedRef.current) return;
+    if (!AD_CONFIG.adMaven.enabled || loadedRef.current || !containerRef.current) return;
     loadedRef.current = true;
+    const container = containerRef.current;
 
-    // Adsterra Social Bar（CPM/CPC収益）
-    if (adsterraRef.current) {
-      const container = adsterraRef.current;
-      const zoneId = '29042260';
-      const div = document.createElement('div');
-      div.id = `container-${zoneId}`;
-      container.appendChild(div);
-      const script = document.createElement('script');
-      script.src = `https://alwingulla.com/${zoneId}/invoke.js`;
-      script.async = true;
-      script.dataset.cfasync = 'false';
-      container.appendChild(script);
-    }
+    // AdMaven Content Locker script
+    const script = document.createElement('script');
+    script.src = `https://d3a58drcwcnmve.cloudfront.net/js/NotificationManagerIMP.js?pid=${AD_CONFIG.adMaven.publisherId}&lid=${AD_CONFIG.adMaven.lockerId}`;
+    script.async = true;
+    container.appendChild(script);
+  }, []);
 
-    // FANZA動的ウィジェット（非同期）
-    if (fanzaRef.current) {
-      const container = fanzaRef.current;
-      const dataId = '700d7d51a632d919255af456a6e3ced7';
-      const ins = document.createElement('ins');
-      ins.className = 'dmm-widget-placement';
-      ins.dataset.id = dataId;
-      ins.style.background = 'transparent';
-      container.appendChild(ins);
-      const script = document.createElement('script');
-      script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
-      script.className = 'dmm-widget-scripts';
-      script.dataset.id = dataId;
-      container.appendChild(script);
-    }
+  if (!AD_CONFIG.adMaven.enabled) return null;
+  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
+}
+
+/** CPALead コンテンツロッカー広告（CPA/CPC）*/
+function CPALeadLockerAd() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!AD_CONFIG.cpaLead.enabled || loadedRef.current || !containerRef.current) return;
+    loadedRef.current = true;
+    const container = containerRef.current;
+
+    // CPALead Content Locker script
+    const script = document.createElement('script');
+    script.src = `https://d1lxhc4jvstzrp.cloudfront.net/scripts/content-locker/cplocker.js`;
+    script.async = true;
+    script.dataset.appId = AD_CONFIG.cpaLead.appId;
+    script.dataset.subId = AD_CONFIG.cpaLead.subId;
+    container.appendChild(script);
+  }, []);
+
+  if (!AD_CONFIG.cpaLead.enabled) return null;
+  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
+}
+
+/** フォールバック広告（AdMaven/CPALead未登録時）: FANZA + noteバナー */
+function FallbackLockerAd() {
+  const fanzaRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (loadedRef.current || !fanzaRef.current) return;
+    loadedRef.current = true;
+    const container = fanzaRef.current;
+    const dataId = '700d7d51a632d919255af456a6e3ced7';
+
+    const ins = document.createElement('ins');
+    ins.className = 'dmm-widget-placement';
+    ins.dataset.id = dataId;
+    ins.style.background = 'transparent';
+    container.appendChild(ins);
+
+    const script = document.createElement('script');
+    script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
+    script.className = 'dmm-widget-scripts';
+    script.dataset.id = dataId;
+    container.appendChild(script);
   }, []);
 
   return (
     <div className="space-y-3">
-      {/* Adsterra CPM/CPC広告 */}
-      <div ref={adsterraRef} className="flex justify-center" />
-      {/* FANZA動的ウィジェット */}
       <div ref={fanzaRef} className="flex justify-center" />
-      {/* noteバナー（常時表示） */}
       <div className="flex justify-center">
         <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored">
           <img
@@ -79,6 +103,13 @@ function LockerAd() {
       </div>
     </div>
   );
+}
+
+/** ロッカー内広告を優先順で表示 */
+function LockerAd() {
+  if (AD_CONFIG.adMaven.enabled) return <AdMavenLockerAd />;
+  if (AD_CONFIG.cpaLead.enabled) return <CPALeadLockerAd />;
+  return <FallbackLockerAd />;
 }
 
 /** ロック時のダミー口コミカード（実データは一切含まない） */
@@ -108,7 +139,7 @@ interface ContentLockerProps {
 }
 
 export default function ContentLocker({ children, reviewCount }: ContentLockerProps) {
-  const [unlocked, setUnlocked] = useState(true); // SSR: デフォルト表示
+  const [unlocked, setUnlocked] = useState(true);
   const [countdown, setCountdown] = useState(-1);
   const [showButton, setShowButton] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -141,25 +172,20 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
     } catch {}
   }, []);
 
-  // 口コミ0件 or 解除済み → 実データ表示
   if (reviewCount === 0 || unlocked) {
     return <>{children}</>;
   }
 
-  // ロック状態 → 実データはDOMに出さず、プレースホルダーを表示
   return (
     <div className="relative">
-      {/* ダミーカード（実データなし、HTMLを見てもわからない） */}
       <div className="relative overflow-hidden" style={{ maxHeight: '500px' }}>
         <PlaceholderReviews count={reviewCount} />
-        {/* グラデーションマスク */}
         <div className="absolute inset-0 top-[80px]" style={{
           background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.6) 15%, rgba(255,255,255,0.9) 50%)',
           pointerEvents: 'none',
         }} />
       </div>
 
-      {/* ロッカーオーバーレイ */}
       <div className="relative -mt-48 pt-8 pb-6 px-4 flex flex-col items-center">
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-5 sm:p-6 w-full max-w-md text-center">
           <div className="text-2xl mb-2">🔒</div>

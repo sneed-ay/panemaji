@@ -34,6 +34,20 @@ export const AD_CONFIG = {
     socialBarZoneId: '29042260',
   },
 
+  // AdMaven コンテンツロッカー（CPM）- 登録後にzoneId設定
+  adMaven: {
+    enabled: false, // zoneId取得後にtrueに変更
+    publisherId: '', // パブリッシャーID
+    lockerId: '',    // コンテンツロッカーID
+  },
+
+  // CPALead コンテンツロッカー（CPA/CPC）- 登録後にappId設定
+  cpaLead: {
+    enabled: false, // appId取得後にtrueに変更
+    appId: '',      // アプリID
+    subId: 'panemaji_locker', // トラッキング用サブID
+  },
+
   // fam.（オーバーレイ広告）- 審査通過後に設定
   fam: {
     enabled: false,
