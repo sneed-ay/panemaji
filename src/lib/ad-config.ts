@@ -34,11 +34,10 @@ export const AD_CONFIG = {
     socialBarZoneId: '29042260',
   },
 
-  // AdMaven コンテンツロッカー（CPM）- 登録後にzoneId設定
+  // AdMaven コンテンツロッカー（CPM）
   adMaven: {
-    enabled: false, // zoneId取得後にtrueに変更
-    publisherId: '', // パブリッシャーID
-    lockerId: '',    // コンテンツロッカーID
+    enabled: true,
+    scriptUrl: '//dcbbwymp1bhlf.cloudfront.net/?wbbcd=1253022',
   },
 
   // CPALead コンテンツロッカー（CPA/CPC）- 登録後にappId設定

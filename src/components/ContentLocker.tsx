@@ -31,10 +31,9 @@ function AdMavenLockerAd() {
     loadedRef.current = true;
     const container = containerRef.current;
 
-    // AdMaven Content Locker script
     const script = document.createElement('script');
-    script.src = `https://d3a58drcwcnmve.cloudfront.net/js/NotificationManagerIMP.js?pid=${AD_CONFIG.adMaven.publisherId}&lid=${AD_CONFIG.adMaven.lockerId}`;
-    script.async = true;
+    script.src = AD_CONFIG.adMaven.scriptUrl;
+    script.dataset.cfasync = 'false';
     container.appendChild(script);
   }, []);
 
