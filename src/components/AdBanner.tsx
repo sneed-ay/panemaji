@@ -23,16 +23,6 @@ function getRandomImage(images: string[]): string {
   return images[Math.floor(Math.random() * images.length)];
 }
 
-/** コンテキストからFANZA検索キーワードを生成 */
-function buildFanzaKeyword(context?: AdContext): string {
-  if (!context) return '';
-  const parts: string[] = [];
-  if (context.area) parts.push(context.area);
-  if (context.category) parts.push(context.category);
-  if (context.keyword) parts.push(context.keyword);
-  return parts.join(' ');
-}
-
 /** 配信比率に基づいて広告タイプを選択 */
 function pickAdType(): AdType {
   const candidates: { type: AdType; weight: number }[] = [];
@@ -157,7 +147,7 @@ function NoteAdImage({ size }: { size: AdSize }) {
   );
 }
 
-export default function AdBanner({ size, className = '', context }: AdBannerProps) {
+export default function AdBanner({ size, className = '' }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
   const [adType, setAdType] = useState<AdType>('note');
 
