@@ -65,19 +65,21 @@ function FanzaWidget({ size }: { size: AdSize }) {
     loadedRef.current = true;
     const container = containerRef.current;
 
-    // DMM公式 placement.js 方式
+    // DMM公式 placement.js 方式（ins要素をbodyに追加してからscriptをロード）
+    const dataId = '700d7d51a632d919255af456a6e3ced7';
     const ins = document.createElement('ins');
     ins.className = 'dmm-widget-placement';
-    ins.dataset.id = '700d7d51a632d919255af456a6e3ced7';
+    ins.dataset.id = dataId;
     ins.style.background = 'transparent';
     container.appendChild(ins);
 
+    // placement.jsはドキュメント全体のins要素をスキャンするため、
+    // scriptはbodyに追加して確実にins要素が先にDOMに存在するようにする
     const script = document.createElement('script');
     script.src = 'https://widget-view.dmm.co.jp/js/placement.js';
     script.className = 'dmm-widget-scripts';
-    script.dataset.id = '700d7d51a632d919255af456a6e3ced7';
-    script.async = true;
-    container.appendChild(script);
+    script.dataset.id = dataId;
+    document.body.appendChild(script);
 
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
