@@ -61,7 +61,7 @@ function FanzaWidget({ size, context }: { size: AdSize; context?: AdContext }) {
   const [showFallback, setShowFallback] = useState(false);
 
   const dimensions = size === 'header' || size === 'footer'
-    ? { w: 320, h: 100 } : { w: 300, h: 250 };
+    ? { w: 300, h: 250 } : { w: 300, h: 250 };
 
   const keyword = buildFanzaKeyword(context);
 
@@ -71,26 +71,30 @@ function FanzaWidget({ size, context }: { size: AdSize; context?: AdContext }) {
     const container = containerRef.current;
     const { fanza } = AD_CONFIG;
 
-    // キーワード付きDMMウィジェットURL
-    let widgetUrl = `https://www.dmm.co.jp/widget/affiliate/id=${fanza.affiliateId}-998/fn=widget/service=${fanza.service.toLowerCase()}/floor=${fanza.defaultFloor}/size=${dimensions.w}_${dimensions.h}/`;
-    if (keyword) {
-      widgetUrl += `keyword=${encodeURIComponent(keyword)}/`;
-    }
+    // DMMウィジェット: script方式
+    const widgetId = `dmm-widget-${size}-${Date.now()}`;
+    const div = document.createElement('div');
+    div.id = widgetId;
+    container.appendChild(div);
 
-    const iframe = document.createElement('iframe');
-    iframe.src = widgetUrl;
-    iframe.width = String(dimensions.w);
-    iframe.height = String(dimensions.h);
-    iframe.scrolling = 'no';
-    iframe.frameBorder = '0';
-    iframe.style.border = 'none';
-    iframe.style.maxWidth = '100%';
-    container.appendChild(iframe);
+    const script = document.createElement('script');
+    const params = new URLSearchParams({
+      affiliate_id: `${fanza.affiliateId}-998`,
+      site: fanza.service,
+      service: fanza.defaultFloor,
+      floor: fanza.defaultFloor,
+      size: `${dimensions.w}x${dimensions.h}`,
+      type: 'responsive',
+    });
+    if (keyword) params.set('keyword', keyword);
+    script.src = `https://widget-view.dmm.co.jp/js/widget_api.js?${params.toString()}`;
+    script.async = true;
+    container.appendChild(script);
 
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
-      const hasIframe = containerRef.current.querySelector('iframe');
-      if (!hasIframe || hasIframe.offsetHeight < 30) {
+      const hasContent = containerRef.current.querySelector('iframe, img, a[href*="dmm"]');
+      if (!hasContent) {
         setShowFallback(true);
       }
     }, 6000);
