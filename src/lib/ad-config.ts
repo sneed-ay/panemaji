@@ -28,12 +28,10 @@ export const AD_CONFIG = {
     scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
   },
 
-  // Adsterra（Social Bar + Popunder）
+  // Adsterra（Social Barのみ。Popunderは現代ブラウザで機能しないため廃止）
   adsterra: {
     enabled: true,
     socialBarZoneId: '29042260',
-    popunderZoneId: '29042259',
-    popunderFrequencyHours: 24,
   },
 
   // fam.（オーバーレイ広告）- 審査通過後に設定
