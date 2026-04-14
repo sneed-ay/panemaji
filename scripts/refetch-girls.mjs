@@ -37,16 +37,47 @@ function parseGirlList(html) {
     const liHtml = match[1];
     const girlIdMatch = liHtml.match(/girlid-(\d+)/);
     if (!girlIdMatch) continue;
-    const textMatch = liHtml.match(/<[^>]*class="girllisttext"[^>]*>([\s\S]*?)<\/div>/i);
-    if (!textMatch) continue;
-    const text = textMatch[1].replace(/<[^>]*>/g, '');
-    const lines = text.split('\n').map(s => s.trim()).filter(s => s);
+
+    // 旧形式: class="girllisttext" / 新形式: class="girl_caption"
+    let textBlock = liHtml.match(/<[^>]*class="girllisttext"[^>]*>([\s\S]*?)<\/div>/i);
+    if (!textBlock) textBlock = liHtml.match(/<div[^>]*class="girl_caption"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
+    if (!textBlock) textBlock = liHtml.match(/<div[^>]*class="girl_caption"[^>]*>([\s\S]*)/i);
+
+    const text = textBlock ? textBlock[1].replace(/<[^>]*>/g, '') : liHtml.replace(/<[^>]*>/g, '');
+    const lines = text.split('\n').map(s => s.trim()).filter(s => s && s.length < 100);
     if (lines.length < 1) continue;
-    const name = lines[0].replace(/\s*(更新|NEW|新人).*$/, '').trim();
-    const statsLine = lines[1] || '';
-    const ageMatch = statsLine.match(/(\d+)歳/);
-    const heightMatch = statsLine.match(/T(\d+)/);
-    const sizeMatch = statsLine.match(/(\d+)\s*[（(](\w+)[）)]\s*[･・]\s*(\d+)\s*[･・]\s*(\d+)/);
+
+    // 名前の抽出: title属性 > girllisttext先頭行 > img alt
+    let name = '';
+    const titleMatch = liHtml.match(/title="([^"]+)"/);
+    const altMatch = liHtml.match(/<img[^>]*alt="([^"]+)"/);
+    if (titleMatch && titleMatch[1].length < 20) {
+      name = titleMatch[1].trim();
+    } else {
+      // テキストブロックから名前を探す
+      for (const line of lines) {
+        const cleaned = line.replace(/\s*(更新|NEW|新人|現在待機中|✨[^✨]*✨|💥[^💥]*💥|ご新規[^\s]*).*$/, '').trim();
+        if (cleaned && cleaned.length >= 1 && cleaned.length <= 15
+            && !cleaned.includes('歳') && !cleaned.match(/^T\d/) && !cleaned.match(/^\d/)
+            && !cleaned.includes('・') && !cleaned.includes('No.')
+            && !cleaned.includes('写メ') && !cleaned.includes('口コミ')) {
+          name = cleaned;
+          break;
+        }
+      }
+    }
+    if (!name && altMatch) name = altMatch[1].trim();
+    if (!name || name.length > 20) continue;
+
+    // 全テキストから年齢・スペック抽出（タブ・改行を正規化）
+    const fullText = liHtml.replace(/<[^>]*>/g, ' ').replace(/[\t\n\r]+/g, ' ').replace(/\s+/g, ' ');
+    // 年齢: 「24歳」「〔24歳〕」
+    const ageMatch = fullText.match(/[\[〔(]?(\d{2})歳[\]〕)]?/);
+    // 身長: T157
+    const heightMatch = fullText.match(/T(\d{3})/);
+    // スペック: "82 (C) ・ 54 ・ 82" or "82（C）・54・82"
+    const sizeMatch = fullText.match(/(\d{2,3})\s*[（(]\s*(\w+)\s*[）)]\s*[･・]\s*(\d{2,3})\s*[･・]\s*(\d{2,3})/);
+
     girls.push({
       name, sourceId: girlIdMatch[1],
       age: ageMatch ? parseInt(ageMatch[1]) : null,
@@ -86,6 +117,10 @@ async function main() {
   const args = process.argv.slice(2);
   const fetchAll = args.includes('--all');
   const resumeMode = args.includes('--resume');
+  const minIdArg = args.find(a => a.startsWith('--min-id='));
+  const maxIdArg = args.find(a => a.startsWith('--max-id='));
+  const minId = minIdArg ? parseInt(minIdArg.split('=')[1]) : 0;
+  const maxId = maxIdArg ? parseInt(maxIdArg.split('=')[1]) : Infinity;
 
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
@@ -108,6 +143,11 @@ async function main() {
              ORDER BY s.id`;
   }
   let shops = db.prepare(query).all();
+
+  // ID範囲フィルタ（並列実行用）
+  if (minId > 0 || maxId < Infinity) {
+    shops = shops.filter(s => s.id >= minId && s.id <= maxId);
+  }
 
   // resume
   let resumeId = 0;
