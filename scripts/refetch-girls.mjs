@@ -102,7 +102,8 @@ async function main() {
              WHERE s.is_active = 1 AND s.source_url LIKE '%cityheaven.net%'
                AND (
                  NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id = s.id AND g.is_active = 1)
-                 OR (SELECT COUNT(*) FROM girls g WHERE g.shop_id = s.id AND g.is_active = 1) BETWEEN 95 AND 100
+                 OR (SELECT COUNT(*) FROM girls g WHERE g.shop_id = s.id AND g.is_active = 1) BETWEEN 95 AND 105
+                 OR (SELECT COUNT(*) FROM girls g WHERE g.shop_id = s.id AND g.is_active = 1) BETWEEN 195 AND 205
                )
              ORDER BY s.id`;
   }
