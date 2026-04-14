@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const UNLOCK_KEY = 'content_unlocked';
+const UNLOCK_DURATION = 86400000; // 24時間
+const COUNTDOWN_SECONDS = 5;
 
 function isUnlocked(): boolean {
   try {
@@ -10,6 +12,52 @@ function isUnlocked(): boolean {
     if (raw && Date.now() < parseInt(raw, 10)) return true;
   } catch {}
   return false;
+}
+
+function saveUnlock(): void {
+  try {
+    localStorage.setItem(UNLOCK_KEY, String(Date.now() + UNLOCK_DURATION));
+  } catch {}
+}
+
+/** ロッカー内広告: FANZA + noteバナー（AdMaven審査通過後に差し替え可能） */
+function LockerAd() {
+  const fanzaRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (loadedRef.current || !fanzaRef.current) return;
+    loadedRef.current = true;
+    const container = fanzaRef.current;
+    const dataId = '700d7d51a632d919255af456a6e3ced7';
+
+    const ins = document.createElement('ins');
+    ins.className = 'dmm-widget-placement';
+    ins.dataset.id = dataId;
+    ins.style.background = 'transparent';
+    container.appendChild(ins);
+
+    const script = document.createElement('script');
+    script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
+    script.className = 'dmm-widget-scripts';
+    script.dataset.id = dataId;
+    container.appendChild(script);
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <div ref={fanzaRef} className="flex justify-center" />
+      <div className="flex justify-center">
+        <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored">
+          <img
+            src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
+            alt="PR"
+            className="w-full max-w-[300px] h-auto rounded-lg"
+          />
+        </a>
+      </div>
+    </div>
+  );
 }
 
 /** ロック時のダミー口コミカード */
@@ -39,28 +87,44 @@ interface ContentLockerProps {
 
 export default function ContentLocker({ children, reviewCount }: ContentLockerProps) {
   const [unlocked, setUnlocked] = useState(true);
+  const [countdown, setCountdown] = useState(-1);
+  const [showButton, setShowButton] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setUnlocked(isUnlocked());
   }, []);
 
-  // GA tracking
-  const trackUnlockClick = () => {
+  useEffect(() => {
+    if (countdown <= 0) return;
+    timerRef.current = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [countdown]);
+
+  useEffect(() => {
+    if (countdown === 0) setShowButton(true);
+  }, [countdown]);
+
+  const handleStartCountdown = useCallback(() => {
+    setCountdown(COUNTDOWN_SECONDS);
+  }, []);
+
+  const handleUnlock = useCallback(() => {
+    saveUnlock();
+    setUnlocked(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
-      if (w.gtag) w.gtag('event', 'content_locker_click', { method: 'admaven' });
+      if (w.gtag) w.gtag('event', 'content_unlock', { method: 'ad_view' });
     } catch {}
-  };
+  }, []);
 
   if (reviewCount === 0 || unlocked) {
     return <>{children}</>;
   }
 
-  // ロック状態: ダミーカード + AdMavenトリガーリンク
   return (
     <div className="relative">
-      {/* プレースホルダー + ぼかし */}
       <div className="relative overflow-hidden" style={{ maxHeight: '180px' }}>
         <PlaceholderReviews count={reviewCount} />
         <div className="absolute inset-0 top-[50px]" style={{
@@ -69,7 +133,6 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
         }} />
       </div>
 
-      {/* ロッカーカード */}
       <div className="relative -mt-8 pb-4 px-4 flex flex-col items-center">
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-5 sm:p-6 w-full max-w-md text-center">
           <div className="text-2xl mb-2">🔒</div>
@@ -80,15 +143,40 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
             短い広告を見ると24時間すべての口コミが閲覧できます
           </p>
 
-          {/* AdMaven Single Link → ロッカーページ → /unlock にリダイレクト */}
-          <a
-            href="https://ultra-links.net/s?gnGY7kq8"
-            onClick={trackUnlockClick}
-            rel="noopener noreferrer"
-            className="block w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-center no-underline"
-          >
-            ▶ 口コミを見る（広告が表示されます）
-          </a>
+          {countdown === -1 ? (
+            <button
+              onClick={handleStartCountdown}
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <span>▶</span>
+              <span>短い広告を見る（{COUNTDOWN_SECONDS}秒）</span>
+            </button>
+          ) : (
+            <div>
+              <div className="bg-gray-50 rounded-lg p-2 mb-3">
+                <LockerAd />
+              </div>
+
+              {showButton ? (
+                <button
+                  onClick={handleUnlock}
+                  className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+                >
+                  口コミを見る
+                </button>
+              ) : (
+                <div className="text-center py-2">
+                  <div className="inline-flex items-center gap-2 text-blue-600">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span className="font-bold text-lg">{countdown}秒</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <p className="text-[10px] text-gray-400 mt-3">
             ※ 解除後24時間、サイト全体の口コミが閲覧可能になります
