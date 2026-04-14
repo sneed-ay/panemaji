@@ -26,27 +26,54 @@ function LockerAd() {
   const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (loadedRef.current || !fanzaRef.current) return;
+    if (loadedRef.current) return;
     loadedRef.current = true;
-    const container = fanzaRef.current;
     const dataId = '700d7d51a632d919255af456a6e3ced7';
+
+    // ins要素とscriptをbody直下に配置（React管理外のDOMに置くことで
+    // placement.jsのnodeType参照エラーを回避）
+    const wrapper = document.createElement('div');
+    wrapper.id = `fanza-locker-${dataId}`;
+    wrapper.style.cssText = 'display:flex;justify-content:center;';
 
     const ins = document.createElement('ins');
     ins.className = 'dmm-widget-placement';
     ins.dataset.id = dataId;
     ins.style.background = 'transparent';
-    container.appendChild(ins);
+    wrapper.appendChild(ins);
+    document.body.appendChild(wrapper);
 
     const script = document.createElement('script');
     script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
     script.className = 'dmm-widget-scripts';
     script.dataset.id = dataId;
-    container.appendChild(script);
+    document.body.appendChild(script);
+
+    // iframeが生成されたらReactコンテナに移動
+    const moveTimer = setInterval(() => {
+      const iframe = wrapper.querySelector('iframe');
+      if (iframe && fanzaRef.current) {
+        fanzaRef.current.appendChild(wrapper);
+        clearInterval(moveTimer);
+      }
+    }, 500);
+
+    const fallbackTimer = setTimeout(() => {
+      clearInterval(moveTimer);
+      if (!wrapper.querySelector('iframe')) {
+        wrapper.remove();
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(moveTimer);
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   return (
     <div className="space-y-3">
-      <div ref={fanzaRef} className="flex justify-center" />
+      <div ref={fanzaRef} className="flex justify-center min-h-[50px]" />
       <div className="flex justify-center">
         <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored">
           <img
