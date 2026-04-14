@@ -236,18 +236,39 @@ function parseGirlList(html) {
     const girlIdMatch = liHtml.match(/girlid-(\d+)/);
     if (!girlIdMatch) continue;
 
-    const textMatch = liHtml.match(/<[^>]*class="girllisttext"[^>]*>([\s\S]*?)<\/div>/i);
-    if (!textMatch) continue;
+    // 旧形式: class="girllisttext" / 新形式: class="girl_caption"
+    let textBlock = liHtml.match(/<[^>]*class="girllisttext"[^>]*>([\s\S]*?)<\/div>/i);
+    if (!textBlock) textBlock = liHtml.match(/<div[^>]*class="girl_caption"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
+    if (!textBlock) textBlock = liHtml.match(/<div[^>]*class="girl_caption"[^>]*>([\s\S]*)/i);
 
-    const text = textMatch[1].replace(/<[^>]*>/g, '');
-    const lines = text.split('\n').map(s => s.trim()).filter(s => s);
+    const text = textBlock ? textBlock[1].replace(/<[^>]*>/g, '') : liHtml.replace(/<[^>]*>/g, '');
+    const lines = text.split('\n').map(s => s.trim()).filter(s => s && s.length < 100);
     if (lines.length < 1) continue;
 
-    const name = lines[0].replace(/\s*(更新|NEW|新人).*$/, '').trim();
-    const statsLine = lines[1] || '';
-    const ageMatch = statsLine.match(/(\d+)歳/);
-    const heightMatch = statsLine.match(/T(\d+)/);
-    const sizeMatch = statsLine.match(/(\d+)\s*[（(](\w+)[）)]\s*[･・]\s*(\d+)\s*[･・]\s*(\d+)/);
+    let name = '';
+    const titleMatch = liHtml.match(/title="([^"]+)"/);
+    const altMatch = liHtml.match(/<img[^>]*alt="([^"]+)"/);
+    if (titleMatch && titleMatch[1].length < 20) {
+      name = titleMatch[1].trim();
+    } else {
+      for (const line of lines) {
+        const cleaned = line.replace(/\s*(更新|NEW|新人|現在待機中|✨[^✨]*✨|💥[^💥]*💥|ご新規[^\s]*).*$/, '').trim();
+        if (cleaned && cleaned.length >= 1 && cleaned.length <= 15
+            && !cleaned.includes('歳') && !cleaned.match(/^T\d/) && !cleaned.match(/^\d/)
+            && !cleaned.includes('・') && !cleaned.includes('No.')
+            && !cleaned.includes('写メ') && !cleaned.includes('口コミ')) {
+          name = cleaned;
+          break;
+        }
+      }
+    }
+    if (!name && altMatch) name = altMatch[1].trim();
+    if (!name || name.length > 20) continue;
+
+    const fullText = liHtml.replace(/<[^>]*>/g, ' ').replace(/[\t\n\r]+/g, ' ').replace(/\s+/g, ' ');
+    const ageMatch = fullText.match(/[\[〔(]?(\d{2})歳[\]〕)]?/);
+    const heightMatch = fullText.match(/T(\d{3})/);
+    const sizeMatch = fullText.match(/(\d{2,3})\s*[（(]\s*(\w+)\s*[）)]\s*[･・]\s*(\d{2,3})\s*[･・]\s*(\d{2,3})/);
 
     girls.push({
       name, sourceId: girlIdMatch[1],
