@@ -12,11 +12,12 @@ export const AD_CONFIG = {
   },
 
   // FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動）
-  // ⚠️ affiliate_id "shumpo-001" が DMM API で "Invalid Request Error" を返す
-  //    → DMMアフィリエイト管理画面でアカウント状態を確認し、有効なIDに更新すること
+  // アフィリエイトID: shumpo-018（バナー/リンク用）
+  // API用ID: shumpo-990（DMM API v3は末尾990-999のみ受付）
   fanza: {
-    enabled: false, // affiliate_idが無効のため一時無効化
-    affiliateId: 'shumpo-001',
+    enabled: true,
+    affiliateId: 'shumpo-018',
+    apiAffiliateId: 'shumpo-990', // API専用（末尾990-999制限）
     apiId: '3man2sH6YEEYxuKyeefg',
     service: 'FANZA',
     defaultFloor: 'videoa',

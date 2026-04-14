@@ -44,62 +44,32 @@ function pickAdType(): AdType {
   return 'note';
 }
 
-/** FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動） */
+/** FANZA動的バナー（DMM API v3 で商品取得→カスタム表示） */
 function FanzaWidget() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
-  const [showFallback, setShowFallback] = useState(false);
+  const [items, setItems] = useState<{ title: string; url: string; imageUrl: string }[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-    const dataId = '700d7d51a632d919255af456a6e3ced7';
-
-    // ins要素とscriptを共にbodyに追加（React管理外のDOMに置くことで
-    // 再レンダリングによる消失を防ぎ、placement.jsのnodeType参照エラーを回避）
-    const wrapper = document.createElement('div');
-    wrapper.id = `fanza-widget-${dataId}`;
-    wrapper.style.cssText = 'display:flex;justify-content:center;';
-
-    const ins = document.createElement('ins');
-    ins.className = 'dmm-widget-placement';
-    ins.dataset.id = dataId;
-    ins.style.background = 'transparent';
-    wrapper.appendChild(ins);
-    document.body.appendChild(wrapper);
-
-    const script = document.createElement('script');
-    script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
-    script.className = 'dmm-widget-scripts';
-    script.dataset.id = dataId;
-    document.body.appendChild(script);
-
-    // placement.jsがiframeを生成したら、それをReactコンテナに移動
-    const moveTimer = setInterval(() => {
-      const iframe = wrapper.querySelector('iframe');
-      if (iframe && containerRef.current) {
-        containerRef.current.appendChild(wrapper);
-        clearInterval(moveTimer);
-      }
-    }, 500);
-
-    // 10秒後にiframeが生成されなければnoteにフォールバック
-    const fallbackTimer = setTimeout(() => {
-      clearInterval(moveTimer);
-      if (!wrapper.querySelector('iframe')) {
-        wrapper.remove();
-        setShowFallback(true);
-      }
-    }, 10000);
-
-    return () => {
-      clearInterval(moveTimer);
-      clearTimeout(fallbackTimer);
-    };
+    fetch('/api/fanza')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data) && data.length > 0) setItems(data.slice(0, 3)); })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
-  if (showFallback) return <NoteAdImage size="rectangle" />;
-  return <div ref={containerRef} className="flex justify-center min-h-[50px]" />;
+  if (loaded && items.length === 0) return <NoteAdImage size="rectangle" />;
+  if (!loaded) return <div className="flex justify-center min-h-[50px]" />;
+
+  return (
+    <div className="flex gap-2 justify-center overflow-hidden">
+      {items.map((item, i) => (
+        <a key={i} href={item.url} target="_blank" rel="noopener noreferrer sponsored"
+          className="shrink-0 w-[100px] hover:opacity-80 transition-opacity no-underline">
+          <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
+        </a>
+      ))}
+    </div>
+  );
 }
 
 /** adstir SSP広告バナー */
