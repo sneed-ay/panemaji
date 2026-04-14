@@ -51,32 +51,51 @@ function FanzaWidget() {
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
+    if (loadedRef.current) return;
     loadedRef.current = true;
-    const container = containerRef.current;
     const dataId = '700d7d51a632d919255af456a6e3ced7';
 
-    // ins要素をコンテナに追加
+    // ins要素とscriptを共にbodyに追加（React管理外のDOMに置くことで
+    // 再レンダリングによる消失を防ぎ、placement.jsのnodeType参照エラーを回避）
+    const wrapper = document.createElement('div');
+    wrapper.id = `fanza-widget-${dataId}`;
+    wrapper.style.cssText = 'display:flex;justify-content:center;';
+
     const ins = document.createElement('ins');
     ins.className = 'dmm-widget-placement';
     ins.dataset.id = dataId;
     ins.style.background = 'transparent';
-    container.appendChild(ins);
+    wrapper.appendChild(ins);
+    document.body.appendChild(wrapper);
 
-    // placement.jsはbodyに追加（コンテナ内だと実行されないケースがある）
     const script = document.createElement('script');
     script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
     script.className = 'dmm-widget-scripts';
     script.dataset.id = dataId;
     document.body.appendChild(script);
 
+    // placement.jsがiframeを生成したら、それをReactコンテナに移動
+    const moveTimer = setInterval(() => {
+      const iframe = wrapper.querySelector('iframe');
+      if (iframe && containerRef.current) {
+        containerRef.current.appendChild(wrapper);
+        clearInterval(moveTimer);
+      }
+    }, 500);
+
     // 10秒後にiframeが生成されなければnoteにフォールバック
-    const timer = setTimeout(() => {
-      if (!container.querySelector('iframe')) {
+    const fallbackTimer = setTimeout(() => {
+      clearInterval(moveTimer);
+      if (!wrapper.querySelector('iframe')) {
+        wrapper.remove();
         setShowFallback(true);
       }
     }, 10000);
-    return () => clearTimeout(timer);
+
+    return () => {
+      clearInterval(moveTimer);
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   if (showFallback) return <NoteAdImage size="rectangle" />;
