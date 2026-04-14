@@ -48,33 +48,38 @@ function pickAdType(): AdType {
 function FanzaWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
+  const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     if (loadedRef.current || !containerRef.current) return;
     loadedRef.current = true;
     const container = containerRef.current;
-
-    // DMM公式 placement.js 方式
     const dataId = '700d7d51a632d919255af456a6e3ced7';
+
+    // ins要素をコンテナに追加
     const ins = document.createElement('ins');
     ins.className = 'dmm-widget-placement';
     ins.dataset.id = dataId;
     ins.style.background = 'transparent';
     container.appendChild(ins);
 
-    // cache-busterで毎回再ロードしins要素をスキャンさせる
+    // placement.jsはbodyに追加（コンテナ内だと実行されないケースがある）
     const script = document.createElement('script');
     script.src = `https://widget-view.dmm.co.jp/js/placement.js?_=${Date.now()}`;
     script.className = 'dmm-widget-scripts';
     script.dataset.id = dataId;
-    container.appendChild(script);
+    document.body.appendChild(script);
 
-    // placement.jsの読み込み・描画完了まで待つ（フォールバックなし）
-    // ins要素をDOMに残し続けないとplacement.jsが動作しない
-    return () => {};
+    // 10秒後にiframeが生成されなければnoteにフォールバック
+    const timer = setTimeout(() => {
+      if (!container.querySelector('iframe')) {
+        setShowFallback(true);
+      }
+    }, 10000);
+    return () => clearTimeout(timer);
   }, []);
 
-  // フォールバックせず常にins要素を保持（placement.jsが非同期で描画）
+  if (showFallback) return <NoteAdImage size="rectangle" />;
   return <div ref={containerRef} className="flex justify-center min-h-[50px]" />;
 }
 
