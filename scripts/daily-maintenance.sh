@@ -55,8 +55,9 @@ const s = db.prepare('SELECT COUNT(*) as c FROM shops WHERE is_active=1').get();
 const g = db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active=1').get();
 const r = db.prepare('SELECT COUNT(*) as c FROM reviews').get();
 const z = db.prepare(\"SELECT COUNT(*) as c FROM shops s WHERE s.is_active=1 AND NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id=s.id AND g.is_active=1)\").get();
-const d = db.prepare(\"SELECT COUNT(*) FROM (SELECT name, area_id, COUNT(*) as c FROM shops WHERE is_active=1 GROUP BY name, area_id HAVING c > 1)\").get();
-console.log('  店舗:', s.c, '| 嬢:', g.c, '| 評価:', r.c, '| 0人店:', z.c, '| 重複:', Object.values(d)[0]);
+const d = db.prepare(\"SELECT COUNT(*) FROM (SELECT name, category, COUNT(*) as c FROM shops WHERE is_active=1 GROUP BY name, category HAVING c > 1)\").get();
+const dg = db.prepare(\"SELECT COUNT(*) FROM (SELECT shop_id, name, COUNT(*) as c FROM girls WHERE is_active=1 GROUP BY shop_id, name HAVING c > 1)\").get();
+console.log('  店舗:', s.c, '| 嬢:', g.c, '| 評価:', r.c, '| 0人店:', z.c, '| 店重複:', Object.values(d)[0], '| 嬢重複:', Object.values(dg)[0]);
 db.close();
 " 2>&1 | tee -a "$LOG_FILE"
 
@@ -130,23 +131,7 @@ if (r4.changes > 0) {
   console.log('  [2-4] セクキャバ非アクティブ化:', r4.changes);
 }
 
-// 2-5: 重複店舗の統合（同名+同エリア → 嬢が多い方を残す）
-const dupeCount = db.prepare(\"SELECT COUNT(*) as c FROM (SELECT name, area_id, COUNT(*) as cnt FROM shops WHERE is_active=1 GROUP BY name, area_id HAVING cnt > 1)\").get().c;
-if (dupeCount > 0) {
-  console.log('  [2-5] 重複店舗統合: ' + dupeCount + 'グループ');
-
-  db.exec('CREATE TEMP TABLE keep_shops AS SELECT s.id as keep_id, s.name, s.area_id FROM shops s WHERE s.is_active = 1 AND EXISTS (SELECT 1 FROM shops s2 WHERE s2.name = s.name AND s2.area_id = s.area_id AND s2.is_active = 1 AND s2.id != s.id) AND (SELECT COUNT(*) FROM girls g WHERE g.shop_id = s.id AND g.is_active = 1) = (SELECT MAX(gc) FROM (SELECT s3.id, (SELECT COUNT(*) FROM girls g2 WHERE g2.shop_id = s3.id AND g2.is_active = 1) as gc FROM shops s3 WHERE s3.name = s.name AND s3.area_id = s.area_id AND s3.is_active = 1)) GROUP BY s.name, s.area_id');
-
-  // 嬢を移動
-  const moved = db.prepare('UPDATE girls SET shop_id = (SELECT k.keep_id FROM keep_shops k JOIN shops s ON s.name = k.name AND s.area_id = k.area_id WHERE girls.shop_id = s.id AND s.is_active = 1 AND s.id != k.keep_id) WHERE shop_id IN (SELECT s.id FROM shops s JOIN keep_shops k ON s.name = k.name AND s.area_id = k.area_id WHERE s.is_active = 1 AND s.id != k.keep_id) AND shop_id NOT IN (SELECT keep_id FROM keep_shops)').run();
-
-  // 重複店を非アクティブ化
-  const deduped = db.prepare('UPDATE shops SET is_active = 0 WHERE is_active = 1 AND id NOT IN (SELECT keep_id FROM keep_shops) AND EXISTS (SELECT 1 FROM keep_shops k WHERE k.name = shops.name AND k.area_id = shops.area_id)').run();
-  total.deduped += deduped.changes;
-  console.log('    嬢移動:', moved.changes, '| 店舗非アクティブ化:', deduped.changes);
-
-  db.exec('DROP TABLE keep_shops');
-}
+// 2-5: 重複処理は dedup-shops.mjs + dedup-girls.mjs に外出し（Phase 2 後半で呼ぶ）
 
 // 2-6: スクレイプ済み0人の非cityheaven店を非アクティブ化（30日以上0人のまま）
 const threshold = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -155,11 +140,20 @@ total.deactivated += r6.changes;
 if (r6.changes > 0) console.log('  [2-6] 30日以上0人の非CH店:', r6.changes);
 
 console.log('');
-console.log('  メンテナンス合計: クリーニング=' + total.cleaned + ' 重複統合=' + total.deduped + ' 非アクティブ化=' + total.deactivated);
+console.log('  メンテナンス合計: クリーニング=' + total.cleaned + ' 非アクティブ化=' + total.deactivated);
 
 db.pragma('wal_checkpoint(TRUNCATE)');
 db.close();
 " 2>&1 | tee -a "$LOG_FILE"
+
+# 2-7: 店舗重複統合（同名+同カテゴリ → 嬢が多い方に統合）
+log "  [2-7] 店舗重複統合..."
+node scripts/dedup-shops.mjs 2>&1 | tee -a "$LOG_FILE" || log "  [warn] dedup-shops 失敗"
+
+# 2-8: 嬢重複統合（同店内同名 → 情報量が多い方を残す）
+#      Phase 2-7 で店舗統合した結果、同店内に同名嬢が発生するため必ず順序遵守
+log "  [2-8] 嬢重複統合..."
+node scripts/dedup-girls.mjs 2>&1 | tee -a "$LOG_FILE" || log "  [warn] dedup-girls 失敗"
 
 # ============================================================================
 # Phase 2.5: 記事処理（新規作成10本 + メンテナンス）
@@ -189,9 +183,13 @@ const db = new Database('$DB_PATH', { readonly: true });
 const c1 = db.prepare(\"SELECT COUNT(*) as c FROM girls WHERE is_active=1 AND (name IS NULL OR name = '' OR length(name) = 1)\").get().c;
 console.log('  [CHECK] 空/1文字名嬢:', c1, c1 === 0 ? 'OK' : 'NG');
 
-// Check 2: 重複店舗
-const c2 = db.prepare(\"SELECT COUNT(*) as c FROM (SELECT name, area_id, COUNT(*) as cnt FROM shops WHERE is_active=1 GROUP BY name, area_id HAVING cnt > 1)\").get().c;
+// Check 2: 重複店舗（同名+同カテゴリ）
+const c2 = db.prepare(\"SELECT COUNT(*) as c FROM (SELECT name, category, COUNT(*) as cnt FROM shops WHERE is_active=1 GROUP BY name, category HAVING cnt > 1)\").get().c;
 console.log('  [CHECK] 重複店舗:', c2, c2 === 0 ? 'OK' : 'NG');
+
+// Check 2b: 重複嬢（同店内同名）
+const c2b = db.prepare(\"SELECT COUNT(*) as c FROM (SELECT shop_id, name, COUNT(*) as cnt FROM girls WHERE is_active=1 GROUP BY shop_id, name HAVING cnt > 1)\").get().c;
+console.log('  [CHECK] 重複嬢:', c2b, c2b === 0 ? 'OK' : 'NG');
 
 // Check 3: 0人店舗数
 const c3 = db.prepare(\"SELECT COUNT(*) as c FROM shops s WHERE s.is_active=1 AND NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id=s.id AND g.is_active=1)\").get().c;
