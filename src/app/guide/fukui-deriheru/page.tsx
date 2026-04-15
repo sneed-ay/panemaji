@@ -31,7 +31,7 @@ export default function FukuiDeriheruPage() {
       breadcrumb="福井デリヘル"
       slug="fukui-deriheru"
       datePublished="2026-04-12"
-      dateModified="2026-04-12"
+      dateModified="2026-04-15"
       description="福井エリアのデリヘルにおけるパネマジ事情を徹底解説。片町エリアの特徴とパネル通り率の高い店の見つけ方。"
       ctaHref="/?pref=fukui"
       ctaLabel="福井エリアの口コミをチェック →"
@@ -48,7 +48,7 @@ export default function FukuiDeriheruPage() {
         </h2>
         <p className="mb-3">
           福井県のデリヘルは福井市を中心に営業しており、北陸三県の中では店舗数が最も少ないエリアです。
-          2024年に北陸新幹線が敦賀まで延伸し、首都圏からのアクセスが向上したことで出張需要の増加が見込まれています。
+          2026年に北陸新幹線が敦賀まで延伸し、首都圏からのアクセスが向上したことで出張需要の増加が見込まれています。
         </p>
         <p>
           繁華街は片町に集中しており、金沢の片町と同名ですが規模はコンパクトです。

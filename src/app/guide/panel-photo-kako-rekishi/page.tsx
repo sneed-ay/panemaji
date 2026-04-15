@@ -22,7 +22,7 @@ export default function PanelPhotoKakoRekishiPage() {
       breadcrumb="写真加工の歴史"
       slug="panel-photo-kako-rekishi"
       datePublished="2026-04-12"
-      dateModified="2026-04-12"
+      dateModified="2026-04-15"
       description="風俗業界のパネル写真加工の歴史。アナログ修正からAI加工まで。"
       relatedLinks={[
         { href: "/guide/panemaji-kaishuu-gihou", label: "パネル写真の加工テクニック完全解説" },
@@ -67,7 +67,7 @@ export default function PanelPhotoKakoRekishiPage() {
       </section>
 
       <section>
-        <h2 className="text-xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-pink-200">AI加工時代（2024年〜）</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-4 pb-2 border-b-2 border-pink-200">AI加工時代（2026年〜）</h2>
         <p className="mb-3">
           最新のAI技術により、顔の入れ替え、体型の変更、背景の合成などが高精度で行えるようになっています。
           AI生成画像は従来の加工痕（歪み、ぼかし）が出にくく、見分けるのが困難になってきています。
