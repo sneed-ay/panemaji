@@ -28,6 +28,17 @@ LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/daily-$(date +%Y%m%d-%H%M).log"
 
+# macOS には GNU timeout がないので gtimeout（coreutils）にフォールバック。
+# 両方とも無い場合は警告して素通し実行（タイムアウト無し）。
+if command -v timeout &>/dev/null; then
+  TIMEOUT="timeout"
+elif command -v gtimeout &>/dev/null; then
+  TIMEOUT="gtimeout"
+else
+  echo "[warn] timeout / gtimeout どちらも見つからないためタイムアウト無しで実行します (brew install coreutils 推奨)"
+  TIMEOUT=""
+fi
+
 FORCE_FLAG=""
 QUICK_MODE=false
 for arg in "$@"; do
@@ -69,31 +80,31 @@ log "=== Phase 1: データ収集 ==="
 
 # 1-1: cityheaven全国更新（デリヘル + 他カテゴリ差分）
 log "  [1-1] cityheaven 全国更新..."
-timeout 14400 node scripts/update-all.mjs $FORCE_FLAG >> "$LOG_FILE" 2>&1 || log "  [warn] update-all.mjs がタイムアウトまたはエラー"
+$TIMEOUT 14400 node scripts/update-all.mjs $FORCE_FLAG >> "$LOG_FILE" 2>&1 || log "  [warn] update-all.mjs がタイムアウトまたはエラー"
 
 # 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）
 if [ "$QUICK_MODE" = false ]; then
   log "  [1-2] カテゴリ別スクレイプ（ソープ/ヘルス/ホテヘル/エステ）..."
   for pref in tokyo osaka kanagawa aichi hokkaido fukuoka miyagi saitama chiba hyogo kyoto hiroshima shizuoka niigata; do
-    timeout 1800 node scripts/scrape-category.mjs "$pref" all >> "$LOG_FILE" 2>&1 || true
+    $TIMEOUT 1800 node scripts/scrape-category.mjs "$pref" all >> "$LOG_FILE" 2>&1 || true
   done
 fi
 
 # 1-3: メンエス（aromaesthe + fues）
 log "  [1-3] メンエスデータ更新..."
-timeout 7200 node scripts/scrape-menesu.mjs all >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-menesu がタイムアウト"
+$TIMEOUT 7200 node scripts/scrape-menesu.mjs all >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-menesu がタイムアウト"
 
 # 1-4: men-esthe.jp
 log "  [1-4] men-esthe.jp データ更新..."
-timeout 3600 node scripts/scrape-menesthe.mjs girls >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-menesthe がタイムアウト"
+$TIMEOUT 3600 node scripts/scrape-menesthe.mjs girls >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-menesthe がタイムアウト"
 
 # 1-5: 0人店・100人上限店の再取得
 log "  [1-5] 0人/100人上限店の再取得..."
-timeout 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] refetch-girls がタイムアウト"
+$TIMEOUT 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] refetch-girls がタイムアウト"
 
 # 1-6: 画像URL補完
 log "  [1-6] 画像URL補完..."
-timeout 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
+$TIMEOUT 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
 
 # ============================================================================
 # Phase 2: データ品質メンテナンス
