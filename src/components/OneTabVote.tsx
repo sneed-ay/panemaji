@@ -22,7 +22,7 @@ function getBrowserId(): string {
 const RATING_OPTIONS = [
   { value: 'panel_match', label: 'パネル通り', emoji: '\ud83d\ude0a', color: 'border-green-400 bg-green-50 text-green-700 hover:bg-green-100 active:bg-green-200', selectedColor: 'border-green-500 bg-green-100 text-green-800 ring-2 ring-green-400' },
   { value: 'panel_diff', label: '許せる', emoji: '\ud83e\udd14', color: 'border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 active:bg-yellow-200', selectedColor: 'border-yellow-500 bg-yellow-100 text-yellow-800 ring-2 ring-yellow-400' },
-  { value: 'jirai', label: 'パネル詐欺', emoji: '\ud83d\udc80', color: 'border-red-400 bg-red-50 text-red-700 hover:bg-red-100 active:bg-red-200', selectedColor: 'border-red-500 bg-red-100 text-red-800 ring-2 ring-red-400' },
+  { value: 'jirai', label: '盛りすぎ', emoji: '\ud83d\udc80', color: 'border-red-400 bg-red-50 text-red-700 hover:bg-red-100 active:bg-red-200', selectedColor: 'border-red-500 bg-red-100 text-red-800 ring-2 ring-red-400' },
 ] as const;
 
 export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {

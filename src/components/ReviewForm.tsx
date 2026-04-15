@@ -86,7 +86,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   const ratingOptions = [
     { value: 'panel_match', label: 'パネル通り', emoji: '\u2705', color: 'border-green-400 bg-green-50 text-green-800 hover:bg-green-100' },
     { value: 'panel_diff', label: '許せる', emoji: '\u26a0\ufe0f', color: 'border-yellow-400 bg-yellow-50 text-yellow-800 hover:bg-yellow-100' },
-    { value: 'jirai', label: 'パネル詐欺', emoji: '\ud83d\udca3', color: 'border-red-400 bg-red-50 text-red-800 hover:bg-red-100' },
+    { value: 'jirai', label: '盛りすぎ', emoji: '\ud83d\udca3', color: 'border-red-400 bg-red-50 text-red-800 hover:bg-red-100' },
   ];
 
   return (

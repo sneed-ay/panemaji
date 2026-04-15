@@ -10,7 +10,7 @@ export function generateMetadata({ params }: { params: { prefecture: string } })
   const prefName = prefectureSlugToName(params.prefecture);
   return {
     title: `${prefName}の風俗 パネマジ口コミ一覧`,
-    description: `${prefName}の風俗店舗のパネル写真リアル度・口コミをチェック。パネル通りかパネル詐欺か、みんなの口コミで確認。`,
+    description: `${prefName}の風俗店舗のパネル写真リアル度・口コミをチェック。パネル通りか盛りすぎか、みんなの口コミで確認。`,
   };
 }
 

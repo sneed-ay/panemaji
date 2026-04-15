@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         const ratingEmoji: Record<string, string> = {
           panel_match: 'パネル通り ✅',
           panel_diff: '許せる 🟡',
-          jirai: 'パネル詐欺 🚨',
+          jirai: '盛りすぎ 🚨',
         };
         const ratingText = ratingEmoji[panel_rating] || panel_rating;
 

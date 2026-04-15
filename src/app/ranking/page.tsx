@@ -11,7 +11,7 @@ export function generateMetadata({ searchParams }: { searchParams: { pref?: stri
   const prefName = prefectureSlugToName(prefSlug);
   return {
     title: `${prefName}のパネマジランキング`,
-    description: `${prefName}の風俗 パネル通り率ランキング・パネル詐欺率ランキング。口コミに基づくリアル度で女性・店舗をランキング。`,
+    description: `${prefName}の風俗 パネル通り率ランキング・盛りすぎ率ランキング。口コミに基づくリアル度で女性・店舗をランキング。`,
   };
 }
 
@@ -136,7 +136,7 @@ export default function RankingPage({ searchParams }: { searchParams: { pref?: s
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <h2 className="text-base sm:text-xl font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
               <span className="text-red-500">&#x1F4A3;</span>
-              注意！パネル詐欺率 TOP{worstGirls.length > 0 ? Math.min(20, worstGirls.length) : 20}
+              注意！盛りすぎ率 TOP{worstGirls.length > 0 ? Math.min(20, worstGirls.length) : 20}
             </h2>
             <p className="text-xs text-gray-400 mb-4">口コミ3件以上の女性をリアル度が低い順に表示</p>
             {worstGirls.length === 0 ? (
