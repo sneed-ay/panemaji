@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AD_CONFIG } from '@/lib/ad-config';
 
-const CACHE_TTL = 3600; // 1時間キャッシュ
+const CACHE_TTL = 600; // 10分キャッシュ（バリエーション確保のため短め）
 let cache: { data: FanzaItem[]; ts: number } | null = null;
 
 interface FanzaItem {
@@ -10,10 +10,25 @@ interface FanzaItem {
   imageUrl: string;
 }
 
-export async function GET() {
-  // キャッシュ有効ならそのまま返す
+/** 配列からランダムにn件を選んで返す */
+function pickRandom<T>(arr: T[], n: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+}
+
+/** ソート条件をランダムに選ぶ（表示バリエーション向上） */
+function randomSort(): string {
+  const sorts = ['rank', 'date', 'review', 'price_asc'];
+  return sorts[Math.floor(Math.random() * sorts.length)];
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const count = Math.min(parseInt(url.searchParams.get('n') || '4'), 10);
+
+  // キャッシュ有効でも、返すアイテムはランダムに選ぶ
   if (cache && Date.now() - cache.ts < CACHE_TTL * 1000) {
-    return NextResponse.json(cache.data);
+    return NextResponse.json(pickRandom(cache.data, count));
   }
 
   const { fanza } = AD_CONFIG;
@@ -21,19 +36,22 @@ export async function GET() {
   const apiId = fanza.apiId;
 
   try {
+    // ランダムなソート+ページで毎回違う結果を取得
+    const offset = Math.floor(Math.random() * 50) + 1; // 1-50ページからランダム
     const params = new URLSearchParams({
       api_id: apiId,
       affiliate_id: apiAffId,
       site: 'FANZA',
       service: 'digital',
       floor: 'videoa',
-      hits: '6',
-      sort: 'rank',
+      hits: '30',
+      sort: randomSort(),
+      offset: String(offset),
       output: 'json',
     });
 
     const res = await fetch(`https://api.dmm.com/affiliate/v3/ItemList?${params}`, {
-      next: { revalidate: CACHE_TTL },
+      cache: 'no-store',
     });
 
     if (!res.ok) {
@@ -49,7 +67,7 @@ export async function GET() {
     })).filter((item: FanzaItem) => item.url && item.imageUrl);
 
     cache = { data: items, ts: Date.now() };
-    return NextResponse.json(items);
+    return NextResponse.json(pickRandom(items, count));
   } catch (e) {
     console.error('FANZA API fetch error:', e);
     return NextResponse.json([], { status: 200 });
