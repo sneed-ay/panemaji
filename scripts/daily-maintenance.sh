@@ -162,6 +162,20 @@ db.close();
 " 2>&1 | tee -a "$LOG_FILE"
 
 # ============================================================================
+# Phase 2.5: 記事処理（新規作成10本 + メンテナンス）
+# ============================================================================
+log ""
+log "=== Phase 2.5: 記事処理 ==="
+
+# 2.5-1: 記事メンテナンス（閉店リンク修正・古い年号更新）
+log "  [2.5-1] 記事メンテナンス..."
+node scripts/maintain-articles.mjs 2>&1 | tee -a "$LOG_FILE" || log "  [warn] 記事メンテ失敗"
+
+# 2.5-2: 新規記事作成（1日10本、空白地帯優先）
+log "  [2.5-2] 新規記事作成（10本）..."
+node scripts/generate-articles.mjs --count=10 2>&1 | tee -a "$LOG_FILE" || log "  [warn] 記事生成失敗"
+
+# ============================================================================
 # Phase 3: 品質チェック（settings.md 準拠）
 # ============================================================================
 log ""
@@ -217,9 +231,9 @@ if command -v gh &> /dev/null; then
   log "  GitHub Release: アップロード完了"
 fi
 
-# git push（コード変更があれば）
+# git push（コード変更があれば。新規記事やメンテ修正を含む）
 if [ -d .git ]; then
-  git add -A scripts/ 2>/dev/null || true
+  git add -A scripts/ src/app/guide/ 2>/dev/null || true
   git diff --staged --quiet 2>/dev/null || {
     git commit -m "chore: daily maintenance $(date +%Y-%m-%d)" 2>/dev/null || true
     git push origin main 2>/dev/null || log "  [warn] git push failed"
