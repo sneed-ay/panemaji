@@ -86,25 +86,70 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-gray-100 overflow-x-hidden">
         <header className="bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-lg">
-          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          {/* メインヘッダー */}
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
             <div className="flex items-center justify-between gap-3">
-              <a href="/" className="text-white no-underline hover:no-underline">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              <a href="/" className="text-white no-underline hover:no-underline shrink-0">
+                <h1 className="text-lg sm:text-2xl font-bold tracking-tight">
                   🔍 パネマジ掲示板
                 </h1>
-                <p className="text-pink-200 text-xs sm:text-sm mt-1">
+                <p className="text-pink-200 text-[10px] sm:text-xs mt-0.5">
                   パネル写真と実物の一致度を口コミでチェック
                 </p>
               </a>
-              <a
-                href="/ranking"
-                className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-xs sm:text-sm font-medium transition-colors no-underline"
-              >
-                &#x1F3C6;
-                <span className="hidden sm:inline">ランキング</span>
+              {/* PC: 検索バー */}
+              <form action="/search" method="GET" className="hidden md:flex flex-1 max-w-md mx-4">
+                <div className="flex w-full">
+                  <input
+                    type="text"
+                    name="q"
+                    placeholder="店舗名・女の子の名前で検索..."
+                    className="flex-1 px-3 py-1.5 rounded-l-lg text-gray-800 text-sm border-0 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  />
+                  <button type="submit" className="px-3 py-1.5 bg-pink-500 hover:bg-pink-400 rounded-r-lg transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </button>
+                </div>
+              </form>
+              {/* SP: 検索アイコン */}
+              <a href="/search" className="md:hidden shrink-0 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors no-underline text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </a>
             </div>
           </div>
+          {/* ナビゲーションバー */}
+          <nav className="bg-black/20 border-t border-white/10">
+            <div className="max-w-6xl mx-auto px-2 sm:px-4">
+              <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide py-1.5 text-xs sm:text-sm">
+                <a href="/" className="shrink-0 px-2.5 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/90 hover:text-white flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+                  <span className="hidden sm:inline">トップ</span>
+                </a>
+                <a href="/search" className="shrink-0 px-2.5 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/90 hover:text-white flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  検索
+                </a>
+                <a href="/ranking" className="shrink-0 px-2.5 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/90 hover:text-white flex items-center gap-1">
+                  🏆 ランキング
+                </a>
+                <a href="/guide" className="shrink-0 px-2.5 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/90 hover:text-white flex items-center gap-1">
+                  📖 ガイド
+                </a>
+                <span className="hidden sm:inline text-white/30 mx-1">|</span>
+                <a href="/area/shinjuku" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">新宿</a>
+                <a href="/area/ikebukuro" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">池袋</a>
+                <a href="/area/shibuya" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">渋谷</a>
+                <a href="/area/gotanda" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">五反田</a>
+                <a href="/area/shinbashi" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">新橋</a>
+                <a href="/area/ueno" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs hidden sm:inline-block">上野</a>
+                <a href="/area/kinshicho" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs hidden sm:inline-block">錦糸町</a>
+              </div>
+            </div>
+          </nav>
         </header>
         <AdBanner size="header" />
         <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
