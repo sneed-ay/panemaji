@@ -498,6 +498,94 @@ export function getShopAreaId(shopId: number): number | undefined {
   return row?.area_id;
 }
 
+// Recently reviewed girls (for top page)
+export function getRecentlyReviewedGirls(limit = 8) {
+  return db.prepare(`
+    SELECT
+      g.id, g.name, g.image_url,
+      s.name as shop_name,
+      a.name as area_name,
+      r.panel_rating,
+      r.created_at as review_date,
+      ${GIRL_STATS_COLS}
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    JOIN shops s ON g.shop_id = s.id
+    JOIN areas a ON s.area_id = a.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.is_active = 1 AND s.is_active = 1
+    GROUP BY g.id
+    ORDER BY MAX(r.created_at) DESC
+    LIMIT ?
+  `).all(limit) as (Girl & { shop_name: string; area_name: string; panel_rating: string; review_date: string })[];
+}
+
+// Popular girls in area for area page (no exclusion)
+export function getPopularGirlsInAreaTop(areaId: number, limit: number = 5): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    JOIN areas a ON s.area_id = a.id
+    ${GIRL_STATS_JOIN}
+    WHERE s.area_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) > 0
+    ORDER BY rs.review_count DESC, real_pct DESC
+    LIMIT ?
+  `).all(areaId, limit) as Girl[];
+}
+
+// Nearby shops in same area (same category first, then others)
+export function getNearbyShops(areaId: number, shopId: number, category: string, limit = 5): Shop[] {
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS},
+      CASE WHEN s.category = ? THEN 0 ELSE 1 END as cat_order
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.area_id = ? AND s.id != ? AND s.is_active = 1
+    ORDER BY cat_order ASC, COALESCE(rc.review_count, 0) DESC, gc.girl_count DESC
+    LIMIT ?
+  `).all(category, areaId, shopId, limit) as Shop[];
+}
+
+// Recently added shops (for home page)
+export function getRecentlyAddedShops(limit = 6): Shop[] {
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1
+    ORDER BY s.created_at DESC
+    LIMIT ?
+  `).all(limit) as Shop[];
+}
+
+// Top shops by real_pct for any prefecture or nationwide
+export function getTopShopsForPrefecture(prefectureSlug: string | null, limit = 5): Shop[] {
+  if (!prefectureSlug) {
+    // Nationwide
+    return db.prepare(`
+      SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+      FROM shops s
+      JOIN areas a ON s.area_id = a.id
+      ${SHOP_STATS_JOIN}
+      WHERE s.is_active = 1 AND COALESCE(rc.review_count, 0) >= 5
+      ORDER BY real_pct DESC, rc.review_count DESC
+      LIMIT ?
+    `).all(limit) as Shop[];
+  }
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(rc.review_count, 0) >= 5
+    ORDER BY real_pct DESC, rc.review_count DESC
+    LIMIT ?
+  `).all(prefectureSlug, limit) as Shop[];
+}
+
 // --- Shop Comments (BBS) ---
 
 export function getShopComments(shopId: number, limit: number = 20): ShopComment[] {

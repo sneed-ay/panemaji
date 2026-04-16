@@ -1,4 +1,4 @@
-import { getShopById, getGirlsByShop, getReviewsByShop, CATEGORY_COLORS } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getReviewsByShop, getNearbyShops, CATEGORY_COLORS } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
@@ -16,6 +16,13 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const realPct = shop.real_pct != null && shop.real_pct >= 0 ? shop.real_pct : null;
   const title = `${shop.name}のパネマジ度・口コミ一覧 | ${shop.area_name || '東京'}`;
   const description = `${shop.name}の在籍嬢のパネマジ度を口コミでチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人。${reviewCount > 0 ? `口コミ${reviewCount}件。` : ''}${shop.area_name || '東京'}の風俗口コミ。`;
+  const ogParams = new URLSearchParams({
+    name: shop.name,
+    shop: shop.area_name || '',
+    ...(realPct !== null ? { score: String(realPct) } : {}),
+    category: shop.category || '',
+  });
+  const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
   return {
     title,
     description,
@@ -27,12 +34,14 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
       description,
       url: `https://panemaji.com/shop/${params.id}`,
       siteName: 'パネマジ掲示板',
+      images: [{ url: ogImage, width: 1200, height: 630 }],
       type: 'website',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
       description,
+      images: [ogImage],
     },
   };
 }
@@ -47,6 +56,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const query = searchParams.q || '';
   const girls = getGirlsByShop(shopId, query || undefined);
   const latestReviews = getReviewsByShop(shopId, 5);
+  const nearbyShops = getNearbyShops(shop.area_id, shopId, shop.category, 5);
 
   const matchCount = shop.panel_match_count || 0;
   const diffCount = shop.panel_diff_count || 0;
@@ -240,6 +250,47 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
       {/* Girls List with Sort/Filter */}
       <GirlSortFilter girls={girlsData} query={query} />
+
+      {/* Nearby Shops */}
+      {nearbyShops.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+            近くの店舗
+          </h3>
+          <div className="space-y-2">
+            {nearbyShops.map((ns) => {
+              const nsPct = ns.real_pct ?? -1;
+              return (
+                <a
+                  key={ns.id}
+                  href={`/shop/${ns.id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors no-underline"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-800 truncate">{ns.name}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded ${CATEGORY_COLORS[ns.category] || 'bg-gray-100 text-gray-700'}`}>
+                        {ns.category}
+                      </span>
+                      <span className="text-xs text-gray-500">{ns.girl_count ?? 0}人在籍</span>
+                      <span className="text-xs text-gray-400">{ns.review_count ?? 0}件口コミ</span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {nsPct >= 0 ? (
+                      <span className={`text-sm font-bold ${nsPct >= 70 ? 'text-green-600' : nsPct >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {nsPct}%
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">---</span>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

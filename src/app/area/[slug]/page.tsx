@@ -1,7 +1,8 @@
-import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import CategoryTabs from '@/components/CategoryTabs';
+import GirlImage from '@/components/GirlImage';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
 
   const catSlug = searchParams.cat && isValidCategory(searchParams.cat) ? searchParams.cat : undefined;
   const shops = getShopsByArea(area.id, catSlug);
+  const popularGirls = getPopularGirlsInAreaTop(area.id, 5);
   const prefSlug = area.prefecture;
   const prefName = prefectureSlugToName(prefSlug);
 
@@ -43,6 +45,44 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
         currentCat={catSlug || ''}
         basePath={`/area/${params.slug}`}
       />
+
+      {/* Popular Girls TOP5 */}
+      {popularGirls.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-5">
+          <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">
+            {area.name} 人気の嬢 TOP5
+          </h2>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+            {popularGirls.map((girl, i) => {
+              const realPct = girl.real_pct ?? -1;
+              const hasReviews = (girl.review_count ?? 0) > 0 && realPct >= 0;
+              const pctColor = realPct >= 70 ? 'text-green-600' : realPct >= 40 ? 'text-yellow-600' : 'text-red-600';
+              const rankColors = i === 0 ? 'bg-yellow-500' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-orange-400' : 'bg-blue-400';
+              return (
+                <a
+                  key={girl.id}
+                  href={`/girl/${girl.id}`}
+                  className="flex-shrink-0 w-28 sm:w-32 bg-gray-50 hover:bg-blue-50 rounded-lg p-2 sm:p-3 transition-colors no-underline relative"
+                >
+                  <div className={`absolute -top-1 -left-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${rankColors} z-10 shadow`}>
+                    {i + 1}
+                  </div>
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <GirlImage src={girl.image_url} alt={girl.name} size={64} />
+                    <div className="min-w-0 w-full">
+                      <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{girl.name}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">{girl.shop_name}</p>
+                    </div>
+                    {hasReviews && (
+                      <span className={`text-xs font-bold ${pctColor}`}>{realPct}%</span>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg sm:text-2xl font-bold text-gray-800 break-words min-w-0">

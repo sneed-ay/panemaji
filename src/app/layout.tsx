@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AdBanner from "@/components/AdBanner";
+import BottomNav from "@/components/BottomNav";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -152,8 +153,9 @@ export default function RootLayout({
           </nav>
         </header>
         <AdBanner size="header" />
-        <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
+        <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-20 md:pb-6">{children}</main>
         <AdBanner size="footer" />
+        <BottomNav />
         <footer className="bg-gray-800 text-gray-400 text-center py-4 sm:py-6 mt-8 sm:mt-12 text-xs sm:text-sm px-3">
           <div className="flex justify-center flex-wrap gap-4 mb-2">
             <a href="/guide/how-to-use" className="hover:text-white transition-colors">使い方</a>

@@ -1,4 +1,4 @@
-import { getGirlWithReviewStats, getReviewsByGirl, getOtherGirlsInShopExpanded, getPopularGirlsInArea, getShopAreaId } from '@/lib/queries';
+import { getGirlWithReviewStats, getReviewsByGirl, getOtherGirlsInShopExpanded, getPopularGirlsInArea, getShopAreaId, getShopById } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
@@ -12,9 +12,17 @@ export const dynamic = 'force-dynamic';
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));
   if (!girl) return {};
+  const shop = getShopById(girl.shop_id);
   const title = `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`;
   const description = `${girl.name}さんはパネル通り？パネマジ度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`;
-  const ogImage = girl.image_url || 'https://panemaji.com/icon-512.png';
+  const realPct = girl.real_pct != null && girl.real_pct >= 0 ? girl.real_pct : null;
+  const ogParams = new URLSearchParams({
+    name: girl.name,
+    shop: girl.shop_name || '',
+    ...(realPct !== null ? { score: String(realPct) } : {}),
+    category: shop?.category || '',
+  });
+  const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
   return {
     title,
     description,
@@ -26,11 +34,11 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
       description,
       url: `https://panemaji.com/girl/${params.id}`,
       siteName: 'パネマジ掲示板',
-      images: [{ url: ogImage }],
+      images: [{ url: ogImage, width: 1200, height: 630 }],
       type: 'article',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
       description,
       images: [ogImage],
