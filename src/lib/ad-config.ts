@@ -12,7 +12,7 @@ export const AD_CONFIG = {
   },
 
   // FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動）
-  // アフィリエイトID: shumpo-018（バナー/リンク用）
+  // クリックトラッキング用ID: shumpo-018（ダッシュボードで確認する方）
   // API用ID: shumpo-990（DMM API v3は末尾990-999のみ受付）
   fanza: {
     enabled: true,

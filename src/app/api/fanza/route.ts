@@ -60,9 +60,11 @@ export async function GET(request: Request) {
     }
 
     const json = await res.json();
+    // API は shumpo-990 で取得するが、クリックURLは shumpo-018 に差し替え
+    const clickAffId = fanza.affiliateId; // shumpo-018
     const items: FanzaItem[] = (json.result?.items || []).map((item: Record<string, unknown>) => ({
       title: (item.title as string || '').substring(0, 40),
-      url: item.affiliateURL as string || '',
+      url: ((item.affiliateURL as string) || '').replace(`af_id=${apiAffId}`, `af_id=${clickAffId}`),
       imageUrl: (item.imageURL as Record<string, string>)?.small || (item.imageURL as Record<string, string>)?.list || '',
     })).filter((item: FanzaItem) => item.url && item.imageUrl);
 
