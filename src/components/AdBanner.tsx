@@ -79,31 +79,47 @@ function AdstirBanner({ size }: { size: AdSize }) {
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
-    if (loadedRef.current || !containerRef.current) return;
+    if (loadedRef.current) return;
     loadedRef.current = true;
-    const container = containerRef.current;
     const { adstir } = AD_CONFIG;
 
-    const varsScript = document.createElement('script');
-    varsScript.type = 'text/javascript';
-    varsScript.textContent = `var adstir_vars = { ver: "4.0", app_id: "${adstir.appId}", ad_spot: ${adstir.spot}, center: true };`;
-    container.appendChild(varsScript);
+    // wrapper を body 直下に配置（React管理外のDOM）
+    const wrapper = document.createElement('div');
+    wrapper.id = `adstir-wrapper-${adstir.spot}`;
+    wrapper.style.cssText = 'display:flex;justify-content:center;';
+    document.body.appendChild(wrapper);
+
+    // adstir_vars を明示的に window に設定（var だとscriptタグ内のローカルになるため）
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).adstir_vars = { ver: '4.0', app_id: adstir.appId, ad_spot: adstir.spot, center: true };
 
     const sdkScript = document.createElement('script');
     sdkScript.type = 'text/javascript';
     sdkScript.src = adstir.scriptUrl;
     sdkScript.async = true;
-    container.appendChild(sdkScript);
+    document.body.appendChild(sdkScript);
 
-    const timer = setTimeout(() => {
-      if (!containerRef.current) return;
-      const hasContent = containerRef.current.querySelector('iframe, img, canvas, svg, [class*="ad"]');
-      const height = containerRef.current.offsetHeight;
-      if (!hasContent || height < 50) {
+    // adstirがwrapperにiframeを作ったらReactコンテナに移動
+    const moveTimer = setInterval(() => {
+      const iframe = wrapper.querySelector('iframe');
+      if (iframe && containerRef.current) {
+        containerRef.current.appendChild(wrapper);
+        clearInterval(moveTimer);
+      }
+    }, 500);
+
+    const fallbackTimer = setTimeout(() => {
+      clearInterval(moveTimer);
+      if (!wrapper.querySelector('iframe')) {
+        wrapper.remove();
         setShowFallback(true);
       }
     }, 5000);
-    return () => clearTimeout(timer);
+
+    return () => {
+      clearInterval(moveTimer);
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   if (showFallback) return <NoteAdImage size={size} />;
