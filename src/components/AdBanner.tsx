@@ -93,11 +93,11 @@ function AdstirBanner({ size }: { size: AdSize }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).adstir_vars = { ver: '4.0', app_id: adstir.appId, ad_spot: adstir.spot, center: true };
 
+    // script は wrapper 内に入れる（adstirはscriptタグの直後にiframeを挿入する仕様）
     const sdkScript = document.createElement('script');
     sdkScript.type = 'text/javascript';
     sdkScript.src = adstir.scriptUrl;
-    sdkScript.async = true;
-    document.body.appendChild(sdkScript);
+    wrapper.appendChild(sdkScript);
 
     // adstirがwrapperにiframeを作ったらReactコンテナに移動
     const moveTimer = setInterval(() => {
