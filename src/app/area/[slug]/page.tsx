@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import CategoryTabs from '@/components/CategoryTabs';
 import GirlImage from '@/components/GirlImage';
+import RelatedGuides from '@/components/RelatedGuides';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -132,6 +133,8 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
           })}
         </div>
       )}
+
+      <RelatedGuides areaSlug={params.slug} prefSlug={prefSlug} />
     </div>
   );
 }

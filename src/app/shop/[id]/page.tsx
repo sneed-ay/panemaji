@@ -4,6 +4,7 @@ import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
 import AdBanner from '@/components/AdBanner';
+import RelatedGuides from '@/components/RelatedGuides';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -291,6 +292,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           </div>
         </div>
       )}
+
+      <RelatedGuides areaSlug={shop.area_slug} />
     </div>
   );
 }
