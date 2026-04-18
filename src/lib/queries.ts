@@ -382,12 +382,35 @@ export function getStatsByPrefecture(prefectureSlug: string, catSlug?: string) {
 }
 
 // Sitemap helpers
-export function getAllShopIds(): { id: number }[] {
-  return db.prepare('SELECT id FROM shops WHERE is_active = 1 ORDER BY id').all() as { id: number }[];
+export function getAllShopIds(): { id: number; last_seen_at: string | null }[] {
+  return db.prepare('SELECT id, last_seen_at FROM shops WHERE is_active = 1 ORDER BY id').all() as { id: number; last_seen_at: string | null }[];
 }
 
-export function getGirlIdsPaginated(offset: number, limit: number): { id: number }[] {
-  return db.prepare('SELECT id FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').all(limit, offset) as { id: number }[];
+export function getGirlIdsPaginated(offset: number, limit: number): { id: number; last_seen_at: string | null }[] {
+  return db.prepare('SELECT id, last_seen_at FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').all(limit, offset) as { id: number; last_seen_at: string | null }[];
+}
+
+// Returns MAX(shops.last_seen_at) per area for sitemap lastmod
+export function getAreaLastModMap(): Map<number, string | null> {
+  const rows = db.prepare(`
+    SELECT area_id, MAX(last_seen_at) AS m FROM shops WHERE is_active = 1 GROUP BY area_id
+  `).all() as { area_id: number; m: string | null }[];
+  const map = new Map<number, string | null>();
+  for (const r of rows) map.set(r.area_id, r.m);
+  return map;
+}
+
+// Returns MAX(shops.last_seen_at) per prefecture (via areas.prefecture) for sitemap lastmod
+export function getPrefectureLastModMap(): Map<string, string | null> {
+  const rows = db.prepare(`
+    SELECT a.prefecture AS p, MAX(s.last_seen_at) AS m
+    FROM shops s JOIN areas a ON s.area_id = a.id
+    WHERE s.is_active = 1
+    GROUP BY a.prefecture
+  `).all() as { p: string; m: string | null }[];
+  const map = new Map<string, string | null>();
+  for (const r of rows) map.set(r.p, r.m);
+  return map;
 }
 
 export function getActiveGirlCount(): number {

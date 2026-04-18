@@ -20,7 +20,7 @@ function buildUrlEntry(loc: string, lastmod: string, changefreq: string, priorit
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   // Lazy import to avoid build-time DB connection
-  const { getAllAreas, getAllShopIds, getGirlIdsPaginated, getPrefectureSlugs } = await import('@/lib/queries');
+  const { getAllAreas, getAllShopIds, getGirlIdsPaginated, getPrefectureSlugs, getAreaLastModMap, getPrefectureLastModMap } = await import('@/lib/queries');
 
   const sitemapId = parseInt(params.id);
   if (isNaN(sitemapId)) {
@@ -29,6 +29,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 
   const today = new Date().toISOString().split('T')[0];
   const entries: string[] = [];
+
+  // Normalize a timestamp string to YYYY-MM-DD; fallback to today
+  const toLastMod = (ts: string | null | undefined): string => {
+    if (!ts) return today;
+    const d = ts.substring(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : today;
+  };
 
   // Guide article slugs for sitemap
   const guideSlugs = [
@@ -85,22 +92,24 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       entries.push(buildUrlEntry(`${BASE_URL}/guide/${slug}`, today, 'weekly', 0.7));
     }
 
-    // Prefecture pages
+    // Prefecture pages (lastmod = MAX(shops.last_seen_at) in that prefecture)
     const prefSlugs = getPrefectureSlugs();
+    const prefLastMod = getPrefectureLastModMap();
     for (const slug of prefSlugs) {
-      entries.push(buildUrlEntry(`${BASE_URL}/${slug}`, today, 'daily', 0.9));
+      entries.push(buildUrlEntry(`${BASE_URL}/${slug}`, toLastMod(prefLastMod.get(slug)), 'daily', 0.9));
     }
 
-    // Area pages
+    // Area pages (lastmod = MAX(shops.last_seen_at) in that area)
     const areas = getAllAreas();
+    const areaLastMod = getAreaLastModMap();
     for (const area of areas) {
-      entries.push(buildUrlEntry(`${BASE_URL}/area/${area.slug}`, today, 'daily', 0.8));
+      entries.push(buildUrlEntry(`${BASE_URL}/area/${area.slug}`, toLastMod(areaLastMod.get(area.id)), 'daily', 0.8));
     }
 
-    // Shop pages
+    // Shop pages (lastmod = shops.last_seen_at)
     const shops = getAllShopIds();
     for (const shop of shops) {
-      entries.push(buildUrlEntry(`${BASE_URL}/shop/${shop.id}`, today, 'weekly', 0.7));
+      entries.push(buildUrlEntry(`${BASE_URL}/shop/${shop.id}`, toLastMod(shop.last_seen_at), 'weekly', 0.7));
     }
   } else {
     // Girl sitemaps (1-indexed: sitemapId 1 = offset 0, sitemapId 2 = offset 50000, etc.)
@@ -110,7 +119,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       return new NextResponse('Not Found', { status: 404 });
     }
     for (const girl of girls) {
-      entries.push(buildUrlEntry(`${BASE_URL}/girl/${girl.id}`, today, 'weekly', 0.6));
+      entries.push(buildUrlEntry(`${BASE_URL}/girl/${girl.id}`, toLastMod(girl.last_seen_at), 'weekly', 0.6));
     }
   }
 
