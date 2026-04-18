@@ -193,6 +193,19 @@ async function stepReviews(opts, config) {
 }
 
 /**
+ * Step: エリア MECE 正規化 — migrate-areas-v4 を呼び、スクレイプで混入した
+ * 重複エリアを独自定義エリアに統合する。詳細は docs/area-definition.md
+ */
+async function stepNormalizeAreas(opts, config) {
+  const scriptPath = path.join(__dirname, 'migrate-areas-v4.mjs');
+  if (!fs.existsSync(scriptPath)) {
+    console.log('  [pipeline] migrate-areas-v4.mjs が見つかりません。スキップします。');
+    return 0;
+  }
+  return runScript(scriptPath, [], 'エリアMECE正規化');
+}
+
+/**
  * Step 4: メンエスデータ更新
  */
 async function stepMenesu(opts, config) {
@@ -411,6 +424,7 @@ async function main() {
     steps.push(
       { name: '店舗 + 女性データ更新', fn: stepUpdateAll },
       { name: 'メンエスデータ更新', fn: stepMenesu },
+      { name: 'エリアMECE正規化', fn: stepNormalizeAreas },
       { name: '画像URL補完', fn: stepImages },
       { name: '口コミ傾向データ', fn: stepReviews },
       { name: '検索クエリ分析', fn: stepSearch },
