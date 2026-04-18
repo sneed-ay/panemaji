@@ -72,6 +72,11 @@ function FanzaWidget() {
   );
 }
 
+// モジュールレベルのフラグ: ページ内に1つだけadstirバナーを出す
+// adstir SDKは window.adstir_vars を読み取って void 0 に消す仕様のため、
+// 複数バナーが同時実行されると2個目以降が「adstir_vars is undefined」エラーになる
+let adstirInstanceExists = false;
+
 /** adstir SSP広告バナー */
 function AdstirBanner({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,6 +86,14 @@ function AdstirBanner({ size }: { size: AdSize }) {
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
+
+    // 既に別のAdBannerインスタンスでadstirが動いている場合は自社広告にフォールバック
+    if (adstirInstanceExists) {
+      setShowFallback(true);
+      return;
+    }
+    adstirInstanceExists = true;
+
     const { adstir } = AD_CONFIG;
 
     // wrapper を body 直下に配置（React管理外のDOM）
@@ -94,8 +107,6 @@ function AdstirBanner({ size }: { size: AdSize }) {
     (window as any).adstir_vars = { ver: '4.0', app_id: adstir.appId, ad_spot: adstir.spot, center: true };
 
     // script は wrapper 内に入れる（adstirはscriptタグの直後にiframeを挿入する仕様）
-    // キャッシュバスター必須: adstir SDKはIIFEで1回しか実行されないため、
-    // 同一URLだと2個目のバナー（footer等）で再実行されず広告が出ない
     const sdkScript = document.createElement('script');
     sdkScript.type = 'text/javascript';
     sdkScript.src = `${adstir.scriptUrl}?_=${Date.now()}-${Math.random()}`;
@@ -114,6 +125,7 @@ function AdstirBanner({ size }: { size: AdSize }) {
       clearInterval(moveTimer);
       if (!wrapper.querySelector('iframe')) {
         wrapper.remove();
+        adstirInstanceExists = false; // fallback時はフラグを解放
         setShowFallback(true);
       }
     }, 5000);
@@ -121,6 +133,7 @@ function AdstirBanner({ size }: { size: AdSize }) {
     return () => {
       clearInterval(moveTimer);
       clearTimeout(fallbackTimer);
+      adstirInstanceExists = false; // unmount時にフラグを解放
     };
   }, []);
 
