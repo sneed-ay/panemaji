@@ -94,9 +94,11 @@ function AdstirBanner({ size }: { size: AdSize }) {
     (window as any).adstir_vars = { ver: '4.0', app_id: adstir.appId, ad_spot: adstir.spot, center: true };
 
     // script は wrapper 内に入れる（adstirはscriptタグの直後にiframeを挿入する仕様）
+    // キャッシュバスター必須: adstir SDKはIIFEで1回しか実行されないため、
+    // 同一URLだと2個目のバナー（footer等）で再実行されず広告が出ない
     const sdkScript = document.createElement('script');
     sdkScript.type = 'text/javascript';
-    sdkScript.src = adstir.scriptUrl;
+    sdkScript.src = `${adstir.scriptUrl}?_=${Date.now()}-${Math.random()}`;
     wrapper.appendChild(sdkScript);
 
     // adstirがwrapperにiframeを作ったらReactコンテナに移動
