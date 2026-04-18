@@ -23,11 +23,13 @@ export const AD_CONFIG = {
     defaultFloor: 'videoa',
   },
 
-  // adstir SSP広告（審査通過済み・広告枠ID 302792 / panemaji_rectangle）
+  // adstir SSP広告（審査通過済み / panemaji_rectangle 300x250）
+  // spot はメディア内の広告枠通し番号（公式タグで ad_spot: 1 が正しい）
+  // 302792 は広告枠IDで内部識別子なのでSDKには渡さない
   adstir: {
     enabled: true,
     appId: 'MEDIA-da9880ba',
-    spot: 302792,
+    spot: 1,
     scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
   },
 
