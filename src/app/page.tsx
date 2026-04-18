@@ -1,5 +1,5 @@
 import HomeContent from '@/components/HomeContent';
-import { isValidPrefecture, isValidCategory, getRecentlyReviewedGirls } from '@/lib/queries';
+import { isValidPrefecture, isValidCategory, getRecentlyReviewedGirls, prefectureSlugToName } from '@/lib/queries';
 import GirlImage from '@/components/GirlImage';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 
@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export default function Home({ searchParams }: { searchParams: { pref?: string; cat?: string } }) {
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';
   const catSlug = searchParams.cat && isValidCategory(searchParams.cat) ? searchParams.cat : undefined;
-  const recentGirls = getRecentlyReviewedGirls(8);
+  const recentGirls = getRecentlyReviewedGirls(8, prefSlug);
+  const prefName = prefectureSlugToName(prefSlug);
 
   return (
     <>
@@ -18,7 +19,7 @@ export default function Home({ searchParams }: { searchParams: { pref?: string; 
       {recentGirls.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-5 mt-5">
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">
-            最近評価された嬢
+            {prefName}で最近評価された嬢
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {recentGirls.map((girl) => {

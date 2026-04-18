@@ -304,7 +304,19 @@ export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
   `).all(shopId, limit) as Review[];
 }
 
-export function getLatestReviews(limit: number = 20): Review[] {
+export function getLatestReviews(limit: number = 20, prefectureSlug?: string): Review[] {
+  if (prefectureSlug) {
+    return db.prepare(`
+      SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
+      FROM reviews r
+      JOIN girls g ON r.girl_id = g.id
+      JOIN shops s ON g.shop_id = s.id
+      JOIN areas a ON s.area_id = a.id
+      WHERE a.prefecture = ?
+      ORDER BY r.created_at DESC
+      LIMIT ?
+    `).all(prefectureSlug, limit) as Review[];
+  }
   return db.prepare(`
     SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
     FROM reviews r
@@ -522,7 +534,9 @@ export function getShopAreaId(shopId: number): number | undefined {
 }
 
 // Recently reviewed girls (for top page)
-export function getRecentlyReviewedGirls(limit = 8) {
+export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
+  const prefClause = prefectureSlug ? 'AND a.prefecture = ?' : '';
+  const args: (string | number)[] = prefectureSlug ? [prefectureSlug, limit] : [limit];
   return db.prepare(`
     SELECT
       g.id, g.name, g.image_url,
@@ -536,11 +550,11 @@ export function getRecentlyReviewedGirls(limit = 8) {
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
-    WHERE g.is_active = 1 AND s.is_active = 1
+    WHERE g.is_active = 1 AND s.is_active = 1 ${prefClause}
     GROUP BY g.id
     ORDER BY MAX(r.created_at) DESC
     LIMIT ?
-  `).all(limit) as (Girl & { shop_name: string; area_name: string; panel_rating: string; review_date: string })[];
+  `).all(...args) as (Girl & { shop_name: string; area_name: string; panel_rating: string; review_date: string })[];
 }
 
 // Popular girls in area for area page (no exclusion)
@@ -571,8 +585,19 @@ export function getNearbyShops(areaId: number, shopId: number, category: string,
   `).all(category, areaId, shopId, limit) as Shop[];
 }
 
-// Recently added shops (for home page)
-export function getRecentlyAddedShops(limit = 6): Shop[] {
+// Recently added shops (for home page). Optionally scope to a prefecture.
+export function getRecentlyAddedShops(limit = 6, prefectureSlug?: string): Shop[] {
+  if (prefectureSlug) {
+    return db.prepare(`
+      SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+      FROM shops s
+      JOIN areas a ON s.area_id = a.id
+      ${SHOP_STATS_JOIN}
+      WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(gc.girl_count, 0) >= 1
+      ORDER BY s.created_at DESC
+      LIMIT ?
+    `).all(prefectureSlug, limit) as Shop[];
+  }
   return db.prepare(`
     SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s

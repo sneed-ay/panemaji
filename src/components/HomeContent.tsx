@@ -16,9 +16,9 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
   const prefectures = getPrefectures();
   const regionOrder = getRegionOrder();
   const areas = getAreasByPrefecture(prefSlug, catSlug);
-  const latestReviews = getLatestReviews(5);
+  const latestReviews = getLatestReviews(5, prefSlug);
   const topShops = getTopRealShops(prefSlug, 5);
-  const recentShops = getRecentlyAddedShops(6);
+  const recentShops = getRecentlyAddedShops(6, prefSlug);
   const currentPrefName = prefectureSlugToName(prefSlug);
 
   // Group prefectures by region
@@ -106,7 +106,7 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
       {latestReviews.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-5">
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">
-            最新の口コミ
+            {currentPrefName}の最新の口コミ
           </h2>
           <div className="space-y-2">
             {latestReviews.map((review) => (
@@ -145,7 +145,7 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
       {recentShops.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-5">
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">
-            新着店舗
+            {currentPrefName}の新着店舗
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {recentShops.map((shop) => (
