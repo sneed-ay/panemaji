@@ -14,8 +14,8 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const reviewCount = shop.review_count || 0;
   const girlCount = shop.girl_count || 0;
   const realPct = shop.real_pct != null && shop.real_pct >= 0 ? shop.real_pct : null;
-  const title = `${shop.name}のパネマジ度・口コミ一覧 | ${shop.area_name || '東京'}`;
-  const description = `${shop.name}の在籍嬢のパネマジ度を口コミでチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人。${reviewCount > 0 ? `口コミ${reviewCount}件。` : ''}${shop.area_name || '東京'}の風俗口コミ。`;
+  const title = `${shop.name}の口コミ掲示板・パネマジ度【${shop.area_name || '東京'}】`;
+  const description = `${shop.name}(${shop.area_name || '東京'})の口コミ掲示板。在籍嬢のパネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}。${shop.name}の最新レビューと評判。`;
   const ogParams = new URLSearchParams({
     name: shop.name,
     shop: shop.area_name || '',
@@ -133,7 +133,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{shop.name}</h2>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{shop.name}<span className="sr-only">の口コミ掲示板・パネマジ度</span></h1>
             <div className="flex items-center gap-2 sm:gap-3 mt-2 flex-wrap">
               <span className={`inline-block text-xs px-2 py-0.5 rounded shrink-0 ${CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700'}`}>
                 {shop.category}

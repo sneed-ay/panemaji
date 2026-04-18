@@ -29,6 +29,7 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
 
   return (
     <div className="space-y-5">
+      <h1 className="sr-only">{currentPrefName}の風俗 口コミ掲示板・パネマジ度チェック | パネル写真と実物の一致度</h1>
       {/* 1. Search Bar - prominent at top */}
       <div className="bg-white rounded-lg shadow p-3 sm:p-4">
         <form action="/search" method="GET" className="flex gap-2">
