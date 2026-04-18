@@ -20,9 +20,27 @@ function saveUnlock(): void {
   } catch {}
 }
 
+/** GA計測ヘルパー（AdBanner.tsxと共通の関数、ad_placement=lockerで区別） */
+function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'fanza' | 'note', extra: Record<string, string | number> = {}) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    if (w.gtag) {
+      w.gtag('event', event, {
+        ad_type: adType,
+        ad_placement: 'locker',
+        ad_page: typeof window !== 'undefined' ? window.location.pathname : '',
+        ...extra,
+      });
+    }
+  } catch {}
+}
+
 /** ロッカー内広告: FANZA API + noteバナー */
 function LockerAd() {
   const [items, setItems] = useState<{ title: string; url: string; imageUrl: string }[]>([]);
+  const fanzaImpressionRef = useRef(false);
+  const noteImpressionRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/fanza')
@@ -31,20 +49,36 @@ function LockerAd() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (items.length > 0 && !fanzaImpressionRef.current) {
+      fanzaImpressionRef.current = true;
+      trackLockerAd('banner_impression', 'fanza', { items_count: items.length });
+    }
+  }, [items]);
+
+  useEffect(() => {
+    if (!noteImpressionRef.current) {
+      noteImpressionRef.current = true;
+      trackLockerAd('banner_impression', 'note');
+    }
+  }, []);
+
   return (
     <div className="space-y-3">
       {items.length > 0 && (
         <div className="flex gap-2 justify-center overflow-hidden">
           {items.map((item, i) => (
             <a key={i} href={item.url} target="_blank" rel="noopener noreferrer sponsored"
-              className="shrink-0 w-[70px] hover:opacity-80 transition-opacity no-underline">
+              className="shrink-0 w-[70px] hover:opacity-80 transition-opacity no-underline"
+              onClick={() => trackLockerAd('banner_click', 'fanza', { item_index: i })}>
               <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
             </a>
           ))}
         </div>
       )}
       <div className="flex justify-center">
-        <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored">
+        <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored"
+          onClick={() => trackLockerAd('banner_click', 'note')}>
           <img
             src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
             alt="PR"

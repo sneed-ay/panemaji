@@ -44,10 +44,26 @@ function pickAdType(): AdType {
   return 'note';
 }
 
+/** GA gtag ヘルパー */
+function trackAdEvent(event: 'banner_view' | 'banner_click' | 'banner_impression', adType: AdType, extra: Record<string, string | number> = {}) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    if (w.gtag) {
+      w.gtag('event', event, {
+        ad_type: adType,
+        ad_page: typeof window !== 'undefined' ? window.location.pathname : '',
+        ...extra,
+      });
+    }
+  } catch {}
+}
+
 /** FANZA動的バナー（DMM API v3 で商品取得→カスタム表示） */
 function FanzaWidget() {
   const [items, setItems] = useState<{ title: string; url: string; imageUrl: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const impressionFiredRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/fanza')
@@ -57,6 +73,18 @@ function FanzaWidget() {
       .finally(() => setLoaded(true));
   }, []);
 
+  // 実際にFANZA商品が表示されたらimpression計測
+  useEffect(() => {
+    if (items.length > 0 && !impressionFiredRef.current) {
+      impressionFiredRef.current = true;
+      trackAdEvent('banner_impression', 'fanza', { items_count: items.length });
+    }
+  }, [items]);
+
+  const handleFanzaClick = (index: number, url: string) => {
+    trackAdEvent('banner_click', 'fanza', { item_index: index, item_url: url.substring(0, 100) });
+  };
+
   if (loaded && items.length === 0) return <NoteAdImage size="rectangle" />;
   if (!loaded) return <div className="flex justify-center min-h-[50px]" />;
 
@@ -64,7 +92,8 @@ function FanzaWidget() {
     <div className="flex gap-2 justify-center overflow-hidden">
       {items.map((item, i) => (
         <a key={i} href={item.url} target="_blank" rel="noopener noreferrer sponsored"
-          className="shrink-0 w-[100px] hover:opacity-80 transition-opacity no-underline">
+          className="shrink-0 w-[100px] hover:opacity-80 transition-opacity no-underline"
+          onClick={() => handleFanzaClick(i, item.url)}>
           <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
         </a>
       ))}
@@ -112,12 +141,29 @@ function AdstirBanner({ size }: { size: AdSize }) {
     sdkScript.src = `${adstir.scriptUrl}?_=${Date.now()}-${Math.random()}`;
     wrapper.appendChild(sdkScript);
 
-    // adstirがwrapperにiframeを作ったらReactコンテナに移動
+    // adstirがwrapperにiframeを作ったらReactコンテナに移動 + GA impression計測
+    let impressionFired = false;
     const moveTimer = setInterval(() => {
       const iframe = wrapper.querySelector('iframe');
       if (iframe && containerRef.current) {
         containerRef.current.appendChild(wrapper);
+        if (!impressionFired) {
+          impressionFired = true;
+          trackAdEvent('banner_impression', 'adstir', { ad_size: size });
+        }
         clearInterval(moveTimer);
+
+        // iframeへのフォーカス移動をクリックプロキシとして計測
+        // (cross-origin iframe への直接的なクリック検知は不可能だが、
+        //  iframeフォーカス = ユーザーがadstir広告をクリックした信号になる)
+        const onBlur = () => {
+          setTimeout(() => {
+            if (document.activeElement === iframe) {
+              trackAdEvent('banner_click', 'adstir', { ad_size: size });
+            }
+          }, 100);
+        };
+        window.addEventListener('blur', onBlur);
       }
     }, 500);
 
@@ -148,11 +194,7 @@ function NoteAdImage({ size }: { size: AdSize }) {
   const link = getAdLink(size);
 
   const handleClick = () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const w = window as any;
-      if (w.gtag) w.gtag('event', 'banner_click', { ad_size: size, ad_type: 'note', ad_page: window.location.pathname });
-    } catch {}
+    trackAdEvent('banner_click', 'note', { ad_size: size });
   };
 
   if (imgError) return null;
@@ -181,11 +223,8 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     setAdType(picked);
     setVisible(true);
 
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const w = window as any;
-      if (w.gtag) w.gtag('event', 'banner_view', { ad_size: size, ad_type: picked });
-    } catch {}
+    // banner_view: バナーが表示されるたびに計測（adType別にGAで集計可能）
+    trackAdEvent('banner_view', picked, { ad_size: size });
   }, [size]);
 
   const handleDismiss = useCallback(() => {
