@@ -102,11 +102,20 @@ function FanzaWidget() {
 }
 
 // モジュールレベルのフラグ: ページ内に1つだけadstirバナーを出す
-// adstir SDKは window.adstir_vars を読み取って void 0 に消す仕様のため、
-// 複数バナーが同時実行されると2個目以降が「adstir_vars is undefined」エラーになる
+// 複数同時実行されても adstir_vars は各iframe内でローカルに宣言するので問題ないが、
+// 同一 app_id / ad_spot のリクエストを重複させない方針で1枠に絞る
 let adstirInstanceExists = false;
 
-/** adstir SSP広告バナー */
+/**
+ * adstir SSP広告バナー（iframe sandbox 方式）
+ *
+ * adstir.js は内部で document.write() を21箇所使っている同期版SDK。
+ * Next.js / SPA で <script> を dynamic inject しても DOMContentLoaded 後は
+ * document.write が無効化され、SDKが広告配信リクエストを発行できない。
+ *
+ * 対策: 新規iframeを作り contentDocument.write() で公式タグを書き込む。
+ * iframe 内部は独立した document lifecycle を持つため document.write が機能する。
+ */
 function AdstirBanner({ size }: { size: AdSize }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
@@ -116,7 +125,6 @@ function AdstirBanner({ size }: { size: AdSize }) {
     if (loadedRef.current) return;
     loadedRef.current = true;
 
-    // 既に別のAdBannerインスタンスでadstirが動いている場合は自社広告にフォールバック
     if (adstirInstanceExists) {
       setShowFallback(true);
       return;
@@ -124,41 +132,48 @@ function AdstirBanner({ size }: { size: AdSize }) {
     adstirInstanceExists = true;
 
     const { adstir } = AD_CONFIG;
+    const container = containerRef.current;
+    if (!container) return;
 
-    // wrapper を body 直下に配置（React管理外のDOM）
-    const wrapper = document.createElement('div');
-    wrapper.id = `adstir-wrapper-${adstir.spot}`;
-    wrapper.style.cssText = 'display:flex;justify-content:center;';
-    document.body.appendChild(wrapper);
+    // sandboxとなる iframe を作成（300x250固定、公式枠サイズ）
+    const sandbox = document.createElement('iframe');
+    sandbox.style.cssText = 'width:300px;height:250px;border:0;display:block;';
+    sandbox.setAttribute('scrolling', 'no');
+    sandbox.setAttribute('frameborder', '0');
+    sandbox.setAttribute('title', 'Ad');
+    container.appendChild(sandbox);
 
-    // adstir_vars を明示的に window に設定（var だとscriptタグ内のローカルになるため）
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).adstir_vars = { ver: '4.0', app_id: adstir.appId, ad_spot: adstir.spot, center: true };
+    // iframe 内部に公式タグを書き込む
+    const innerDoc = sandbox.contentDocument;
+    if (!innerDoc) {
+      adstirInstanceExists = false;
+      setShowFallback(true);
+      return;
+    }
+    innerDoc.open();
+    innerDoc.write(
+      '<!doctype html><html><head><base target="_top"><meta charset="utf-8"></head>' +
+      '<body style="margin:0;padding:0;">' +
+      '<script type="text/javascript">var adstir_vars = { ver: "4.0", app_id: "' + adstir.appId + '", ad_spot: ' + adstir.spot + ', center: false };<\/script>' +
+      '<script type="text/javascript" src="' + adstir.scriptUrl + '"><\/script>' +
+      '</body></html>'
+    );
+    innerDoc.close();
 
-    // script は wrapper 内に入れる（adstirはscriptタグの直後にiframeを挿入する仕様）
-    const sdkScript = document.createElement('script');
-    sdkScript.type = 'text/javascript';
-    sdkScript.src = `${adstir.scriptUrl}?_=${Date.now()}-${Math.random()}`;
-    wrapper.appendChild(sdkScript);
-
-    // adstirがwrapperにiframeを作ったらReactコンテナに移動 + GA impression計測
+    // 広告iframeが iframe 内部に生成されたら impression を計測してフォールバック解除
     let impressionFired = false;
     const moveTimer = setInterval(() => {
-      const iframe = wrapper.querySelector('iframe');
-      if (iframe && containerRef.current) {
-        containerRef.current.appendChild(wrapper);
-        if (!impressionFired) {
-          impressionFired = true;
-          trackAdEvent('banner_impression', 'adstir', { ad_size: size });
-        }
+      const innerIframe = innerDoc.querySelector('iframe');
+      if (innerIframe && !impressionFired) {
+        impressionFired = true;
+        trackAdEvent('banner_impression', 'adstir', { ad_size: size });
         clearInterval(moveTimer);
 
-        // iframeへのフォーカス移動をクリックプロキシとして計測
-        // (cross-origin iframe への直接的なクリック検知は不可能だが、
-        //  iframeフォーカス = ユーザーがadstir広告をクリックした信号になる)
+        // ネストiframeへのフォーカス移動をクリックプロキシとして計測
         const onBlur = () => {
           setTimeout(() => {
-            if (document.activeElement === iframe) {
+            // document.activeElementは外側iframe=sandboxを指す
+            if (document.activeElement === sandbox) {
               trackAdEvent('banner_click', 'adstir', { ad_size: size });
             }
           }, 100);
@@ -167,11 +182,12 @@ function AdstirBanner({ size }: { size: AdSize }) {
       }
     }, 500);
 
+    // 5秒以内に広告iframeが生成されなかったら no-fill とみなして note 自社広告へ
     const fallbackTimer = setTimeout(() => {
       clearInterval(moveTimer);
-      if (!wrapper.querySelector('iframe')) {
-        wrapper.remove();
-        adstirInstanceExists = false; // fallback時はフラグを解放
+      if (!innerDoc.querySelector('iframe')) {
+        sandbox.remove();
+        adstirInstanceExists = false;
         setShowFallback(true);
       }
     }, 5000);
@@ -179,7 +195,7 @@ function AdstirBanner({ size }: { size: AdSize }) {
     return () => {
       clearInterval(moveTimer);
       clearTimeout(fallbackTimer);
-      adstirInstanceExists = false; // unmount時にフラグを解放
+      adstirInstanceExists = false;
     };
   }, []);
 
