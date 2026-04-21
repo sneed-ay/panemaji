@@ -63,9 +63,11 @@ export const AD_CONFIG = {
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // バナー配信比率: FANZA 50% / note 25% / adstir 25%
-  fanzaRatio: 2,
-  noteRatio: 1,
+  // バナー配信比率: FANZA 50% / adstir 50% (noteは両者の no-fill フォールバック専用)
+  // - FanzaWidget が空商品のとき → NoteAdImage にフォールバック (AdBanner.tsx:88)
+  // - AdstirBanner が 5秒で広告iframe生成失敗時 → NoteAdImage にフォールバック (AdBanner.tsx:186-193)
+  fanzaRatio: 1,
+  noteRatio: 0,
   adstirRatio: 1,
   ninjaRatio: 0,
   exoclickRatio: 0,
