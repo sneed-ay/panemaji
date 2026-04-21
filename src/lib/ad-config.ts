@@ -83,3 +83,25 @@ export function getAdLink(content: string): string {
   });
   return `${noteAd.link}?${params.toString()}`;
 }
+
+/**
+ * Wrap any outbound ad URL via the server-side click tracking endpoint (/api/click)
+ *
+ * サーバー側で ad_clicks テーブルに記録してから 302 で遷移させる。
+ * GA の beacon 送信漏れ・広告ブロッカー対策として並列で動かす。
+ *
+ * @param destUrl  最終遷移先 URL (必ず allow-list 内のホストを指すこと)
+ * @param meta     ad_type / ad_size / ad_page のメタ情報
+ */
+export function wrapClickUrl(
+  destUrl: string,
+  meta: { adType: string; adSize?: string; adPage?: string }
+): string {
+  const params = new URLSearchParams({
+    to: destUrl,
+    ad_type: meta.adType,
+  });
+  if (meta.adSize) params.set('ad_size', meta.adSize);
+  if (meta.adPage) params.set('ad_page', meta.adPage);
+  return `/api/click?${params.toString()}`;
+}

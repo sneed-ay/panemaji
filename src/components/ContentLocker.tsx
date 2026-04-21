@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { wrapClickUrl } from '@/lib/ad-config';
 
 const UNLOCK_KEY = 'content_unlocked';
 const UNLOCK_DURATION = 86400000; // 24時間
@@ -27,6 +28,7 @@ function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'fan
     const w = window as any;
     if (w.gtag) {
       w.gtag('event', event, {
+        transport_type: 'beacon',
         ad_type: adType,
         ad_placement: 'locker',
         ad_page: typeof window !== 'undefined' ? window.location.pathname : '',
@@ -63,12 +65,16 @@ function LockerAd() {
     }
   }, []);
 
+  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const noteUrl = 'https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker';
   return (
     <div className="space-y-3">
       {items.length > 0 && (
         <div className="flex gap-2 justify-center overflow-hidden">
           {items.map((item, i) => (
-            <a key={i} href={item.url} target="_blank" rel="noopener noreferrer sponsored"
+            <a key={i}
+              href={wrapClickUrl(item.url, { adType: 'fanza', adSize: 'locker', adPage: pagePath })}
+              target="_blank" rel="noopener noreferrer sponsored"
               className="shrink-0 w-[70px] hover:opacity-80 transition-opacity no-underline"
               onClick={() => trackLockerAd('banner_click', 'fanza', { item_index: i })}>
               <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
@@ -77,7 +83,8 @@ function LockerAd() {
         </div>
       )}
       <div className="flex justify-center">
-        <a href="https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker" target="_blank" rel="noopener noreferrer sponsored"
+        <a href={wrapClickUrl(noteUrl, { adType: 'note', adSize: 'locker', adPage: pagePath })}
+          target="_blank" rel="noopener noreferrer sponsored"
           onClick={() => trackLockerAd('banner_click', 'note')}>
           <img
             src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
@@ -145,7 +152,7 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
-      if (w.gtag) w.gtag('event', 'content_unlock', { method: 'ad_view' });
+      if (w.gtag) w.gtag('event', 'content_unlock', { transport_type: 'beacon', method: 'ad_view' });
     } catch {}
   }, []);
 

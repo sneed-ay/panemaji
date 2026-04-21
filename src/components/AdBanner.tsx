@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AD_CONFIG, getAdLink } from '@/lib/ad-config';
+import { AD_CONFIG, getAdLink, wrapClickUrl } from '@/lib/ad-config';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
 type AdType = 'note' | 'fanza' | 'adstir';
@@ -44,13 +44,14 @@ function pickAdType(): AdType {
   return 'note';
 }
 
-/** GA gtag ヘルパー */
+/** GA gtag ヘルパー (beacon 送信で target="_blank" 遷移との競合を回避) */
 function trackAdEvent(event: 'banner_view' | 'banner_click' | 'banner_impression', adType: AdType, extra: Record<string, string | number> = {}) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
     if (w.gtag) {
       w.gtag('event', event, {
+        transport_type: 'beacon',
         ad_type: adType,
         ad_page: typeof window !== 'undefined' ? window.location.pathname : '',
         ...extra,
@@ -88,10 +89,13 @@ function FanzaWidget() {
   if (loaded && items.length === 0) return <NoteAdImage size="rectangle" />;
   if (!loaded) return <div className="flex justify-center min-h-[50px]" />;
 
+  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
   return (
     <div className="flex gap-2 justify-center overflow-hidden">
       {items.map((item, i) => (
-        <a key={i} href={item.url} target="_blank" rel="noopener noreferrer sponsored"
+        <a key={i}
+          href={wrapClickUrl(item.url, { adType: 'fanza', adSize: 'rectangle', adPage: pagePath })}
+          target="_blank" rel="noopener noreferrer sponsored"
           className="shrink-0 w-[100px] hover:opacity-80 transition-opacity no-underline"
           onClick={() => handleFanzaClick(i, item.url)}>
           <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
@@ -170,6 +174,8 @@ function AdstirBanner({ size }: { size: AdSize }) {
         clearInterval(moveTimer);
 
         // ネストiframeへのフォーカス移動をクリックプロキシとして計測
+        // 注: cross-origin iframe のため実クリックは取得不可。タブ切替・アラート等で
+        // 誤発火する可能性あり (精度低)。正確な実績は adstir 管理画面を参照すること。
         const onBlur = () => {
           setTimeout(() => {
             // document.activeElementは外側iframe=sandboxを指す
@@ -207,7 +213,8 @@ function AdstirBanner({ size }: { size: AdSize }) {
 function NoteAdImage({ size }: { size: AdSize }) {
   const [adSrc] = useState(() => getRandomImage(AD_CONFIG.noteAd.images));
   const [imgError, setImgError] = useState(false);
-  const link = getAdLink(size);
+  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const link = wrapClickUrl(getAdLink(size), { adType: 'note', adSize: size, adPage: pagePath });
 
   const handleClick = () => {
     trackAdEvent('banner_click', 'note', { ad_size: size });

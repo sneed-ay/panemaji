@@ -95,6 +95,22 @@ function getDb(): Database.Database {
       FOREIGN KEY (shop_id) REFERENCES shops(id)
     );
     CREATE INDEX IF NOT EXISTS idx_shop_comments_shop ON shop_comments(shop_id);
+
+    -- Server-side ad click log (真のクリック数を DB に残す)
+    -- 広告ブロッカー / beacon 未配信などで GA が取りこぼしたクリックも記録される
+    CREATE TABLE IF NOT EXISTS ad_clicks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at INTEGER NOT NULL,
+      ad_type TEXT NOT NULL,
+      ad_size TEXT,
+      ad_page TEXT,
+      dest_host TEXT,
+      browser_id TEXT,
+      user_agent TEXT,
+      referer TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_ad_clicks_type_date ON ad_clicks(ad_type, created_at);
+    CREATE INDEX IF NOT EXISTS idx_ad_clicks_created ON ad_clicks(created_at DESC);
   `);
 
   // Add twitter_url column if missing

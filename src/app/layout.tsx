@@ -81,7 +81,7 @@ export default function RootLayout({
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('consent', 'default', { analytics_storage: 'granted' });
-              gtag('config', 'G-CM0CD47KFB');
+              gtag('config', 'G-CM0CD47KFB', { transport_type: 'beacon' });
             `}} />
         </>
       </head>
