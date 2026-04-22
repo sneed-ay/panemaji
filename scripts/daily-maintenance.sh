@@ -23,7 +23,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PROJECT_ROOT="$(pwd)"
-DB_PATH="$PROJECT_ROOT/panemaji.db"
+# Render では /data/panemaji.db（env 経由で渡される）、scheduled-task / ローカルでは PROJECT_ROOT/panemaji.db
+DB_PATH="${DB_PATH:-$PROJECT_ROOT/panemaji.db}"
+export DB_PATH
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/daily-$(date +%Y%m%d-%H%M).log"
