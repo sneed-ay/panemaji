@@ -13,12 +13,6 @@ interface FanzaItem {
 // フロア別にキャッシュを持つ
 const cacheByFloor: Record<string, { data: FanzaItem[]; ts: number }> = {};
 
-/** 配列からランダムにn件を選ぶ */
-function pickRandom<T>(arr: T[], n: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-}
-
 // FANZA の各フロア（service/floor の組み合わせ）
 // 視覚的に似すぎないよう bucket タグでグルーピングし、1リクエストで異なる bucket から取得する
 const FLOORS = [
