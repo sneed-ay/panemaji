@@ -5,6 +5,7 @@ import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
 import AdBanner from '@/components/AdBanner';
 import RelatedGuides from '@/components/RelatedGuides';
+import { generateAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -83,10 +84,12 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   }));
 
   // JSON-LD LocalBusiness structured data
+  const alternateNames = generateAlternateNames(shop.name);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: shop.name,
+    ...(alternateNames.length > 0 ? { alternateName: alternateNames } : {}),
     url: `https://panemaji.com/shop/${shop.id}`,
     description: shop.description || `${shop.area_name}エリアの風俗店「${shop.name}」`,
     ...(shop.area_name ? { areaServed: shop.area_name } : {}),
@@ -199,7 +202,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       {/* Latest Reviews */}
       {latestReviews.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">最新の口コミ</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">{shop.name}の掲示板</h3>
           <div className="space-y-3">
             {latestReviews.map((review) => (
               <div

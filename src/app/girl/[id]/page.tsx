@@ -5,6 +5,7 @@ import GirlImage from '@/components/GirlImage';
 import ShareButtons from '@/components/ShareButtons';
 import GirlPageClient from './GirlPageClient';
 import AdBanner from '@/components/AdBanner';
+import { generateGirlAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -83,10 +84,12 @@ export default function GirlPage({ params }: { params: { id: string } }) {
     ? reviews.reduce((sum, r) => sum + (ratingMap[r.panel_rating] || 3), 0) / reviews.length
     : undefined;
 
+  const alternateNames = generateGirlAlternateNames(girl.name, girl.shop_name);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: girl.name,
+    ...(alternateNames.length > 0 ? { alternateName: alternateNames } : {}),
     url: `https://panemaji.com/girl/${girl.id}`,
     ...(girl.image_url ? { image: girl.image_url } : {}),
     ...(reviews.length > 0 ? {
