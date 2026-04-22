@@ -162,6 +162,7 @@ export default function RootLayout({
             <a href="/guide/panemaji-checker" className="hover:text-white transition-colors">パネマジ見分け方</a>
             <a href="/guide" className="hover:text-white transition-colors">コラム・ガイド</a>
             <a href="/terms" className="hover:text-white transition-colors">利用規約</a>
+            <a href="/privacy" className="hover:text-white transition-colors">プライバシーポリシー</a>
             <a href="/contact" className="hover:text-white transition-colors">お問い合わせ</a>
           </div>
           <p>&copy; 2026 パネマジ掲示板 - 風俗 パネマジ口コミサイト</p>
