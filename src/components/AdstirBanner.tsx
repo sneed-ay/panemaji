@@ -65,32 +65,26 @@ export default function AdstirBanner({ size, placement = 'banner', fallback = nu
     const container = containerRef.current;
     if (!container) return;
 
+    // srcdoc に初期 HTML を埋め込んで通常の document lifecycle を走らせる。
+    // innerDoc.open()/write()/close() 方式は close() 後の adstir SDK 内部 document.write が効かず
+    // ad iframe が生成されないケースがあるため srcdoc に切り替え。
     const sandbox = document.createElement('iframe');
     sandbox.style.cssText = 'width:300px;height:250px;border:0;display:block;';
     sandbox.setAttribute('scrolling', 'no');
     sandbox.setAttribute('frameborder', '0');
     sandbox.setAttribute('title', 'Ad');
-    container.appendChild(sandbox);
-
-    const innerDoc = sandbox.contentDocument;
-    if (!innerDoc) {
-      mountedPlacements.delete(placement);
-      setShowFallback(true);
-      return;
-    }
-    innerDoc.open();
-    innerDoc.write(
+    sandbox.srcdoc =
       '<!doctype html><html><head><base target="_top"><meta charset="utf-8"></head>' +
       '<body style="margin:0;padding:0;">' +
-      '<script type="text/javascript">var adstir_vars = { ver: "4.0", app_id: "' + adstir.appId + '", ad_spot: ' + adstir.spot + ', center: false };<\/script>' +
-      '<script type="text/javascript" src="' + adstir.scriptUrl + '"><\/script>' +
-      '</body></html>'
-    );
-    innerDoc.close();
+      '<script>var adstir_vars = { ver: "4.0", app_id: "' + adstir.appId + '", ad_spot: ' + adstir.spot + ', center: false };<\/script>' +
+      '<script src="' + adstir.scriptUrl + '"><\/script>' +
+      '</body></html>';
+    container.appendChild(sandbox);
 
     let impressionFired = false;
     const moveTimer = setInterval(() => {
-      const innerIframe = innerDoc.querySelector('iframe');
+      const innerDoc = sandbox.contentDocument;
+      const innerIframe = innerDoc?.querySelector('iframe');
       if (innerIframe && !impressionFired) {
         impressionFired = true;
         trackAdEvent('banner_impression', { ad_size: size, ad_placement: placement });
@@ -107,14 +101,16 @@ export default function AdstirBanner({ size, placement = 'banner', fallback = nu
       }
     }, 500);
 
+    // 8 秒まで待つ（5 秒だと adstir のレスポンス前にタイムアウトしがち）
     const fallbackTimer = setTimeout(() => {
       clearInterval(moveTimer);
-      if (!innerDoc.querySelector('iframe')) {
+      const innerDoc = sandbox.contentDocument;
+      if (!innerDoc?.querySelector('iframe')) {
         sandbox.remove();
         mountedPlacements.delete(placement);
         setShowFallback(true);
       }
-    }, 5000);
+    }, 8000);
 
     return () => {
       clearInterval(moveTimer);

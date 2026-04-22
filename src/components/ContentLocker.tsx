@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { wrapClickUrl } from '@/lib/ad-config';
 import AdstirBanner from './AdstirBanner';
+import { pickAdType, type AdType } from '@/lib/pickAdType';
+import { pickFreshFanza } from '@/lib/fanzaPool';
 
 const UNLOCK_KEY = 'content_unlocked';
 const UNLOCK_DURATION = 86400000; // 24時間
@@ -22,8 +24,8 @@ function saveUnlock(): void {
   } catch {}
 }
 
-/** GA計測ヘルパー（フォールバック note バナー用） */
-function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'note', extra: Record<string, string | number> = {}) {
+/** GA計測ヘルパー（ロッカー内広告共通） */
+function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: AdType, extra: Record<string, string | number> = {}) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
@@ -39,12 +41,12 @@ function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'not
   } catch {}
 }
 
-/** adstir が no-fill だった場合のフォールバック: note 自社広告 */
+/** note 自社バナー（adstir/FANZA no-fill 時 or pickAdType で note 当選時のフォールバック） */
 function LockerNoteFallback() {
-  const noteImpressionRef = useRef(false);
+  const impressionRef = useRef(false);
   useEffect(() => {
-    if (!noteImpressionRef.current) {
-      noteImpressionRef.current = true;
+    if (!impressionRef.current) {
+      impressionRef.current = true;
       trackLockerAd('banner_impression', 'note');
     }
   }, []);
@@ -65,9 +67,62 @@ function LockerNoteFallback() {
   );
 }
 
-/** ロッカー内広告: adstir のみ（no-fill 時は note 自社広告へフォールバック） */
+/** ロッカー内 FANZA バナー（1商品のみ、大きめ） */
+function LockerFanzaBanner() {
+  const [item, setItem] = useState<{ title: string; url: string; imageUrl: string } | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const impressionRef = useRef(false);
+
+  useEffect(() => {
+    fetch('/api/fanza?n=8')
+      .then(r => r.json())
+      .then((data: { title: string; url: string; imageUrl: string }[]) => {
+        const picked = pickFreshFanza(data, 1);
+        if (picked.length > 0) setItem(picked[0]);
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (item && !impressionRef.current) {
+      impressionRef.current = true;
+      trackLockerAd('banner_impression', 'fanza');
+    }
+  }, [item]);
+
+  // no-fill（APIが空返却）時は note フォールバック
+  if (loaded && !item) return <LockerNoteFallback />;
+  if (!item) return <div className="flex justify-center min-h-[240px]" />;
+
+  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
+  // imageURL.small は大体 240x340 前後。locker 内で縦長に表示して目立たせる
+  return (
+    <div className="flex justify-center">
+      <a href={wrapClickUrl(item.url, { adType: 'fanza', adSize: 'locker', adPage: pagePath })}
+        target="_blank" rel="noopener noreferrer sponsored"
+        className="block hover:opacity-80 transition-opacity no-underline"
+        onClick={() => trackLockerAd('banner_click', 'fanza')}>
+        <img src={item.imageUrl} alt="" className="max-h-[240px] w-auto rounded" loading="lazy" />
+      </a>
+    </div>
+  );
+}
+
+/**
+ * ロッカー内広告: メインと同じ比率で FANZA / adstir / note を抽選。
+ * 1枠1広告ルールを遵守し、抽選された1種類だけ描画する。
+ * no-fill / no-ad 時のみ LockerNoteFallback に自動差し替え。
+ */
 function LockerAd() {
-  return <AdstirBanner size="locker" placement="locker" fallback={<LockerNoteFallback />} />;
+  // 初回マウント時に抽選結果を固定（再レンダリングで切り替わらないように）
+  const [adType] = useState<AdType>(() => pickAdType());
+
+  if (adType === 'fanza') return <LockerFanzaBanner />;
+  if (adType === 'adstir') {
+    return <AdstirBanner size="locker" placement="locker" fallback={<LockerNoteFallback />} />;
+  }
+  return <LockerNoteFallback />;
 }
 
 /** ロック時のダミー口コミカード */

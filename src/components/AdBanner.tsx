@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AD_CONFIG, getAdLink, wrapClickUrl } from '@/lib/ad-config';
 import AdstirBanner from './AdstirBanner';
+import { pickAdType, type AdType } from '@/lib/pickAdType';
+import { pickFreshFanza } from '@/lib/fanzaPool';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
-type AdType = 'note' | 'fanza' | 'adstir';
 
 /** コンテキスト情報（FANZAのキーワード連動用） */
 export interface AdContext {
@@ -24,27 +25,6 @@ function getRandomImage(images: string[]): string {
   return images[Math.floor(Math.random() * images.length)];
 }
 
-/** 配信比率に基づいて広告タイプを選択 */
-function pickAdType(): AdType {
-  const candidates: { type: AdType; weight: number }[] = [];
-
-  if (AD_CONFIG.fanza.enabled) {
-    candidates.push({ type: 'fanza', weight: AD_CONFIG.fanzaRatio });
-  }
-  candidates.push({ type: 'note', weight: AD_CONFIG.noteRatio });
-  if (AD_CONFIG.adstir.enabled && AD_CONFIG.adstir.appId) {
-    candidates.push({ type: 'adstir', weight: AD_CONFIG.adstirRatio });
-  }
-
-  const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
-  let rand = Math.random() * totalWeight;
-  for (const c of candidates) {
-    rand -= c.weight;
-    if (rand <= 0) return c.type;
-  }
-  return 'note';
-}
-
 /** GA gtag ヘルパー (beacon 送信で target="_blank" 遷移との競合を回避) */
 function trackAdEvent(event: 'banner_view' | 'banner_click' | 'banner_impression', adType: AdType, extra: Record<string, string | number> = {}) {
   try {
@@ -61,34 +41,19 @@ function trackAdEvent(event: 'banner_view' | 'banner_click' | 'banner_impression
   } catch {}
 }
 
-/**
- * モジュールレベルで「ページ内で既に表示した FANZA 商品の URL」を記録し、
- * 同一ページに複数 FanzaWidget が居ても別の商品を引けるようにする。
- * ページ遷移時も保持されるが、各 .then() で都度フィルタするので害は限定的。
- * 無制限に膨れないよう 200 件でリセット。
- */
-const shownFanzaUrls = new Set<string>();
-function rememberFanzaUrls(urls: string[]) {
-  for (const u of urls) shownFanzaUrls.add(u);
-  if (shownFanzaUrls.size > 200) shownFanzaUrls.clear();
-}
-
-/** FANZA動的バナー（DMM API v3 で商品取得→カスタム表示） */
+/** FANZA動的バナー（DMM API v3 で商品取得→3枚横並び） */
 function FanzaWidget() {
   const [items, setItems] = useState<{ title: string; url: string; imageUrl: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
   const impressionFiredRef = useRef(false);
 
   useEffect(() => {
-    // 大きめのプールを取得し、まだ同一ページで出していない商品から3件を選ぶ
+    // 大きめのプールを取得し、ページ内 FANZA 共有プールで重複しない3件を選ぶ
     fetch('/api/fanza?n=12')
       .then(r => r.json())
       .then((data: { title: string; url: string; imageUrl: string }[]) => {
-        if (!Array.isArray(data) || data.length === 0) return;
-        const fresh = data.filter(it => !shownFanzaUrls.has(it.url));
-        const picked = (fresh.length >= 3 ? fresh : [...fresh, ...data.filter(it => !fresh.includes(it))]).slice(0, 3);
-        rememberFanzaUrls(picked.map(it => it.url));
-        setItems(picked);
+        const picked = pickFreshFanza(data, 3);
+        if (picked.length > 0) setItems(picked);
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
