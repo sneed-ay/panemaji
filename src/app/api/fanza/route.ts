@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AD_CONFIG } from '@/lib/ad-config';
 
-const CACHE_TTL = 180; // 3分キャッシュ（短めにしてバリエーション最大化）
+const CACHE_TTL = 60; // 1分キャッシュ（短めにしてバリエーション最大化）
 
 interface FanzaItem {
   title: string;
@@ -20,17 +20,17 @@ function pickRandom<T>(arr: T[], n: number): T[] {
 }
 
 // FANZA の各フロア（service/floor の組み合わせ）
-// 表示バリエーションを広げるため複数から毎回ランダム選択
+// 視覚的に似すぎないよう bucket タグでグルーピングし、1リクエストで異なる bucket から取得する
 const FLOORS = [
-  { service: 'digital', floor: 'videoa', label: 'AV' },
-  { service: 'digital', floor: 'videoc', label: 'アマチュア' },
-  { service: 'digital', floor: 'anime', label: 'アニメ' },
-  { service: 'digital', floor: 'nikkatsu', label: '日活ロマン' },
-  { service: 'digital', floor: 'cinema', label: '一般映画' },
-  { service: 'mono', floor: 'dvd', label: 'DVD' },
-  { service: 'mono', floor: 'anime', label: 'アニメDVD' },
-  { service: 'doujin', floor: 'digital_doujin', label: '同人' },
-  { service: 'book', floor: 'comic', label: 'コミック' },
+  { service: 'digital', floor: 'videoa', label: 'AV', bucket: 'live' },
+  { service: 'digital', floor: 'videoc', label: 'アマチュア', bucket: 'live' },
+  { service: 'digital', floor: 'nikkatsu', label: '日活ロマン', bucket: 'live' },
+  { service: 'digital', floor: 'cinema', label: '一般映画', bucket: 'live' },
+  { service: 'mono', floor: 'dvd', label: 'DVD', bucket: 'live' },
+  { service: 'digital', floor: 'anime', label: 'アニメ', bucket: 'anime' },
+  { service: 'mono', floor: 'anime', label: 'アニメDVD', bucket: 'anime' },
+  { service: 'doujin', floor: 'digital_doujin', label: '同人', bucket: 'book' },
+  { service: 'book', floor: 'comic', label: 'コミック', bucket: 'book' },
 ];
 
 function randomSort(): string {
@@ -40,6 +40,16 @@ function randomSort(): string {
 
 function randomFloor() {
   return FLOORS[Math.floor(Math.random() * FLOORS.length)];
+}
+
+/** bucket が異なる 2 フロアを選び、パターン被りを防ぐ */
+function pickTwoFloors() {
+  const a = randomFloor();
+  const otherBucket = FLOORS.filter(f => f.bucket !== a.bucket);
+  const b = otherBucket.length > 0
+    ? otherBucket[Math.floor(Math.random() * otherBucket.length)]
+    : FLOORS.find(f => f !== a) || a;
+  return [a, b] as const;
 }
 
 async function fetchFloorItems(floor: { service: string; floor: string }, apiId: string, apiAffId: string, clickAffId: string): Promise<FanzaItem[]> {
@@ -84,9 +94,22 @@ async function fetchFloorItems(floor: { service: string; floor: string }, apiId:
   }
 }
 
+/** items から floor 別に偏りなく count 件サンプリング */
+function balancedPick(byFloor: FanzaItem[][], count: number): FanzaItem[] {
+  const active = byFloor.filter(a => a.length > 0).map(a => [...a].sort(() => Math.random() - 0.5));
+  const out: FanzaItem[] = [];
+  let i = 0;
+  while (out.length < count && active.some(a => a.length > 0)) {
+    const src = active[i % active.length];
+    if (src.length > 0) out.push(src.shift()!);
+    i++;
+  }
+  return out;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const count = Math.min(parseInt(url.searchParams.get('n') || '4'), 10);
+  const count = Math.min(parseInt(url.searchParams.get('n') || '4'), 20);
 
   const { fanza } = AD_CONFIG;
   const apiAffId = (fanza as { apiAffiliateId?: string }).apiAffiliateId || fanza.affiliateId;
@@ -94,20 +117,18 @@ export async function GET(request: Request) {
   const clickAffId = fanza.affiliateId;
 
   try {
-    // 毎回2つのフロアから取得して混ぜる（バリエーション最大化）
-    const floor1 = randomFloor();
-    let floor2 = randomFloor();
-    while (floor2 === floor1) floor2 = randomFloor();
+    // bucket が異なる2フロアを選ぶ → ジャンル/視覚の被りを減らす
+    const [floor1, floor2] = pickTwoFloors();
 
     const [items1, items2] = await Promise.all([
       fetchFloorItems(floor1, apiId, apiAffId, clickAffId),
       fetchFloorItems(floor2, apiId, apiAffId, clickAffId),
     ]);
 
-    const merged = [...items1, ...items2];
-    if (merged.length === 0) return NextResponse.json([], { status: 200 });
+    if (items1.length + items2.length === 0) return NextResponse.json([], { status: 200 });
 
-    return NextResponse.json(pickRandom(merged, count));
+    // フロアごとに偏りなく取るので、視覚的に「全部同じジャンル」にならない
+    return NextResponse.json(balancedPick([items1, items2], count));
   } catch (e) {
     console.error('FANZA API fetch error:', e);
     return NextResponse.json([], { status: 200 });

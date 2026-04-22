@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { wrapClickUrl } from '@/lib/ad-config';
+import AdstirBanner from './AdstirBanner';
 
 const UNLOCK_KEY = 'content_unlocked';
 const UNLOCK_DURATION = 86400000; // 24時間
@@ -21,8 +22,8 @@ function saveUnlock(): void {
   } catch {}
 }
 
-/** GA計測ヘルパー（AdBanner.tsxと共通の関数、ad_placement=lockerで区別） */
-function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'fanza' | 'note', extra: Record<string, string | number> = {}) {
+/** GA計測ヘルパー（フォールバック note バナー用） */
+function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'note', extra: Record<string, string | number> = {}) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
@@ -38,63 +39,35 @@ function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: 'fan
   } catch {}
 }
 
-/** ロッカー内広告: FANZA API + noteバナー */
-function LockerAd() {
-  const [items, setItems] = useState<{ title: string; url: string; imageUrl: string }[]>([]);
-  const fanzaImpressionRef = useRef(false);
+/** adstir が no-fill だった場合のフォールバック: note 自社広告 */
+function LockerNoteFallback() {
   const noteImpressionRef = useRef(false);
-
-  useEffect(() => {
-    fetch('/api/fanza')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data) && data.length > 0) setItems(data.slice(0, 4)); })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (items.length > 0 && !fanzaImpressionRef.current) {
-      fanzaImpressionRef.current = true;
-      trackLockerAd('banner_impression', 'fanza', { items_count: items.length });
-    }
-  }, [items]);
-
   useEffect(() => {
     if (!noteImpressionRef.current) {
       noteImpressionRef.current = true;
       trackLockerAd('banner_impression', 'note');
     }
   }, []);
-
   const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
   const noteUrl = 'https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker';
   return (
-    <div className="space-y-3">
-      {items.length > 0 && (
-        <div className="flex gap-2 justify-center overflow-hidden">
-          {items.map((item, i) => (
-            <a key={i}
-              href={wrapClickUrl(item.url, { adType: 'fanza', adSize: 'locker', adPage: pagePath })}
-              target="_blank" rel="noopener noreferrer sponsored"
-              className="shrink-0 w-[70px] hover:opacity-80 transition-opacity no-underline"
-              onClick={() => trackLockerAd('banner_click', 'fanza', { item_index: i })}>
-              <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
-            </a>
-          ))}
-        </div>
-      )}
-      <div className="flex justify-center">
-        <a href={wrapClickUrl(noteUrl, { adType: 'note', adSize: 'locker', adPage: pagePath })}
-          target="_blank" rel="noopener noreferrer sponsored"
-          onClick={() => trackLockerAd('banner_click', 'note')}>
-          <img
-            src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
-            alt="PR"
-            className="w-full max-w-[300px] h-auto rounded-lg"
-          />
-        </a>
-      </div>
+    <div className="flex justify-center">
+      <a href={wrapClickUrl(noteUrl, { adType: 'note', adSize: 'locker', adPage: pagePath })}
+        target="_blank" rel="noopener noreferrer sponsored"
+        onClick={() => trackLockerAd('banner_click', 'note')}>
+        <img
+          src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
+          alt="PR"
+          className="w-full max-w-[300px] h-auto rounded-lg"
+        />
+      </a>
     </div>
   );
+}
+
+/** ロッカー内広告: adstir のみ（no-fill 時は note 自社広告へフォールバック） */
+function LockerAd() {
+  return <AdstirBanner size="locker" placement="locker" fallback={<LockerNoteFallback />} />;
 }
 
 /** ロック時のダミー口コミカード */

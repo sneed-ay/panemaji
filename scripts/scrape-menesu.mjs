@@ -18,6 +18,7 @@ import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { cleanShopName } from './lib/clean-shop-name.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -217,8 +218,8 @@ async function scrapeAromaestheShops(browser, db, stmts) {
         return { name, area, ladyCount: ladyLinks.length };
       });
 
-      const shopName = detail.name || shop.name;
-      if (!shopName) continue;
+      const shopName = cleanShopName(detail.name || shop.name);
+      if (!shopName || shopName.length < 2 || shopName.length > 80) continue;
 
       const existing = stmts.findShopBySource.get(shop.href);
       if (existing) {
@@ -315,13 +316,12 @@ async function scrapeFuesShops(browser, db, stmts) {
           await page.goto(sourceUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
           await sleep(800);
 
-          const shopName = await page.evaluate(() => {
-            // Title format: "SHOP_NAME｜超割引クーポン｜エリア"
+          const rawShopName = await page.evaluate(() => {
+            // Title format: "SHOP_NAME｜超割引クーポン｜エリア" — cleanShopName でサフィックス除去
             const title = document.title || '';
-            const name = title.split('｜')[0].split('|')[0].trim();
-            return name;
+            return title.split('｜')[0].split('|')[0].trim();
           });
-
+          const shopName = cleanShopName(rawShopName);
           if (!shopName || shopName.length > 80 || shopName.length < 2) continue;
 
           stmts.insertShop.run({

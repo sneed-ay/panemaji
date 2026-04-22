@@ -157,6 +157,11 @@ db.pragma('wal_checkpoint(TRUNCATE)');
 db.close();
 " 2>&1 | tee -a "$LOG_FILE"
 
+# 2-6b: 店舗名サフィックス除去（「〜の超割引クーポン」等、fues.jp 由来のノイズ）
+#       dedup 前に走らせないと同一店舗が dedup 対象に拾えない
+log "  [2-6b] 店舗名クリーンアップ..."
+node scripts/fix-shop-names.mjs --apply 2>&1 | tee -a "$LOG_FILE" || log "  [warn] fix-shop-names 失敗"
+
 # 2-7: 店舗重複統合（同名+同カテゴリ → 嬢が多い方に統合）
 log "  [2-7] 店舗重複統合..."
 node scripts/dedup-shops.mjs 2>&1 | tee -a "$LOG_FILE" || log "  [warn] dedup-shops 失敗"

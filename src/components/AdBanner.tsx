@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AD_CONFIG, getAdLink, wrapClickUrl } from '@/lib/ad-config';
+import AdstirBanner from './AdstirBanner';
 
 type AdSize = 'header' | 'rectangle' | 'footer';
 type AdType = 'note' | 'fanza' | 'adstir';
@@ -60,6 +61,18 @@ function trackAdEvent(event: 'banner_view' | 'banner_click' | 'banner_impression
   } catch {}
 }
 
+/**
+ * モジュールレベルで「ページ内で既に表示した FANZA 商品の URL」を記録し、
+ * 同一ページに複数 FanzaWidget が居ても別の商品を引けるようにする。
+ * ページ遷移時も保持されるが、各 .then() で都度フィルタするので害は限定的。
+ * 無制限に膨れないよう 200 件でリセット。
+ */
+const shownFanzaUrls = new Set<string>();
+function rememberFanzaUrls(urls: string[]) {
+  for (const u of urls) shownFanzaUrls.add(u);
+  if (shownFanzaUrls.size > 200) shownFanzaUrls.clear();
+}
+
 /** FANZA動的バナー（DMM API v3 で商品取得→カスタム表示） */
 function FanzaWidget() {
   const [items, setItems] = useState<{ title: string; url: string; imageUrl: string }[]>([]);
@@ -67,9 +80,16 @@ function FanzaWidget() {
   const impressionFiredRef = useRef(false);
 
   useEffect(() => {
-    fetch('/api/fanza')
+    // 大きめのプールを取得し、まだ同一ページで出していない商品から3件を選ぶ
+    fetch('/api/fanza?n=12')
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data) && data.length > 0) setItems(data.slice(0, 3)); })
+      .then((data: { title: string; url: string; imageUrl: string }[]) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        const fresh = data.filter(it => !shownFanzaUrls.has(it.url));
+        const picked = (fresh.length >= 3 ? fresh : [...fresh, ...data.filter(it => !fresh.includes(it))]).slice(0, 3);
+        rememberFanzaUrls(picked.map(it => it.url));
+        setItems(picked);
+      })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
@@ -103,110 +123,6 @@ function FanzaWidget() {
       ))}
     </div>
   );
-}
-
-// モジュールレベルのフラグ: ページ内に1つだけadstirバナーを出す
-// 複数同時実行されても adstir_vars は各iframe内でローカルに宣言するので問題ないが、
-// 同一 app_id / ad_spot のリクエストを重複させない方針で1枠に絞る
-let adstirInstanceExists = false;
-
-/**
- * adstir SSP広告バナー（iframe sandbox 方式）
- *
- * adstir.js は内部で document.write() を21箇所使っている同期版SDK。
- * Next.js / SPA で <script> を dynamic inject しても DOMContentLoaded 後は
- * document.write が無効化され、SDKが広告配信リクエストを発行できない。
- *
- * 対策: 新規iframeを作り contentDocument.write() で公式タグを書き込む。
- * iframe 内部は独立した document lifecycle を持つため document.write が機能する。
- */
-function AdstirBanner({ size }: { size: AdSize }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
-  const [showFallback, setShowFallback] = useState(false);
-
-  useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-
-    if (adstirInstanceExists) {
-      setShowFallback(true);
-      return;
-    }
-    adstirInstanceExists = true;
-
-    const { adstir } = AD_CONFIG;
-    const container = containerRef.current;
-    if (!container) return;
-
-    // sandboxとなる iframe を作成（300x250固定、公式枠サイズ）
-    const sandbox = document.createElement('iframe');
-    sandbox.style.cssText = 'width:300px;height:250px;border:0;display:block;';
-    sandbox.setAttribute('scrolling', 'no');
-    sandbox.setAttribute('frameborder', '0');
-    sandbox.setAttribute('title', 'Ad');
-    container.appendChild(sandbox);
-
-    // iframe 内部に公式タグを書き込む
-    const innerDoc = sandbox.contentDocument;
-    if (!innerDoc) {
-      adstirInstanceExists = false;
-      setShowFallback(true);
-      return;
-    }
-    innerDoc.open();
-    innerDoc.write(
-      '<!doctype html><html><head><base target="_top"><meta charset="utf-8"></head>' +
-      '<body style="margin:0;padding:0;">' +
-      '<script type="text/javascript">var adstir_vars = { ver: "4.0", app_id: "' + adstir.appId + '", ad_spot: ' + adstir.spot + ', center: false };<\/script>' +
-      '<script type="text/javascript" src="' + adstir.scriptUrl + '"><\/script>' +
-      '</body></html>'
-    );
-    innerDoc.close();
-
-    // 広告iframeが iframe 内部に生成されたら impression を計測してフォールバック解除
-    let impressionFired = false;
-    const moveTimer = setInterval(() => {
-      const innerIframe = innerDoc.querySelector('iframe');
-      if (innerIframe && !impressionFired) {
-        impressionFired = true;
-        trackAdEvent('banner_impression', 'adstir', { ad_size: size });
-        clearInterval(moveTimer);
-
-        // ネストiframeへのフォーカス移動をクリックプロキシとして計測
-        // 注: cross-origin iframe のため実クリックは取得不可。タブ切替・アラート等で
-        // 誤発火する可能性あり (精度低)。正確な実績は adstir 管理画面を参照すること。
-        const onBlur = () => {
-          setTimeout(() => {
-            // document.activeElementは外側iframe=sandboxを指す
-            if (document.activeElement === sandbox) {
-              trackAdEvent('banner_click', 'adstir', { ad_size: size });
-            }
-          }, 100);
-        };
-        window.addEventListener('blur', onBlur);
-      }
-    }, 500);
-
-    // 5秒以内に広告iframeが生成されなかったら no-fill とみなして note 自社広告へ
-    const fallbackTimer = setTimeout(() => {
-      clearInterval(moveTimer);
-      if (!innerDoc.querySelector('iframe')) {
-        sandbox.remove();
-        adstirInstanceExists = false;
-        setShowFallback(true);
-      }
-    }, 5000);
-
-    return () => {
-      clearInterval(moveTimer);
-      clearTimeout(fallbackTimer);
-      adstirInstanceExists = false;
-    };
-  }, []);
-
-  if (showFallback) return <NoteAdImage size={size} />;
-  return <div ref={containerRef} className="flex justify-center min-h-[250px]" />;
 }
 
 /** Note自社広告バナー */
@@ -263,7 +179,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
       <div className="px-2">
         {adType === 'fanza' && <FanzaWidget />}
         {adType === 'note' && <NoteAdImage size={size} />}
-        {adType === 'adstir' && <AdstirBanner size={size} />}
+        {adType === 'adstir' && <AdstirBanner size={size} placement="banner" fallback={<NoteAdImage size={size} />} />}
       </div>
       <button onClick={handleDismiss}
         className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-full text-xs"
