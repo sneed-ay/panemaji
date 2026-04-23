@@ -15,14 +15,16 @@ const cacheByFloor: Record<string, { data: FanzaItem[]; ts: number }> = {};
 
 // FANZA の各フロア（service/floor の組み合わせ）
 // 視覚的に似すぎないよう bucket タグでグルーピングし、1リクエストで異なる bucket から取得する
+// 3 bucket、商材は「売れる可能性が高い」動画 / アニメ / 書籍 に絞る（グッズ・ゲームはCVR低いため除外）
 const FLOORS = [
+  // 実写系（bucket: live）
   { service: 'digital', floor: 'videoa', label: 'AV', bucket: 'live' },
   { service: 'digital', floor: 'videoc', label: 'アマチュア', bucket: 'live' },
-  { service: 'digital', floor: 'nikkatsu', label: '日活ロマン', bucket: 'live' },
-  { service: 'digital', floor: 'cinema', label: '一般映画', bucket: 'live' },
   { service: 'mono', floor: 'dvd', label: 'DVD', bucket: 'live' },
+  // アニメ系（bucket: anime）
   { service: 'digital', floor: 'anime', label: 'アニメ', bucket: 'anime' },
   { service: 'mono', floor: 'anime', label: 'アニメDVD', bucket: 'anime' },
+  // 書籍系（bucket: book）
   { service: 'doujin', floor: 'digital_doujin', label: '同人', bucket: 'book' },
   { service: 'book', floor: 'comic', label: 'コミック', bucket: 'book' },
 ];
