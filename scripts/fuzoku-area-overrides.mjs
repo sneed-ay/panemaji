@@ -1,0 +1,488 @@
+// fuzoku.jp エリア → 独自slug 手動オーバーライド
+// キー形式: `${prefecture}|${normalized_area_name}` （" 風俗"サフィックス除去後）
+// 値: slug（DBの clean slug）
+export const OVERRIDES = {
+  // ─── aichi ─────────────────────────────
+  'aichi|新栄・東新町': 'nagoya',
+  'aichi|大曽根': 'nagoya',
+  'aichi|柴田': 'nagoya',
+  'aichi|金山': 'nagoya',
+  'aichi|名古屋内その他': 'nagoya',
+  'aichi|栄': 'nagoya',
+  'aichi|錦': 'nagoya',
+  'aichi|丸の内': 'nagoya',
+  'aichi|名駅': 'nagoya',
+  'aichi|納屋橋': 'nagoya',
+  'aichi|今池': 'nagoya',
+  'aichi|池下': 'nagoya',
+  'aichi|栄/錦/丸の内': 'nagoya',
+  'aichi|今池/池下': 'nagoya',
+  'aichi|名駅/納屋橋': 'nagoya',
+  'aichi|春日井': 'aichi-other',
+  'aichi|小牧': 'aichi-other',
+  'aichi|犬山': 'aichi-other',
+  'aichi|大府': 'toyota',
+  'aichi|安城': 'toyota',
+  'aichi|知立': 'toyota',
+  'aichi|半田': 'aichi-other',
+  'aichi|知多': 'aichi-other',
+  'aichi|常滑': 'aichi-other',
+  'aichi|蒲郡': 'toyohashi',
+  'aichi|愛知その他': 'aichi-other',
+
+  // ─── osaka ─────────────────────────────
+  'osaka|日本橋(大阪)': 'namba',
+  'osaka|千日前': 'namba',
+  'osaka|谷九(谷町九丁目)': 'namba',
+  'osaka|宗右衛門町': 'namba',
+  'osaka|心斎橋': 'namba',
+  'osaka|道頓堀': 'namba',
+  'osaka|阿倍野': 'namba',
+  'osaka|十三': 'umeda',
+  'osaka|塚本': 'umeda',
+  'osaka|新大阪': 'umeda',
+  'osaka|西中島': 'umeda',
+  'osaka|天満': 'umeda',
+  'osaka|桜ノ宮': 'umeda',
+  'osaka|兎我野町': 'umeda',
+  'osaka|堂山': 'umeda',
+  'osaka|十三/塚本': 'umeda',
+  'osaka|新大阪/西中島': 'umeda',
+  'osaka|吹田': 'osaka-other',
+  'osaka|豊中': 'osaka-other',
+  'osaka|茨木': 'osaka-other',
+  'osaka|高槻': 'osaka-other',
+  'osaka|守口': 'osaka-other',
+  'osaka|門真': 'osaka-other',
+  'osaka|東大阪': 'osaka-other',
+  'osaka|八尾': 'osaka-other',
+  'osaka|松原': 'osaka-other',
+  'osaka|藤井寺': 'osaka-other',
+  'osaka|四條畷': 'osaka-other',
+  'osaka|大東': 'osaka-other',
+  'osaka|枚方': 'osaka-other',
+  'osaka|岸和田': 'sakai',
+  'osaka|貝塚': 'sakai',
+  'osaka|高石': 'sakai',
+  'osaka|泉大津': 'sakai',
+  'osaka|和泉': 'sakai',
+  'osaka|泉佐野': 'sakai',
+  'osaka|大阪内その他': 'osaka-other',
+  'osaka|大阪その他': 'osaka-other',
+
+  // ─── kanagawa (no -other slug; default yokohama) ────
+  'kanagawa|横浜西口': 'yokohama',
+  'kanagawa|新横浜': 'yokohama',
+  'kanagawa|上大岡': 'yokohama',
+  'kanagawa|鶴見': 'yokohama',
+  'kanagawa|福富町': 'yokohama',
+  'kanagawa|曙町': 'yokohama',
+  'kanagawa|桜木町': 'yokohama',
+  'kanagawa|野毛': 'yokohama',
+  'kanagawa|宮川町': 'yokohama',
+  'kanagawa|武蔵小杉': 'kawasaki',
+  'kanagawa|溝の口': 'kawasaki',
+  'kanagawa|戸塚': 'yokohama',
+  'kanagawa|大船': 'yokohama',
+  'kanagawa|桜木町/野毛/宮川町': 'yokohama',
+  'kanagawa|本厚木': 'atsugi',
+  'kanagawa|伊勢原': 'atsugi',
+  'kanagawa|鎌倉': 'fujisawa',
+  'kanagawa|平塚': 'fujisawa',
+  'kanagawa|神奈川その他': 'yokohama',
+
+  // ─── fukuoka ─────────────────────────────
+  'fukuoka|博多': 'fukuoka-city',
+  'fukuoka|天神': 'fukuoka-city',
+  'fukuoka|福岡内その他': 'fukuoka-city',
+  'fukuoka|福岡その他': 'fukuoka-city',
+  'fukuoka|小倉': 'kitakyushu',
+  'fukuoka|黒崎': 'kitakyushu',
+  'fukuoka|門司': 'kitakyushu',
+  'fukuoka|行橋': 'kitakyushu',
+  'fukuoka|田川': 'kitakyushu',
+  'fukuoka|北九州内その他': 'kitakyushu',
+  'fukuoka|大牟田': 'kurume',
+  'fukuoka|八女': 'kurume',
+  'fukuoka|柳川': 'kurume',
+  'fukuoka|大川': 'kurume',
+  'fukuoka|宗像': 'fukuoka-city',
+  'fukuoka|糸島': 'fukuoka-city',
+  'fukuoka|大野城': 'fukuoka-city',
+  'fukuoka|筑紫野': 'fukuoka-city',
+
+  // ─── kyoto ────────────────────────────
+  'kyoto|祇園': 'kyoto-city',
+  'kyoto|京都南インター': 'kyoto-city',
+  'kyoto|河原町・四条': 'kyoto-city',
+  'kyoto|木屋町': 'kyoto-city',
+  'kyoto|亀岡': 'kyoto-city',
+  'kyoto|京都内その他': 'kyoto-city',
+  'kyoto|京都その他': 'kyoto-city',
+  'kyoto|福知山': 'kyoto-city',
+  'kyoto|舞鶴': 'kyoto-city',
+  'kyoto|宇治': 'kyoto-city',
+  'kyoto|八幡': 'kyoto-city',
+  'kyoto|城陽': 'kyoto-city',
+  'kyoto|宮津': 'kyoto-city',
+  'kyoto|京丹後': 'kyoto-city',
+  'kyoto|福知山/舞鶴': 'kyoto-city',
+
+  // ─── hyogo ──────────────────────────────
+  'hyogo|福原（ソープ）': 'kobe',
+  'hyogo|福原': 'kobe',
+  'hyogo|神戸内その他': 'kobe',
+  'hyogo|尼崎': 'kobe',
+  'hyogo|川西': 'kobe',
+  'hyogo|宝塚': 'kobe',
+  'hyogo|伊丹': 'kobe',
+  'hyogo|西宮': 'kobe',
+  'hyogo|高砂': 'himeji',
+  'hyogo|西脇': 'himeji',
+  'hyogo|三田': 'kobe',
+  'hyogo|小野': 'himeji',
+  'hyogo|滝野社': 'himeji',
+  'hyogo|相生': 'himeji',
+  'hyogo|たつの': 'himeji',
+  'hyogo|豊岡': 'hyogo-other',
+  'hyogo|丹波': 'hyogo-other',
+  'hyogo|豊岡/養父': 'hyogo-other',
+  'hyogo|兵庫その他': 'hyogo-other',
+
+  // ─── hokkaido ────────────────────────────
+  'hokkaido|小樽': 'sapporo',
+  'hokkaido|稚内': 'hokkaido-other',
+  'hokkaido|中標津': 'hokkaido-other',
+  'hokkaido|北海道その他': 'hokkaido-other',
+  'hokkaido|恵庭': 'sapporo',
+
+  // ─── chiba ────────────────────────────
+  'chiba|幕張': 'chiba-city',
+  'chiba|本八幡': 'ichikawa',
+  'chiba|行徳': 'ichikawa',
+  'chiba|富里': 'narita',
+  'chiba|野田': 'kashiwa',
+  'chiba|新松戸': 'kashiwa',
+  'chiba|千葉その他': 'chiba-other',
+  'chiba|君津': 'kisarazu',
+
+  // ─── saitama ─────────────────────────
+  'saitama|浦和': 'omiya',
+  'saitama|与野': 'omiya',
+  'saitama|南越谷': 'koshigaya',
+  'saitama|新越谷': 'koshigaya',
+  'saitama|埼玉その他': 'saitama-other',
+
+  // ─── ibaraki ────────────────────────────
+  'ibaraki|日立': 'mito',
+  'ibaraki|取手': 'tsuchiura',
+  'ibaraki|古河': 'ibaraki-other',
+  'ibaraki|牛久': 'tsuchiura',
+  'ibaraki|ひたちなか': 'mito',
+  'ibaraki|茨城その他': 'ibaraki-other',
+  'ibaraki|鹿島(茨城)': 'kashima',
+
+  // ─── shizuoka ────────────────────────────
+  'shizuoka|熱海': 'numazu',
+  'shizuoka|御殿場': 'numazu',
+  'shizuoka|裾野': 'numazu',
+  'shizuoka|三島': 'numazu',
+  'shizuoka|富士宮': 'numazu',
+  'shizuoka|藤枝': 'shizuoka-city',
+  'shizuoka|掛川': 'hamamatsu',
+  'shizuoka|御前崎': 'hamamatsu',
+  'shizuoka|袋井': 'hamamatsu',
+  'shizuoka|熱海/下田': 'numazu',
+  'shizuoka|静岡その他': 'shizuoka-city',
+
+  // ─── niigata ────────────────────────────
+  'niigata|新発田': 'niigata-city',
+  'niigata|村上': 'niigata-city',
+  'niigata|魚沼': 'nagaoka',
+  'niigata|柏崎': 'joetsu',
+
+  // ─── miyagi ────────────────────────────
+  'miyagi|岩沼': 'sendai',
+  'miyagi|仙南・名取': 'sendai',
+  'miyagi|角田': 'sendai',
+  'miyagi|仙台その他': 'sendai',
+  'miyagi|宮城その他': 'miyagi-other',
+
+  // ─── fukushima ─────────────────────────
+  'fukushima|猪苗代': 'aizu',
+  'fukushima|喜多方': 'aizu',
+  'fukushima|新白河': 'shirakawa',
+  'fukushima|福島その他': 'fukushima-other',
+
+  // ─── hiroshima ────────────────────────
+  'hiroshima|呉': 'hiroshima-city',
+  'hiroshima|安芸高田': 'hiroshima-city',
+  'hiroshima|廿日市': 'hiroshima-city',
+  'hiroshima|東広島': 'hiroshima-city',
+  'hiroshima|三原': 'fukuyama',
+  'hiroshima|東広島/竹原': 'hiroshima-city',
+  'hiroshima|広島その他': 'hiroshima-other',
+
+  // ─── nagano ────────────────────────
+  'nagano|須坂': 'nagano-city',
+  'nagano|小諸': 'ueda',
+  'nagano|中野(長野)': 'nagano-city',
+  'nagano|塩尻': 'matsumoto',
+  'nagano|長野その他': 'nagano-city',
+
+  // ─── gifu ────────────────────────
+  'gifu|各務原': 'gifu-city',
+  'gifu|大垣': 'gifu-city',
+  'gifu|瑞穂': 'gifu-city',
+  'gifu|羽島': 'gifu-city',
+  'gifu|高山': 'gifu-other',
+  'gifu|美濃加茂': 'gifu-city',
+  'gifu|可児': 'gifu-city',
+  'gifu|多治見': 'gifu-city',
+  'gifu|恵那': 'gifu-other',
+  'gifu|土岐': 'gifu-city',
+  'gifu|関': 'gifu-city',
+  'gifu|山県': 'gifu-city',
+  'gifu|美濃加茂/可児/多治見': 'gifu-city',
+
+  // ─── okayama ────────────────────────
+  'okayama|津山': 'okayama-other',
+  'okayama|総社': 'okayama-city',
+  'okayama|水島': 'kurashiki',
+  'okayama|瀬戸内': 'okayama-other',
+  'okayama|備前': 'okayama-other',
+  'okayama|新見': 'okayama-other',
+  'okayama|高梁': 'okayama-other',
+  'okayama|井原': 'okayama-other',
+  'okayama|笠岡': 'okayama-other',
+  'okayama|岡山その他': 'okayama-other',
+
+  // ─── ishikawa ────────────────────────
+  'ishikawa|小松': 'kanazawa',
+  'ishikawa|かほく': 'kanazawa',
+  'ishikawa|片山津': 'kanazawa',
+  'ishikawa|加賀': 'kanazawa',
+  'ishikawa|七尾': 'ishikawa-other',
+  'ishikawa|羽咋': 'ishikawa-other',
+  'ishikawa|能登': 'ishikawa-other',
+  'ishikawa|輪島': 'ishikawa-other',
+  'ishikawa|片山津/加賀': 'kanazawa',
+  'ishikawa|石川その他': 'ishikawa-other',
+
+  // ─── kagoshima ────────────────────────
+  'kagoshima|奄美大島': 'kagoshima-other',
+  'kagoshima|霧島・国分': 'kagoshima-other',
+  'kagoshima|薩摩川内': 'kagoshima-other',
+  'kagoshima|串木野': 'kagoshima-other',
+  'kagoshima|鹿屋': 'kagoshima-other',
+  'kagoshima|出水': 'kagoshima-other',
+  'kagoshima|谷山': 'kagoshima-city',
+  'kagoshima|平川': 'kagoshima-city',
+  'kagoshima|鹿児島その他': 'kagoshima-other',
+
+  // ─── kumamoto ────────────────────────
+  'kumamoto|人吉': 'kumamoto-other',
+  'kumamoto|八代': 'kumamoto-other',
+  'kumamoto|山鹿': 'kumamoto-other',
+  'kumamoto|菊陽町': 'kumamoto-city',
+  'kumamoto|水俣': 'kumamoto-other',
+  'kumamoto|宇土': 'kumamoto-city',
+  'kumamoto|宇城': 'kumamoto-city',
+  'kumamoto|菊池': 'kumamoto-other',
+  'kumamoto|玉名': 'kumamoto-other',
+  'kumamoto|熊本その他': 'kumamoto-other',
+
+  // ─── oita ────────────────────────
+  'oita|別府': 'oita-other',
+  'oita|杵築': 'oita-other',
+  'oita|佐伯': 'oita-other',
+  'oita|津久見': 'oita-other',
+  'oita|臼杵': 'oita-other',
+  'oita|中津': 'oita-other',
+  'oita|大分その他': 'oita-other',
+
+  // ─── okinawa ────────────────────────
+  'okinawa|石垣島': 'okinawa-other',
+  'okinawa|宮古島': 'okinawa-other',
+  'okinawa|名護': 'okinawa-other',
+  'okinawa|沖縄': 'okinawa-other',
+  'okinawa|北谷': 'naha',
+  'okinawa|糸満': 'naha',
+  'okinawa|豊見城': 'naha',
+  'okinawa|浦添': 'naha',
+  'okinawa|宜野湾': 'naha',
+  'okinawa|沖縄/うるま/北谷': 'okinawa-other',
+  'okinawa|沖縄その他': 'okinawa-other',
+
+  // ─── yamaguchi ────────────────────────
+  'yamaguchi|下関': 'shimonoseki',
+  'yamaguchi|岩国': 'yamaguchi-other',
+  'yamaguchi|萩': 'yamaguchi-other',
+  'yamaguchi|長門': 'yamaguchi-other',
+  'yamaguchi|美祢': 'yamaguchi-other',
+  'yamaguchi|下松': 'yamaguchi-city',
+  'yamaguchi|光': 'yamaguchi-city',
+  'yamaguchi|山口その他': 'yamaguchi-other',
+
+  // ─── nagasaki ────────────────────────
+  'nagasaki|松浦': 'sasebo',
+  'nagasaki|平戸': 'sasebo',
+  'nagasaki|島原': 'nagasaki-city',
+  'nagasaki|諫早': 'nagasaki-city',
+  'nagasaki|大村': 'nagasaki-city',
+  'nagasaki|諫早/大村': 'nagasaki-city',
+  'nagasaki|長崎その他': 'nagasaki-city',
+
+  // ─── saga ────────────────────────
+  'saga|鳥栖': 'saga-city',
+  'saga|唐津': 'saga-city',
+  'saga|伊万里': 'saga-city',
+  'saga|小城': 'saga-city',
+  'saga|多久': 'saga-city',
+  'saga|嬉野': 'saga-city',
+  'saga|武雄': 'saga-city',
+  'saga|嬉野/武雄': 'saga-city',
+  'saga|唐津/伊万里': 'saga-city',
+  'saga|佐賀その他': 'saga-city',
+
+  // ─── miyazaki ────────────────────────
+  'miyazaki|日向': 'miyazaki-other',
+  'miyazaki|都城': 'miyazaki-other',
+  'miyazaki|延岡': 'miyazaki-other',
+  'miyazaki|西都': 'miyazaki-other',
+
+  // ─── mie ────────────────────────
+  'mie|熊野': 'mie-other',
+  'mie|久居': 'tsu',
+  'mie|伊勢': 'mie-other',
+  'mie|伊賀': 'mie-other',
+  'mie|亀山': 'yokkaichi',
+  'mie|三重その他': 'mie-other',
+
+  // ─── shiga ────────────────────────
+  'shiga|雄琴': 'shiga',
+  'shiga|大津': 'shiga',
+  'shiga|彦根': 'shiga',
+  'shiga|近江八幡': 'shiga',
+  'shiga|東近江': 'shiga',
+  'shiga|草津': 'shiga',
+  'shiga|守山': 'shiga',
+  'shiga|野洲': 'shiga',
+  'shiga|栗東': 'shiga',
+  'shiga|滋賀その他': 'shiga',
+
+  // ─── nara ────────────────────────
+  'nara|生駒': 'nara-city',
+  'nara|大和郡山': 'nara-city',
+  'nara|天理': 'nara-city',
+  'nara|香芝': 'nara-city',
+  'nara|大和高田': 'nara-city',
+  'nara|橿原': 'nara-city',
+  'nara|奈良その他': 'nara-city',
+
+  // ─── wakayama ────────────────────────
+  'wakayama|田辺': 'wakayama-city',
+  'wakayama|橋本': 'wakayama-city',
+  'wakayama|新宮': 'wakayama-city',
+  'wakayama|海南': 'wakayama-city',
+  'wakayama|有田': 'wakayama-city',
+  'wakayama|御坊': 'wakayama-city',
+  'wakayama|和歌山その他': 'wakayama-city',
+
+  // ─── tochigi ────────────────────────
+  'tochigi|足利': 'oyama',
+  'tochigi|栃木その他': 'utsunomiya',
+
+  // ─── gunma ────────────────────────
+  'gunma|渋川': 'takasaki',
+  'gunma|館林': 'ota',
+  'gunma|沼田': 'takasaki',
+  'gunma|藤岡': 'takasaki',
+  'gunma|富岡': 'takasaki',
+  'gunma|群馬その他': 'takasaki',
+
+  // ─── akita ────────────────────────
+  'akita|大仙・大曲': 'akita-city',
+  'akita|横手': 'akita-other',
+  'akita|秋田その他': 'akita-other',
+
+  // ─── aomori ────────────────────────
+  'aomori|むつ': 'aomori-other',
+  'aomori|十和田': 'hachinohe',
+  'aomori|黒石': 'aomori-city',
+  'aomori|青森その他': 'aomori-other',
+
+  // ─── iwate ────────────────────────
+  'iwate|岩手その他': 'iwate-other',
+
+  // ─── yamagata ────────────────────────
+  'yamagata|尾花沢': 'shinjo',
+  'yamagata|東根': 'yamagata-city',
+  'yamagata|長井': 'yonezawa',
+  'yamagata|南陽': 'yonezawa',
+  'yamagata|上山': 'yamagata-city',
+  'yamagata|山形その他': 'yamagata-city',
+
+  // ─── toyama ────────────────────────
+  'toyama|魚津': 'toyama-other',
+  'toyama|新湊': 'takaoka',
+  'toyama|滑川': 'toyama-city',
+  'toyama|氷見': 'takaoka',
+  'toyama|砺波': 'toyama-other',
+  'toyama|富山その他': 'toyama-other',
+
+  // ─── fukui ────────────────────────
+  'fukui|敦賀': 'fukui-city',
+  'fukui|武生': 'fukui-city',
+  'fukui|鯖江': 'fukui-city',
+  'fukui|福井その他': 'fukui-city',
+
+  // ─── yamanashi ────────────────────────
+  'yamanashi|甲府': 'yamanashi',
+  'yamanashi|富士吉田': 'yamanashi',
+  'yamanashi|石和温泉': 'yamanashi',
+  'yamanashi|笛吹': 'yamanashi',
+  'yamanashi|韮崎': 'yamanashi',
+  'yamanashi|甲斐': 'yamanashi',
+
+  // ─── kochi ────────────────────────
+  'kochi|南国': 'kochi-city',
+  'kochi|土佐': 'kochi-city',
+  'kochi|高知その他': 'kochi-city',
+
+  // ─── kagawa ────────────────────────
+  'kagawa|さぬき': 'takamatsu',
+  'kagawa|東かがわ': 'takamatsu',
+  'kagawa|善通寺': 'kagawa-other',
+  'kagawa|丸亀': 'kagawa-other',
+  'kagawa|坂出': 'kagawa-other',
+  'kagawa|善通寺/丸亀/坂出': 'kagawa-other',
+  'kagawa|香川その他': 'kagawa-other',
+
+  // ─── tokushima ────────────────────────
+  'tokushima|阿南': 'tokushima-other',
+  'tokushima|吉野川': 'tokushima-other',
+  'tokushima|鳴門': 'tokushima-city',
+  'tokushima|小松島': 'tokushima-city',
+
+  // ─── ehime ────────────────────────
+  'ehime|今治': 'ehime-other',
+  'ehime|宇和島': 'ehime-other',
+  'ehime|四国中央': 'ehime-other',
+  'ehime|西予': 'ehime-other',
+  'ehime|八幡浜': 'ehime-other',
+  'ehime|大洲': 'ehime-other',
+  'ehime|西条': 'ehime-other',
+  'ehime|新居浜': 'ehime-other',
+  'ehime|西条/新居浜': 'ehime-other',
+  'ehime|愛媛その他': 'ehime-other',
+
+  // ─── tottori (legacy slugs only) ────────────────────────
+  'tottori|鳥取': 'tottori-a3101',
+  'tottori|米子': 'tottori-a3103',
+
+  // ─── shimane ────────────────────────
+  'shimane|松江': 'shimane',
+  'shimane|出雲': 'shimane',
+  'shimane|出雲/雲南': 'shimane',
+};

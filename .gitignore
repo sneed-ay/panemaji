@@ -44,3 +44,12 @@ panemaji.db
 panemaji.db-wal
 panemaji.db-shm
 panemaji.db.gz
+panemaji.db.bak_*
+panemaji.db.gz
+logs/
+scrape-progress-*.json
+menesthe-progress.json
+menesu-progress.json
+fuzoku-japan-progress.json
+cityheaven-progress.json
+.DS_Store

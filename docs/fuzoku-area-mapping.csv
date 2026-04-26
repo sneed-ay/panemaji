@@ -1,0 +1,582 @@
+prefecture,fuzoku_area,normalized,suggested_slug,suggested_name,confidence
+aichi,"名古屋","名古屋",nagoya,"名古屋",HIGH
+aichi,"新栄・東新町","新栄・東新町",nagoya,"(その他)",OVERRIDE
+aichi,"大曽根","大曽根",nagoya,"(その他)",OVERRIDE
+aichi,"柴田","柴田",nagoya,"(その他)",OVERRIDE
+aichi,"金山","金山",nagoya,"(その他)",OVERRIDE
+aichi,"名古屋内その他","名古屋内その他",nagoya,"(その他)",OVERRIDE
+aichi,"一宮","一宮",ichinomiya,"一宮・稲沢",HIGH
+aichi,"春日井","春日井",aichi-other,"(その他)",OVERRIDE
+aichi,"愛知その他","愛知その他",aichi-other,"(その他)",OVERRIDE
+aichi,"名駅/納屋橋","名駅/納屋橋",nagoya,"(その他)",OVERRIDE
+aichi,"栄 風俗","栄",nagoya,"(その他)",OVERRIDE
+aichi,"錦 風俗","錦",nagoya,"(その他)",OVERRIDE
+aichi,"丸の内 風俗","丸の内",nagoya,"(その他)",OVERRIDE
+aichi,"名駅 風俗","名駅",nagoya,"(その他)",OVERRIDE
+aichi,"納屋橋 風俗","納屋橋",nagoya,"(その他)",OVERRIDE
+aichi,"今池 風俗","今池",nagoya,"(その他)",OVERRIDE
+aichi,"池下 風俗","池下",nagoya,"(その他)",OVERRIDE
+aichi,"小牧 風俗","小牧",aichi-other,"(その他)",OVERRIDE
+aichi,"犬山 風俗","犬山",aichi-other,"(その他)",OVERRIDE
+aichi,"豊田 風俗","豊田",toyota,"豊田・岡崎・刈谷",HIGH
+aichi,"刈谷 風俗","刈谷",toyota,"豊田・岡崎・刈谷",HIGH
+aichi,"大府 風俗","大府",toyota,"(その他)",OVERRIDE
+aichi,"安城 風俗","安城",toyota,"(その他)",OVERRIDE
+aichi,"知立 風俗","知立",toyota,"(その他)",OVERRIDE
+aichi,"半田 風俗","半田",aichi-other,"(その他)",OVERRIDE
+aichi,"知多 風俗","知多",aichi-other,"(その他)",OVERRIDE
+aichi,"常滑 風俗","常滑",aichi-other,"(その他)",OVERRIDE
+aichi,"岡崎 風俗","岡崎",toyota,"豊田・岡崎・刈谷",HIGH
+aichi,"蒲郡 風俗","蒲郡",toyohashi,"(その他)",OVERRIDE
+aichi,"豊橋 風俗","豊橋",toyohashi,"豊橋・豊川",HIGH
+aichi,"豊川 風俗","豊川",toyohashi,"豊橋・豊川",HIGH
+aichi,"栄/錦/丸の内 風俗","栄/錦/丸の内",nagoya,"(その他)",OVERRIDE
+aichi,"今池/池下 風俗","今池/池下",nagoya,"(その他)",OVERRIDE
+aichi,"豊橋/豊川 風俗","豊橋/豊川",toyohashi,"豊橋・豊川",MED
+aichi,"岡崎/蒲郡 風俗","岡崎/蒲郡",toyota,"豊田・岡崎・刈谷",MED
+akita,"秋田","秋田",akita-city,"秋田市・能代・男鹿",HIGH
+akita,"大仙・大曲","大仙・大曲",akita-city,"(その他)",OVERRIDE
+akita,"横手","横手",akita-other,"(その他)",OVERRIDE
+akita,"秋田その他","秋田その他",akita-other,"(その他)",OVERRIDE
+aomori,"青森","青森",aomori-city,"青森・弘前",HIGH
+aomori,"八戸","八戸",hachinohe,"八戸・三沢",HIGH
+aomori,"むつ","むつ",aomori-other,"(その他)",OVERRIDE
+aomori,"弘前","弘前",aomori-city,"青森・弘前",HIGH
+aomori,"三沢","三沢",hachinohe,"八戸・三沢",HIGH
+aomori,"十和田","十和田",hachinohe,"(その他)",OVERRIDE
+aomori,"黒石","黒石",aomori-city,"(その他)",OVERRIDE
+aomori,"青森その他","青森その他",aomori-other,"(その他)",OVERRIDE
+chiba,"千葉・栄町","千葉・栄町",chiba-city,"千葉・栄町",MED
+chiba,"柏","柏",kashiwa,"柏・松戸",HIGH
+chiba,"成田","成田",narita,"成田・印西",HIGH
+chiba,"市原","市原",kisarazu,"木更津・市原",HIGH
+chiba,"津田沼","津田沼",funabashi,"船橋・西船橋・津田沼",HIGH
+chiba,"浦安","浦安",ichikawa,"市川・浦安",HIGH
+chiba,"幕張","幕張",chiba-city,"(その他)",OVERRIDE
+chiba,"本八幡","本八幡",ichikawa,"(その他)",OVERRIDE
+chiba,"市川","市川",ichikawa,"市川・浦安",HIGH
+chiba,"行徳","行徳",ichikawa,"(その他)",OVERRIDE
+chiba,"富里","富里",narita,"(その他)",OVERRIDE
+chiba,"東金","東金",togane,"東金・茂原",HIGH
+chiba,"野田","野田",kashiwa,"(その他)",OVERRIDE
+chiba,"千葉その他","千葉その他",chiba-other,"(その他)",OVERRIDE
+chiba,"西船橋 風俗","西船橋",funabashi,"船橋・西船橋・津田沼",HIGH
+chiba,"船橋 風俗","船橋",funabashi,"船橋・西船橋・津田沼",HIGH
+chiba,"木更津 風俗","木更津",kisarazu,"木更津・市原",HIGH
+chiba,"君津 風俗","君津",kisarazu,"(その他)",OVERRIDE
+chiba,"松戸 風俗","松戸",kashiwa,"柏・松戸",HIGH
+chiba,"新松戸 風俗","新松戸",kashiwa,"(その他)",OVERRIDE
+chiba,"西船橋/船橋 風俗","西船橋/船橋",funabashi,"船橋・西船橋・津田沼",MED
+chiba,"松戸/新松戸 風俗","松戸/新松戸",kashiwa,"柏・松戸",MED
+chiba,"木更津/君津 風俗","木更津/君津",kisarazu,"木更津・市原",MED
+ehime,"松山・道後温泉","松山・道後温泉",matsuyama,"松山",MED
+ehime,"今治","今治",ehime-other,"(その他)",OVERRIDE
+ehime,"宇和島","宇和島",ehime-other,"(その他)",OVERRIDE
+ehime,"四国中央","四国中央",ehime-other,"(その他)",OVERRIDE
+ehime,"愛媛その他","愛媛その他",ehime-other,"(その他)",OVERRIDE
+ehime,"西予 風俗","西予",ehime-other,"(その他)",OVERRIDE
+ehime,"八幡浜 風俗","八幡浜",ehime-other,"(その他)",OVERRIDE
+ehime,"大洲 風俗","大洲",ehime-other,"(その他)",OVERRIDE
+ehime,"西条 風俗","西条",ehime-other,"(その他)",OVERRIDE
+ehime,"新居浜 風俗","新居浜",ehime-other,"(その他)",OVERRIDE
+ehime,"西条/新居浜 風俗","西条/新居浜",ehime-other,"(その他)",OVERRIDE
+fukui,"福井","福井",fukui-city,"福井",HIGH
+fukui,"敦賀","敦賀",fukui-city,"(その他)",OVERRIDE
+fukui,"武生","武生",fukui-city,"(その他)",OVERRIDE
+fukui,"鯖江","鯖江",fukui-city,"(その他)",OVERRIDE
+fukui,"福井その他","福井その他",fukui-city,"(その他)",OVERRIDE
+fukuoka,"福岡","福岡",fukuoka-city,"福岡・中洲",HIGH
+fukuoka,"中洲","中洲",fukuoka-city,"福岡・中洲",HIGH
+fukuoka,"博多","博多",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"小倉","小倉",kitakyushu,"(その他)",OVERRIDE
+fukuoka,"北九州","北九州",kitakyushu,"北九州・筑豊",HIGH
+fukuoka,"久留米","久留米",kurume,"久留米・筑後",HIGH
+fukuoka,"天神","天神",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"大牟田","大牟田",kurume,"(その他)",OVERRIDE
+fukuoka,"黒崎","黒崎",kitakyushu,"(その他)",OVERRIDE
+fukuoka,"門司","門司",kitakyushu,"(その他)",OVERRIDE
+fukuoka,"行橋","行橋",kitakyushu,"(その他)",OVERRIDE
+fukuoka,"田川","田川",kitakyushu,"(その他)",OVERRIDE
+fukuoka,"宗像","宗像",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"糸島","糸島",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"福岡内その他","福岡内その他",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"北九州内その他","北九州内その他",kitakyushu,"(その他)",OVERRIDE
+fukuoka,"福岡その他","福岡その他",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"筑後 風俗","筑後",kurume,"久留米・筑後",HIGH
+fukuoka,"八女 風俗","八女",kurume,"(その他)",OVERRIDE
+fukuoka,"柳川 風俗","柳川",kurume,"(その他)",OVERRIDE
+fukuoka,"大川 風俗","大川",kurume,"(その他)",OVERRIDE
+fukuoka,"大野城 風俗","大野城",fukuoka-city,"(その他)",OVERRIDE
+fukuoka,"筑紫野 風俗","筑紫野",fukuoka-city,"(その他)",OVERRIDE
+fukushima,"郡山","郡山",koriyama,"郡山",HIGH
+fukushima,"いわき・小名浜","いわき・小名浜",iwaki,"いわき・小名浜",MED
+fukushima,"福島","福島",fukushima-city,"福島・二本松",HIGH
+fukushima,"猪苗代","猪苗代",aizu,"(その他)",OVERRIDE
+fukushima,"二本松","二本松",fukushima-city,"福島・二本松",HIGH
+fukushima,"福島その他","福島その他",fukushima-other,"(その他)",OVERRIDE
+fukushima,"会津若松 風俗","会津若松",aizu,"会津若松",HIGH
+fukushima,"喜多方 風俗","喜多方",aizu,"(その他)",OVERRIDE
+fukushima,"白河 風俗","白河",shirakawa,"白河",HIGH
+fukushima,"新白河 風俗","新白河",shirakawa,"(その他)",OVERRIDE
+fukushima,"会津若松/喜多方 風俗","会津若松/喜多方",aizu,"会津若松",MED
+fukushima,"白河/新白河 風俗","白河/新白河",shirakawa,"白河",MED
+gifu,"金津園","金津園",gifu-city,"岐阜・金津園",HIGH
+gifu,"岐阜 風俗","岐阜",gifu-city,"岐阜・金津園",HIGH
+gifu,"各務原 風俗","各務原",gifu-city,"(その他)",OVERRIDE
+gifu,"大垣 風俗","大垣",gifu-city,"(その他)",OVERRIDE
+gifu,"瑞穂 風俗","瑞穂",gifu-city,"(その他)",OVERRIDE
+gifu,"羽島 風俗","羽島",gifu-city,"(その他)",OVERRIDE
+gifu,"高山 風俗","高山",gifu-other,"(その他)",OVERRIDE
+gifu,"美濃加茂 風俗","美濃加茂",gifu-city,"(その他)",OVERRIDE
+gifu,"可児 風俗","可児",gifu-city,"(その他)",OVERRIDE
+gifu,"多治見 風俗","多治見",gifu-city,"(その他)",OVERRIDE
+gifu,"恵那 風俗","恵那",gifu-other,"(その他)",OVERRIDE
+gifu,"土岐 風俗","土岐",gifu-city,"(その他)",OVERRIDE
+gifu,"関 風俗","関",gifu-city,"(その他)",OVERRIDE
+gifu,"山県 風俗","山県",gifu-city,"(その他)",OVERRIDE
+gifu,"岐阜/各務原 風俗","岐阜/各務原",gifu-city,"岐阜・金津園",MED
+gifu,"美濃加茂/可児/多治見 風俗","美濃加茂/可児/多治見",gifu-city,"(その他)",OVERRIDE
+gunma,"高崎","高崎",takasaki,"高崎・前橋",HIGH
+gunma,"太田","太田",ota,"太田・伊勢崎・桐生",HIGH
+gunma,"伊勢崎","伊勢崎",ota,"太田・伊勢崎・桐生",HIGH
+gunma,"前橋","前橋",takasaki,"高崎・前橋",HIGH
+gunma,"渋川","渋川",takasaki,"(その他)",OVERRIDE
+gunma,"館林","館林",ota,"(その他)",OVERRIDE
+gunma,"沼田","沼田",takasaki,"(その他)",OVERRIDE
+gunma,"桐生","桐生",ota,"太田・伊勢崎・桐生",HIGH
+gunma,"群馬その他","群馬その他",takasaki,"(その他)",OVERRIDE
+gunma,"藤岡 風俗","藤岡",takasaki,"(その他)",OVERRIDE
+gunma,"富岡 風俗","富岡",takasaki,"(その他)",OVERRIDE
+hiroshima,"広島","広島",hiroshima-city,"広島市",HIGH
+hiroshima,"福山","福山",fukuyama,"福山・尾道",HIGH
+hiroshima,"呉","呉",hiroshima-city,"(その他)",OVERRIDE
+hiroshima,"安芸高田","安芸高田",hiroshima-city,"(その他)",OVERRIDE
+hiroshima,"広島その他","広島その他",hiroshima-other,"(その他)",OVERRIDE
+hiroshima,"廿日市 風俗","廿日市",hiroshima-city,"(その他)",OVERRIDE
+hiroshima,"東広島 風俗","東広島",hiroshima-city,"(その他)",OVERRIDE
+hiroshima,"三原 風俗","三原",fukuyama,"(その他)",OVERRIDE
+hiroshima,"尾道 風俗","尾道",fukuyama,"福山・尾道",HIGH
+hiroshima,"東広島/竹原 風俗","東広島/竹原",hiroshima-city,"(その他)",OVERRIDE
+hokkaido,"すすきの・札幌","すすきの・札幌",sapporo,"札幌・すすきの",MED
+hokkaido,"旭川","旭川",asahikawa,"旭川",HIGH
+hokkaido,"函館","函館",hakodate,"函館",HIGH
+hokkaido,"小樽","小樽",sapporo,"(その他)",OVERRIDE
+hokkaido,"釧路","釧路",kushiro,"釧路・北見・網走",HIGH
+hokkaido,"帯広","帯広",obihiro,"帯広・十勝",HIGH
+hokkaido,"北見","北見",kushiro,"釧路・北見・網走",HIGH
+hokkaido,"室蘭","室蘭",tomakomai,"苫小牧・室蘭・千歳",HIGH
+hokkaido,"稚内","稚内",hokkaido-other,"(その他)",OVERRIDE
+hokkaido,"中標津","中標津",hokkaido-other,"(その他)",OVERRIDE
+hokkaido,"北海道その他","北海道その他",hokkaido-other,"(その他)",OVERRIDE
+hokkaido,"千歳 風俗","千歳",tomakomai,"苫小牧・室蘭・千歳",HIGH
+hokkaido,"苫小牧 風俗","苫小牧",tomakomai,"苫小牧・室蘭・千歳",HIGH
+hokkaido,"恵庭 風俗","恵庭",sapporo,"(その他)",OVERRIDE
+hokkaido,"千歳/苫小牧/恵庭 風俗","千歳/苫小牧/恵庭",tomakomai,"苫小牧・室蘭・千歳",MED
+hyogo,"神戸・三宮","神戸・三宮",kobe,"神戸・阪神",MED
+hyogo,"福原（ソープ）","福原（ソープ）",kobe,"(その他)",OVERRIDE
+hyogo,"尼崎","尼崎",kobe,"(その他)",OVERRIDE
+hyogo,"福原","福原",kobe,"(その他)",OVERRIDE
+hyogo,"明石","明石",himeji,"姫路・加古川・明石",HIGH
+hyogo,"神戸内その他","神戸内その他",kobe,"(その他)",OVERRIDE
+hyogo,"兵庫その他","兵庫その他",hyogo-other,"(その他)",OVERRIDE
+hyogo,"川西 風俗","川西",kobe,"(その他)",OVERRIDE
+hyogo,"宝塚 風俗","宝塚",kobe,"(その他)",OVERRIDE
+hyogo,"伊丹 風俗","伊丹",kobe,"(その他)",OVERRIDE
+hyogo,"西宮 風俗","西宮",kobe,"(その他)",OVERRIDE
+hyogo,"姫路 風俗","姫路",himeji,"姫路・加古川・明石",HIGH
+hyogo,"加古川 風俗","加古川",himeji,"姫路・加古川・明石",HIGH
+hyogo,"高砂 風俗","高砂",himeji,"(その他)",OVERRIDE
+hyogo,"豊岡 風俗","豊岡",hyogo-other,"(その他)",OVERRIDE
+hyogo,"相生 風俗","相生",himeji,"(その他)",OVERRIDE
+hyogo,"たつの 風俗","たつの",himeji,"(その他)",OVERRIDE
+hyogo,"西脇 風俗","西脇",himeji,"(その他)",OVERRIDE
+hyogo,"丹波 風俗","丹波",hyogo-other,"(その他)",OVERRIDE
+hyogo,"三田 風俗","三田",kobe,"(その他)",OVERRIDE
+hyogo,"小野 風俗","小野",himeji,"(その他)",OVERRIDE
+hyogo,"滝野社 風俗","滝野社",himeji,"(その他)",OVERRIDE
+hyogo,"豊岡/養父 風俗","豊岡/養父",hyogo-other,"(その他)",OVERRIDE
+ibaraki,"土浦","土浦",tsuchiura,"土浦・つくば",HIGH
+ibaraki,"水戸・天王町","水戸・天王町",mito,"水戸",MED
+ibaraki,"つくば","つくば",tsuchiura,"土浦・つくば",HIGH
+ibaraki,"日立","日立",mito,"(その他)",OVERRIDE
+ibaraki,"取手","取手",tsuchiura,"(その他)",OVERRIDE
+ibaraki,"古河","古河",ibaraki-other,"(その他)",OVERRIDE
+ibaraki,"牛久","牛久",tsuchiura,"(その他)",OVERRIDE
+ibaraki,"ひたちなか","ひたちなか",mito,"(その他)",OVERRIDE
+ibaraki,"茨城その他","茨城その他",ibaraki-other,"(その他)",OVERRIDE
+ibaraki,"神栖 風俗","神栖",kashima,"神栖・鹿嶋",HIGH
+ibaraki,"鹿島(茨城) 風俗","鹿島(茨城)",kashima,"(その他)",OVERRIDE
+ibaraki,"神栖/鹿島 風俗","神栖/鹿島",kashima,"神栖・鹿嶋",MED
+ishikawa,"金沢","金沢",kanazawa,"金沢",HIGH
+ishikawa,"小松","小松",kanazawa,"(その他)",OVERRIDE
+ishikawa,"かほく","かほく",kanazawa,"(その他)",OVERRIDE
+ishikawa,"石川その他","石川その他",ishikawa-other,"(その他)",OVERRIDE
+ishikawa,"片山津 風俗","片山津",kanazawa,"(その他)",OVERRIDE
+ishikawa,"加賀 風俗","加賀",kanazawa,"(その他)",OVERRIDE
+ishikawa,"七尾 風俗","七尾",ishikawa-other,"(その他)",OVERRIDE
+ishikawa,"羽咋 風俗","羽咋",ishikawa-other,"(その他)",OVERRIDE
+ishikawa,"能登 風俗","能登",ishikawa-other,"(その他)",OVERRIDE
+ishikawa,"輪島 風俗","輪島",ishikawa-other,"(その他)",OVERRIDE
+ishikawa,"片山津/加賀 風俗","片山津/加賀",kanazawa,"(その他)",OVERRIDE
+iwate,"盛岡","盛岡",morioka,"盛岡",HIGH
+iwate,"北上","北上",kitakami,"北上・花巻・一関",HIGH
+iwate,"一関","一関",kitakami,"北上・花巻・一関",HIGH
+iwate,"花巻","花巻",kitakami,"北上・花巻・一関",HIGH
+iwate,"岩手その他","岩手その他",iwate-other,"(その他)",OVERRIDE
+kagawa,"高松","高松",takamatsu,"高松",HIGH
+kagawa,"さぬき","さぬき",takamatsu,"(その他)",OVERRIDE
+kagawa,"東かがわ","東かがわ",takamatsu,"(その他)",OVERRIDE
+kagawa,"香川その他","香川その他",kagawa-other,"(その他)",OVERRIDE
+kagawa,"善通寺 風俗","善通寺",kagawa-other,"(その他)",OVERRIDE
+kagawa,"丸亀 風俗","丸亀",kagawa-other,"(その他)",OVERRIDE
+kagawa,"坂出 風俗","坂出",kagawa-other,"(その他)",OVERRIDE
+kagawa,"善通寺/丸亀/坂出 風俗","善通寺/丸亀/坂出",kagawa-other,"(その他)",OVERRIDE
+kagoshima,"鹿児島","鹿児島",kagoshima-city,"鹿児島市",HIGH
+kagoshima,"奄美大島","奄美大島",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"霧島・国分","霧島・国分",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"薩摩川内","薩摩川内",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"串木野","串木野",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"鹿児島その他","鹿児島その他",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"鹿屋 風俗","鹿屋",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"出水 風俗","出水",kagoshima-other,"(その他)",OVERRIDE
+kagoshima,"谷山 風俗","谷山",kagoshima-city,"(その他)",OVERRIDE
+kagoshima,"平川 風俗","平川",kagoshima-city,"(その他)",OVERRIDE
+kanagawa,"横浜","横浜",yokohama,"横浜・関内",HIGH
+kanagawa,"川崎","川崎",kawasaki,"川崎",HIGH
+kanagawa,"横浜西口","横浜西口",yokohama,"(その他)",OVERRIDE
+kanagawa,"新横浜","新横浜",yokohama,"(その他)",OVERRIDE
+kanagawa,"相模原","相模原",sagamihara,"相模原・橋本",HIGH
+kanagawa,"上大岡","上大岡",yokohama,"(その他)",OVERRIDE
+kanagawa,"横須賀","横須賀",yokosuka,"横須賀・三浦",HIGH
+kanagawa,"小田原","小田原",odawara,"小田原・箱根",HIGH
+kanagawa,"鶴見","鶴見",yokohama,"(その他)",OVERRIDE
+kanagawa,"鎌倉","鎌倉",fujisawa,"(その他)",OVERRIDE
+kanagawa,"伊勢原","伊勢原",atsugi,"(その他)",OVERRIDE
+kanagawa,"神奈川その他","神奈川その他",yokohama,"(その他)",OVERRIDE
+kanagawa,"関内 風俗","関内",yokohama,"横浜・関内",HIGH
+kanagawa,"福富町 風俗","福富町",yokohama,"(その他)",OVERRIDE
+kanagawa,"曙町 風俗","曙町",yokohama,"(その他)",OVERRIDE
+kanagawa,"桜木町 風俗","桜木町",yokohama,"(その他)",OVERRIDE
+kanagawa,"野毛 風俗","野毛",yokohama,"(その他)",OVERRIDE
+kanagawa,"宮川町 風俗","宮川町",yokohama,"(その他)",OVERRIDE
+kanagawa,"本厚木 風俗","本厚木",atsugi,"(その他)",OVERRIDE
+kanagawa,"厚木 風俗","厚木",atsugi,"厚木・海老名・大和",HIGH
+kanagawa,"武蔵小杉 風俗","武蔵小杉",kawasaki,"(その他)",OVERRIDE
+kanagawa,"溝の口 風俗","溝の口",kawasaki,"(その他)",OVERRIDE
+kanagawa,"藤沢 風俗","藤沢",fujisawa,"藤沢・湘南",HIGH
+kanagawa,"平塚 風俗","平塚",fujisawa,"(その他)",OVERRIDE
+kanagawa,"戸塚 風俗","戸塚",yokohama,"(その他)",OVERRIDE
+kanagawa,"大船 風俗","大船",yokohama,"(その他)",OVERRIDE
+kanagawa,"大和 風俗","大和",atsugi,"厚木・海老名・大和",HIGH
+kanagawa,"海老名 風俗","海老名",atsugi,"厚木・海老名・大和",HIGH
+kanagawa,"関内/福富町/曙町 風俗","関内/福富町/曙町",yokohama,"横浜・関内",MED
+kanagawa,"本厚木/厚木 風俗","本厚木/厚木",atsugi,"厚木・海老名・大和",MED
+kanagawa,"桜木町/野毛/宮川町 風俗","桜木町/野毛/宮川町",yokohama,"(その他)",OVERRIDE
+kanagawa,"大和/海老名 風俗","大和/海老名",atsugi,"厚木・海老名・大和",MED
+kanagawa,"藤沢/平塚 風俗","藤沢/平塚",fujisawa,"藤沢・湘南",MED
+kochi,"高知その他","高知その他",kochi-city,"(その他)",OVERRIDE
+kochi,"高知 風俗","高知",kochi-city,"高知",HIGH
+kochi,"南国 風俗","南国",kochi-city,"(その他)",OVERRIDE
+kochi,"土佐 風俗","土佐",kochi-city,"(その他)",OVERRIDE
+kochi,"高知/南国 風俗","高知/南国",kochi-city,"高知",MED
+kumamoto,"熊本","熊本",kumamoto-city,"熊本市",HIGH
+kumamoto,"人吉","人吉",kumamoto-other,"(その他)",OVERRIDE
+kumamoto,"八代","八代",kumamoto-other,"(その他)",OVERRIDE
+kumamoto,"山鹿","山鹿",kumamoto-other,"(その他)",OVERRIDE
+kumamoto,"菊陽町","菊陽町",kumamoto-city,"(その他)",OVERRIDE
+kumamoto,"水俣","水俣",kumamoto-other,"(その他)",OVERRIDE
+kumamoto,"熊本その他","熊本その他",kumamoto-other,"(その他)",OVERRIDE
+kumamoto,"宇土 風俗","宇土",kumamoto-city,"(その他)",OVERRIDE
+kumamoto,"宇城 風俗","宇城",kumamoto-city,"(その他)",OVERRIDE
+kumamoto,"菊池 風俗","菊池",kumamoto-other,"(その他)",OVERRIDE
+kumamoto,"玉名 風俗","玉名",kumamoto-other,"(その他)",OVERRIDE
+kyoto,"京都","京都",kyoto-city,"京都",HIGH
+kyoto,"祇園","祇園",kyoto-city,"(その他)",OVERRIDE
+kyoto,"京都南インター","京都南インター",kyoto-city,"(その他)",OVERRIDE
+kyoto,"河原町・四条","河原町・四条",kyoto-city,"(その他)",OVERRIDE
+kyoto,"木屋町","木屋町",kyoto-city,"(その他)",OVERRIDE
+kyoto,"亀岡","亀岡",kyoto-city,"(その他)",OVERRIDE
+kyoto,"京都内その他","京都内その他",kyoto-city,"(その他)",OVERRIDE
+kyoto,"京都その他","京都その他",kyoto-city,"(その他)",OVERRIDE
+kyoto,"福知山 風俗","福知山",kyoto-city,"(その他)",OVERRIDE
+kyoto,"舞鶴 風俗","舞鶴",kyoto-city,"(その他)",OVERRIDE
+kyoto,"宇治 風俗","宇治",kyoto-city,"(その他)",OVERRIDE
+kyoto,"八幡 風俗","八幡",kyoto-city,"(その他)",OVERRIDE
+kyoto,"城陽 風俗","城陽",kyoto-city,"(その他)",OVERRIDE
+kyoto,"宮津 風俗","宮津",kyoto-city,"(その他)",OVERRIDE
+kyoto,"京丹後 風俗","京丹後",kyoto-city,"(その他)",OVERRIDE
+kyoto,"福知山/舞鶴 風俗","福知山/舞鶴",kyoto-city,"(その他)",OVERRIDE
+mie,"熊野","熊野",mie-other,"(その他)",OVERRIDE
+mie,"三重その他","三重その他",mie-other,"(その他)",OVERRIDE
+mie,"津 風俗","津",tsu,"津・松阪",HIGH
+mie,"松阪 風俗","松阪",tsu,"津・松阪",HIGH
+mie,"久居 風俗","久居",tsu,"(その他)",OVERRIDE
+mie,"伊勢 風俗","伊勢",mie-other,"(その他)",OVERRIDE
+mie,"伊賀 風俗","伊賀",mie-other,"(その他)",OVERRIDE
+mie,"四日市 風俗","四日市",yokkaichi,"四日市・桑名・鈴鹿",HIGH
+mie,"鈴鹿 風俗","鈴鹿",yokkaichi,"四日市・桑名・鈴鹿",HIGH
+mie,"亀山 風俗","亀山",yokkaichi,"(その他)",OVERRIDE
+mie,"桑名 風俗","桑名",yokkaichi,"四日市・桑名・鈴鹿",HIGH
+mie,"四日市/鈴鹿/亀山 風俗","四日市/鈴鹿/亀山",yokkaichi,"四日市・桑名・鈴鹿",MED
+mie,"津/松阪/久居 風俗","津/松阪/久居",tsu,"津・松阪",MED
+miyagi,"仙台","仙台",sendai,"仙台",HIGH
+miyagi,"石巻","石巻",ishinomaki,"石巻・塩釜・松島",HIGH
+miyagi,"大崎・古川","大崎・古川",osaki,"大崎・古川",MED
+miyagi,"岩沼","岩沼",sendai,"(その他)",OVERRIDE
+miyagi,"仙南・名取","仙南・名取",sendai,"(その他)",OVERRIDE
+miyagi,"角田","角田",sendai,"(その他)",OVERRIDE
+miyagi,"仙台その他","仙台その他",sendai,"(その他)",OVERRIDE
+miyagi,"宮城その他","宮城その他",miyagi-other,"(その他)",OVERRIDE
+miyazaki,"宮崎","宮崎",miyazaki-city,"宮崎",HIGH
+miyazaki,"日向","日向",miyazaki-other,"(その他)",OVERRIDE
+miyazaki,"都城","都城",miyazaki-other,"(その他)",OVERRIDE
+miyazaki,"延岡","延岡",miyazaki-other,"(その他)",OVERRIDE
+miyazaki,"西都","西都",miyazaki-other,"(その他)",OVERRIDE
+nagano,"長野市","長野市",nagano-city,"長野市・千曲",HIGH
+nagano,"松本","松本",matsumoto,"松本・安曇野",HIGH
+nagano,"上田","上田",ueda,"上田・佐久・軽井沢",HIGH
+nagano,"飯田","飯田",suwa,"諏訪・伊那・飯田",HIGH
+nagano,"諏訪","諏訪",suwa,"諏訪・伊那・飯田",HIGH
+nagano,"安曇野","安曇野",matsumoto,"松本・安曇野",HIGH
+nagano,"須坂","須坂",nagano-city,"(その他)",OVERRIDE
+nagano,"千曲","千曲",nagano-city,"長野市・千曲",HIGH
+nagano,"小諸","小諸",ueda,"(その他)",OVERRIDE
+nagano,"長野その他","長野その他",nagano-city,"(その他)",OVERRIDE
+nagano,"軽井沢 風俗","軽井沢",ueda,"上田・佐久・軽井沢",HIGH
+nagano,"佐久 風俗","佐久",ueda,"上田・佐久・軽井沢",HIGH
+nagano,"中野(長野) 風俗","中野(長野)",nagano-city,"(その他)",OVERRIDE
+nagano,"塩尻 風俗","塩尻",matsumoto,"(その他)",OVERRIDE
+nagano,"伊那 風俗","伊那",suwa,"諏訪・伊那・飯田",HIGH
+nagasaki,"佐世保","佐世保",sasebo,"佐世保",HIGH
+nagasaki,"長崎","長崎",nagasaki-city,"長崎",HIGH
+nagasaki,"松浦","松浦",sasebo,"(その他)",OVERRIDE
+nagasaki,"平戸","平戸",sasebo,"(その他)",OVERRIDE
+nagasaki,"島原","島原",nagasaki-city,"(その他)",OVERRIDE
+nagasaki,"長崎その他","長崎その他",nagasaki-city,"(その他)",OVERRIDE
+nagasaki,"諫早 風俗","諫早",nagasaki-city,"(その他)",OVERRIDE
+nagasaki,"大村 風俗","大村",nagasaki-city,"(その他)",OVERRIDE
+nagasaki,"諫早/大村 風俗","諫早/大村",nagasaki-city,"(その他)",OVERRIDE
+nara,"奈良","奈良",nara-city,"奈良",HIGH
+nara,"奈良その他","奈良その他",nara-city,"(その他)",OVERRIDE
+nara,"生駒 風俗","生駒",nara-city,"(その他)",OVERRIDE
+nara,"大和郡山 風俗","大和郡山",nara-city,"(その他)",OVERRIDE
+nara,"天理 風俗","天理",nara-city,"(その他)",OVERRIDE
+nara,"香芝 風俗","香芝",nara-city,"(その他)",OVERRIDE
+nara,"大和高田 風俗","大和高田",nara-city,"(その他)",OVERRIDE
+nara,"橿原 風俗","橿原",nara-city,"(その他)",OVERRIDE
+niigata,"新潟","新潟",niigata-city,"新潟市",HIGH
+niigata,"長岡","長岡",nagaoka,"長岡・三条",HIGH
+niigata,"三条・燕","三条・燕",nagaoka,"長岡・三条",MED
+niigata,"新発田","新発田",niigata-city,"(その他)",OVERRIDE
+niigata,"村上","村上",niigata-city,"(その他)",OVERRIDE
+niigata,"魚沼 風俗","魚沼",nagaoka,"(その他)",OVERRIDE
+niigata,"柏崎 風俗","柏崎",joetsu,"(その他)",OVERRIDE
+niigata,"上越 風俗","上越",joetsu,"上越",HIGH
+niigata,"柏崎/上越 風俗","柏崎/上越",joetsu,"上越",MED
+oita,"大分","大分",oita-city,"大分市",HIGH
+oita,"別府","別府",oita-other,"(その他)",OVERRIDE
+oita,"杵築","杵築",oita-other,"(その他)",OVERRIDE
+oita,"佐伯","佐伯",oita-other,"(その他)",OVERRIDE
+oita,"大分その他","大分その他",oita-other,"(その他)",OVERRIDE
+oita,"津久見 風俗","津久見",oita-other,"(その他)",OVERRIDE
+oita,"臼杵 風俗","臼杵",oita-other,"(その他)",OVERRIDE
+oita,"中津 風俗","中津",oita-other,"(その他)",OVERRIDE
+okayama,"津山","津山",okayama-other,"(その他)",OVERRIDE
+okayama,"岡山その他","岡山その他",okayama-other,"(その他)",OVERRIDE
+okayama,"岡山 風俗","岡山",okayama-city,"岡山市",HIGH
+okayama,"総社 風俗","総社",okayama-city,"(その他)",OVERRIDE
+okayama,"倉敷 風俗","倉敷",kurashiki,"倉敷",HIGH
+okayama,"水島 風俗","水島",kurashiki,"(その他)",OVERRIDE
+okayama,"瀬戸内 風俗","瀬戸内",okayama-other,"(その他)",OVERRIDE
+okayama,"備前 風俗","備前",okayama-other,"(その他)",OVERRIDE
+okayama,"新見 風俗","新見",okayama-other,"(その他)",OVERRIDE
+okayama,"高梁 風俗","高梁",okayama-other,"(その他)",OVERRIDE
+okayama,"井原 風俗","井原",okayama-other,"(その他)",OVERRIDE
+okayama,"笠岡 風俗","笠岡",okayama-other,"(その他)",OVERRIDE
+okayama,"岡山/総社 風俗","岡山/総社",okayama-city,"岡山市",MED
+okayama,"倉敷/水島 風俗","倉敷/水島",kurashiki,"倉敷",MED
+okinawa,"那覇","那覇",naha,"那覇",HIGH
+okinawa,"石垣島","石垣島",okinawa-other,"(その他)",OVERRIDE
+okinawa,"宮古島","宮古島",okinawa-other,"(その他)",OVERRIDE
+okinawa,"名護","名護",okinawa-other,"(その他)",OVERRIDE
+okinawa,"沖縄その他","沖縄その他",okinawa-other,"(その他)",OVERRIDE
+okinawa,"沖縄 風俗","沖縄",okinawa-other,"(その他)",OVERRIDE
+okinawa,"北谷 風俗","北谷",naha,"(その他)",OVERRIDE
+okinawa,"糸満 風俗","糸満",naha,"(その他)",OVERRIDE
+okinawa,"豊見城 風俗","豊見城",naha,"(その他)",OVERRIDE
+okinawa,"浦添 風俗","浦添",naha,"(その他)",OVERRIDE
+okinawa,"宜野湾 風俗","宜野湾",naha,"(その他)",OVERRIDE
+okinawa,"沖縄/うるま/北谷 風俗","沖縄/うるま/北谷",okinawa-other,"(その他)",OVERRIDE
+osaka,"梅田","梅田",umeda,"梅田・キタ・京橋",HIGH
+osaka,"京橋","京橋",umeda,"梅田・キタ・京橋",HIGH
+osaka,"日本橋(大阪)","日本橋(大阪)",namba,"(その他)",OVERRIDE
+osaka,"千日前","千日前",namba,"(その他)",OVERRIDE
+osaka,"谷九(谷町九丁目)","谷九(谷町九丁目)",namba,"(その他)",OVERRIDE
+osaka,"宗右衛門町","宗右衛門町",namba,"(その他)",OVERRIDE
+osaka,"心斎橋","心斎橋",namba,"(その他)",OVERRIDE
+osaka,"大阪内その他","大阪内その他",osaka-other,"(その他)",OVERRIDE
+osaka,"堺","堺",sakai,"堺・南大阪",HIGH
+osaka,"枚方","枚方",osaka-other,"(その他)",OVERRIDE
+osaka,"南大阪","南大阪",sakai,"堺・南大阪",HIGH
+osaka,"大阪その他","大阪その他",osaka-other,"(その他)",OVERRIDE
+osaka,"十三 風俗","十三",umeda,"(その他)",OVERRIDE
+osaka,"塚本 風俗","塚本",umeda,"(その他)",OVERRIDE
+osaka,"新大阪 風俗","新大阪",umeda,"(その他)",OVERRIDE
+osaka,"西中島 風俗","西中島",umeda,"(その他)",OVERRIDE
+osaka,"天満 風俗","天満",umeda,"(その他)",OVERRIDE
+osaka,"桜ノ宮 風俗","桜ノ宮",umeda,"(その他)",OVERRIDE
+osaka,"兎我野町 風俗","兎我野町",umeda,"(その他)",OVERRIDE
+osaka,"堂山 風俗","堂山",umeda,"(その他)",OVERRIDE
+osaka,"難波 風俗","難波",namba,"難波・日本橋・天王寺",HIGH
+osaka,"道頓堀 風俗","道頓堀",namba,"(その他)",OVERRIDE
+osaka,"天王寺 風俗","天王寺",namba,"難波・日本橋・天王寺",HIGH
+osaka,"阿倍野 風俗","阿倍野",namba,"(その他)",OVERRIDE
+osaka,"吹田 風俗","吹田",osaka-other,"(その他)",OVERRIDE
+osaka,"豊中 風俗","豊中",osaka-other,"(その他)",OVERRIDE
+osaka,"茨木 風俗","茨木",osaka-other,"(その他)",OVERRIDE
+osaka,"高槻 風俗","高槻",osaka-other,"(その他)",OVERRIDE
+osaka,"守口 風俗","守口",osaka-other,"(その他)",OVERRIDE
+osaka,"門真 風俗","門真",osaka-other,"(その他)",OVERRIDE
+osaka,"東大阪 風俗","東大阪",osaka-other,"(その他)",OVERRIDE
+osaka,"八尾 風俗","八尾",osaka-other,"(その他)",OVERRIDE
+osaka,"松原 風俗","松原",osaka-other,"(その他)",OVERRIDE
+osaka,"藤井寺 風俗","藤井寺",osaka-other,"(その他)",OVERRIDE
+osaka,"四條畷 風俗","四條畷",osaka-other,"(その他)",OVERRIDE
+osaka,"大東 風俗","大東",osaka-other,"(その他)",OVERRIDE
+osaka,"岸和田 風俗","岸和田",sakai,"(その他)",OVERRIDE
+osaka,"貝塚 風俗","貝塚",sakai,"(その他)",OVERRIDE
+osaka,"高石 風俗","高石",sakai,"(その他)",OVERRIDE
+osaka,"泉大津 風俗","泉大津",sakai,"(その他)",OVERRIDE
+osaka,"和泉 風俗","和泉",sakai,"(その他)",OVERRIDE
+osaka,"泉佐野 風俗","泉佐野",sakai,"(その他)",OVERRIDE
+osaka,"難波/道頓堀 風俗","難波/道頓堀",namba,"難波・日本橋・天王寺",MED
+osaka,"天王寺/阿倍野 風俗","天王寺/阿倍野",namba,"難波・日本橋・天王寺",MED
+osaka,"十三/塚本 風俗","十三/塚本",umeda,"(その他)",OVERRIDE
+osaka,"新大阪/西中島 風俗","新大阪/西中島",umeda,"(その他)",OVERRIDE
+saga,"佐賀","佐賀",saga-city,"佐賀",HIGH
+saga,"鳥栖","鳥栖",saga-city,"(その他)",OVERRIDE
+saga,"佐賀その他","佐賀その他",saga-city,"(その他)",OVERRIDE
+saga,"唐津 風俗","唐津",saga-city,"(その他)",OVERRIDE
+saga,"伊万里 風俗","伊万里",saga-city,"(その他)",OVERRIDE
+saga,"小城 風俗","小城",saga-city,"(その他)",OVERRIDE
+saga,"多久 風俗","多久",saga-city,"(その他)",OVERRIDE
+saga,"嬉野 風俗","嬉野",saga-city,"(その他)",OVERRIDE
+saga,"武雄 風俗","武雄",saga-city,"(その他)",OVERRIDE
+saga,"嬉野/武雄 風俗","嬉野/武雄",saga-city,"(その他)",OVERRIDE
+saga,"唐津/伊万里 風俗","唐津/伊万里",saga-city,"(その他)",OVERRIDE
+saitama,"大宮","大宮",omiya,"大宮・さいたま",HIGH
+saitama,"西川口","西川口",kawaguchi,"西川口・蕨・川口",HIGH
+saitama,"川越","川越",kawagoe,"川越",HIGH
+saitama,"熊谷","熊谷",kumagaya,"熊谷・深谷・本庄",HIGH
+saitama,"春日部","春日部",koshigaya,"越谷・草加・春日部",HIGH
+saitama,"所沢","所沢",tokorozawa,"所沢・入間",HIGH
+saitama,"本庄","本庄",kumagaya,"熊谷・深谷・本庄",HIGH
+saitama,"久喜","久喜",kuki,"久喜・蓮田",HIGH
+saitama,"草加","草加",koshigaya,"越谷・草加・春日部",HIGH
+saitama,"浦和","浦和",omiya,"(その他)",OVERRIDE
+saitama,"蕨","蕨",kawaguchi,"西川口・蕨・川口",HIGH
+saitama,"与野","与野",omiya,"(その他)",OVERRIDE
+saitama,"埼玉その他","埼玉その他",saitama-other,"(その他)",OVERRIDE
+saitama,"越谷 風俗","越谷",koshigaya,"越谷・草加・春日部",HIGH
+saitama,"南越谷 風俗","南越谷",koshigaya,"(その他)",OVERRIDE
+saitama,"新越谷 風俗","新越谷",koshigaya,"(その他)",OVERRIDE
+saitama,"越谷/南越谷/新越谷 風俗","越谷/南越谷/新越谷",koshigaya,"越谷・草加・春日部",MED
+shiga,"雄琴","雄琴",shiga,"(その他)",OVERRIDE
+shiga,"大津","大津",shiga,"(その他)",OVERRIDE
+shiga,"滋賀その他","滋賀その他",shiga,"(その他)",OVERRIDE
+shiga,"彦根 風俗","彦根",shiga,"(その他)",OVERRIDE
+shiga,"近江八幡 風俗","近江八幡",shiga,"(その他)",OVERRIDE
+shiga,"東近江 風俗","東近江",shiga,"(その他)",OVERRIDE
+shiga,"草津 風俗","草津",shiga,"(その他)",OVERRIDE
+shiga,"守山 風俗","守山",shiga,"(その他)",OVERRIDE
+shiga,"野洲 風俗","野洲",shiga,"(その他)",OVERRIDE
+shiga,"栗東 風俗","栗東",shiga,"(その他)",OVERRIDE
+shimane,"松江","松江",shimane,"(その他)",OVERRIDE
+shimane,"出雲/雲南","出雲/雲南",shimane,"(その他)",OVERRIDE
+shimane,"出雲","出雲",shimane,"(その他)",OVERRIDE
+shizuoka,"静岡","静岡",shizuoka-city,"静岡・焼津",HIGH
+shizuoka,"浜松","浜松",hamamatsu,"浜松・磐田",HIGH
+shizuoka,"静岡その他","静岡その他",shizuoka-city,"(その他)",OVERRIDE
+shizuoka,"熱海 風俗","熱海",numazu,"(その他)",OVERRIDE
+shizuoka,"御殿場 風俗","御殿場",numazu,"(その他)",OVERRIDE
+shizuoka,"裾野 風俗","裾野",numazu,"(その他)",OVERRIDE
+shizuoka,"三島 風俗","三島",numazu,"(その他)",OVERRIDE
+shizuoka,"沼津 風俗","沼津",numazu,"沼津・富士・伊豆",HIGH
+shizuoka,"富士宮 風俗","富士宮",numazu,"(その他)",OVERRIDE
+shizuoka,"富士 風俗","富士",numazu,"沼津・富士・伊豆",HIGH
+shizuoka,"藤枝 風俗","藤枝",shizuoka-city,"(その他)",OVERRIDE
+shizuoka,"焼津 風俗","焼津",shizuoka-city,"静岡・焼津",HIGH
+shizuoka,"掛川 風俗","掛川",hamamatsu,"(その他)",OVERRIDE
+shizuoka,"御前崎 風俗","御前崎",hamamatsu,"(その他)",OVERRIDE
+shizuoka,"磐田 風俗","磐田",hamamatsu,"浜松・磐田",HIGH
+shizuoka,"袋井 風俗","袋井",hamamatsu,"(その他)",OVERRIDE
+shizuoka,"沼津/三島 風俗","沼津/三島",numazu,"沼津・富士・伊豆",MED
+shizuoka,"熱海/下田 風俗","熱海/下田",numazu,"(その他)",OVERRIDE
+tochigi,"宇都宮","宇都宮",utsunomiya,"宇都宮",HIGH
+tochigi,"小山","小山",oyama,"小山・栃木・佐野",HIGH
+tochigi,"那須塩原","那須塩原",nasu,"那須塩原・日光",HIGH
+tochigi,"日光","日光",nasu,"那須塩原・日光",HIGH
+tochigi,"栃木その他","栃木その他",utsunomiya,"(その他)",OVERRIDE
+tochigi,"足利 風俗","足利",oyama,"(その他)",OVERRIDE
+tochigi,"佐野 風俗","佐野",oyama,"小山・栃木・佐野",HIGH
+tochigi,"足利/佐野 風俗","足利/佐野",oyama,"小山・栃木・佐野",MED
+tokushima,"阿南","阿南",tokushima-other,"(その他)",OVERRIDE
+tokushima,"吉野川","吉野川",tokushima-other,"(その他)",OVERRIDE
+tokushima,"鳴門","鳴門",tokushima-city,"(その他)",OVERRIDE
+tokushima,"徳島 風俗","徳島",tokushima-city,"徳島",HIGH
+tokushima,"小松島 風俗","小松島",tokushima-city,"(その他)",OVERRIDE
+tokushima,"徳島/小松島 風俗","徳島/小松島",tokushima-city,"徳島",MED
+tottori,"鳥取","鳥取",tottori-a3101,"(その他)",OVERRIDE
+tottori,"米子 風俗","米子",tottori-a3103,"(その他)",OVERRIDE
+toyama,"富山","富山",toyama-city,"富山市",HIGH
+toyama,"魚津","魚津",toyama-other,"(その他)",OVERRIDE
+toyama,"新湊","新湊",takaoka,"(その他)",OVERRIDE
+toyama,"滑川","滑川",toyama-city,"(その他)",OVERRIDE
+toyama,"富山その他","富山その他",toyama-other,"(その他)",OVERRIDE
+toyama,"氷見 風俗","氷見",takaoka,"(その他)",OVERRIDE
+toyama,"高岡 風俗","高岡",takaoka,"高岡・射水",HIGH
+toyama,"砺波 風俗","砺波",toyama-other,"(その他)",OVERRIDE
+wakayama,"田辺","田辺",wakayama-city,"(その他)",OVERRIDE
+wakayama,"橋本","橋本",wakayama-city,"(その他)",OVERRIDE
+wakayama,"新宮","新宮",wakayama-city,"(その他)",OVERRIDE
+wakayama,"和歌山その他","和歌山その他",wakayama-city,"(その他)",OVERRIDE
+wakayama,"和歌山 風俗","和歌山",wakayama-city,"和歌山",HIGH
+wakayama,"海南 風俗","海南",wakayama-city,"(その他)",OVERRIDE
+wakayama,"有田 風俗","有田",wakayama-city,"(その他)",OVERRIDE
+wakayama,"御坊 風俗","御坊",wakayama-city,"(その他)",OVERRIDE
+wakayama,"和歌山/海南 風俗","和歌山/海南",wakayama-city,"和歌山",MED
+yamagata,"山形","山形",yamagata-city,"山形・天童",HIGH
+yamagata,"米沢","米沢",yonezawa,"米沢",HIGH
+yamagata,"新庄","新庄",shinjo,"新庄・最上",HIGH
+yamagata,"天童","天童",yamagata-city,"山形・天童",HIGH
+yamagata,"尾花沢","尾花沢",shinjo,"(その他)",OVERRIDE
+yamagata,"山形その他","山形その他",yamagata-city,"(その他)",OVERRIDE
+yamagata,"酒田 風俗","酒田",sakata,"酒田・鶴岡・庄内",HIGH
+yamagata,"鶴岡 風俗","鶴岡",sakata,"酒田・鶴岡・庄内",HIGH
+yamagata,"東根 風俗","東根",yamagata-city,"(その他)",OVERRIDE
+yamagata,"長井 風俗","長井",yonezawa,"(その他)",OVERRIDE
+yamagata,"南陽 風俗","南陽",yonezawa,"(その他)",OVERRIDE
+yamagata,"上山 風俗","上山",yamagata-city,"(その他)",OVERRIDE
+yamagata,"酒田/鶴岡 風俗","酒田/鶴岡",sakata,"酒田・鶴岡・庄内",MED
+yamaguchi,"下関","下関",shimonoseki,"(その他)",OVERRIDE
+yamaguchi,"岩国","岩国",yamaguchi-other,"(その他)",OVERRIDE
+yamaguchi,"萩","萩",yamaguchi-other,"(その他)",OVERRIDE
+yamaguchi,"山口その他","山口その他",yamaguchi-other,"(その他)",OVERRIDE
+yamaguchi,"宇部 風俗","宇部",ube,"宇部・小野田",HIGH
+yamaguchi,"小野田 風俗","小野田",ube,"宇部・小野田",HIGH
+yamaguchi,"山口 風俗","山口",yamaguchi-city,"山口・防府・周南",HIGH
+yamaguchi,"防府 風俗","防府",yamaguchi-city,"山口・防府・周南",HIGH
+yamaguchi,"長門 風俗","長門",yamaguchi-other,"(その他)",OVERRIDE
+yamaguchi,"美祢 風俗","美祢",yamaguchi-other,"(その他)",OVERRIDE
+yamaguchi,"周南 風俗","周南",yamaguchi-city,"山口・防府・周南",HIGH
+yamaguchi,"下松 風俗","下松",yamaguchi-city,"(その他)",OVERRIDE
+yamaguchi,"光 風俗","光",yamaguchi-city,"(その他)",OVERRIDE
+yamaguchi,"山口/防府 風俗","山口/防府",yamaguchi-city,"山口・防府・周南",MED
+yamaguchi,"宇部/小野田 風俗","宇部/小野田",ube,"宇部・小野田",MED
+yamanashi,"甲府","甲府",yamanashi,"(その他)",OVERRIDE
+yamanashi,"山梨","山梨",yamanashi,"山梨",HIGH
+yamanashi,"富士吉田","富士吉田",yamanashi,"(その他)",OVERRIDE
+yamanashi,"石和温泉","石和温泉",yamanashi,"(その他)",OVERRIDE
+yamanashi,"笛吹 風俗","笛吹",yamanashi,"(その他)",OVERRIDE
+yamanashi,"韮崎 風俗","韮崎",yamanashi,"(その他)",OVERRIDE
+yamanashi,"甲斐 風俗","甲斐",yamanashi,"(その他)",OVERRIDE
