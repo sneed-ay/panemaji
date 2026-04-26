@@ -21,6 +21,7 @@ function buildUrlEntry(loc: string, lastmod: string, changefreq: string, priorit
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   // Lazy import to avoid build-time DB connection
   const { getAllAreas, getAllShopIds, getGirlIdsPaginated, getPrefectureSlugs, getAreaLastModMap, getPrefectureLastModMap } = await import('@/lib/queries');
+  const { getAllGuideSlugs } = await import('@/lib/guides');
 
   const sitemapId = parseInt(params.id);
   if (isNaN(sitemapId)) {
@@ -37,47 +38,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : today;
   };
 
-  // Guide article slugs for sitemap
-  const guideSlugs = [
-    'shinjuku-deriheru', 'ikebukuro-deriheru', 'shibuya-deriheru', 'gotanda-deriheru',
-    'kinshicho-deriheru', 'ueno-deriheru', 'osaka-deriheru', 'nagoya-deriheru',
-    'fukuoka-deriheru', 'sapporo-deriheru', 'yokohama-deriheru', 'kyoto-deriheru',
-    'kobe-deriheru', 'sendai-deriheru', 'hiroshima-deriheru',
-    'chiba-deriheru', 'saitama-deriheru', 'kawasaki-deriheru',
-    'panemaji-checker', 'how-to-use', 'panemaji-taisaku', 'panel-photo-check',
-    'first-deriheru', 'kuchikomi-katsuyou', 'real-do-ranking', 'deriheru-erabikata',
-    'ns-nn-toha', 'shame-nikki-mikata',
-    'panemaji-trend-2026', 'panel-kaishu-sagasu', 'kuchikomi-tokou',
-    'av-joyuu-zaiseki', 'hajimete-menesu', 'panemaji-kaishuu-gihou',
-    'kuchikomi-shinjitsu', 'nenmatsu-nenshi-fuzoku', 'yoshiwara-soap-guide', 'gotanda-menesu',
-    'menesu-nagare', 'menesu-kiwadoi', 'menesu-erabikata',
-    'shinjuku-menesu', 'ikebukuro-menesu', 'ginza-menesu',
-    'menesu-ryoukin-souba', 'menesu-panemaji', 'osaka-menesu', 'nagoya-menesu',
-    'fukuoka-menesu', 'yokohama-menesu',
-    'deriheru-vs-soap', 'menesu-vs-esthe', 'fuzoku-ryoukin-souba',
-    'panemaji-faq', 'menesu-faq', 'fuzoku-yougo',
-    'niigata-deriheru', 'okayama-deriheru', 'kumamoto-deriheru', 'kagoshima-deriheru',
-    'kanazawa-deriheru', 'matsuyama-deriheru', 'naha-deriheru', 'takasaki-deriheru',
-    'hamamatsu-deriheru', 'kitakyushu-deriheru', 'utsunomiya-deriheru', 'mito-deriheru',
-    'deriheru-hajimete-faq', 'soap-hajimete-guide', 'fuzoku-trouble-taisaku',
-    'panel-photo-kako-rekishi', 'fuzoku-eisei-guide', 'fuzoku-manner-guide',
-    'sapporo-menesu', 'sendai-menesu', 'hiroshima-menesu', 'kobe-menesu',
-    'nagano-deriheru', 'gifu-deriheru', 'toyama-deriheru', 'shizuoka-deriheru',
-    'tokushima-deriheru', 'oita-deriheru', 'nagasaki-deriheru', 'miyazaki-deriheru',
-    'nara-deriheru', 'wakayama-deriheru',
-    'akita-deriheru', 'yamagata-deriheru', 'fukushima-deriheru', 'mie-deriheru',
-    'saga-deriheru', 'kochi-deriheru', 'aomori-deriheru', 'iwate-deriheru',
-    'takamatsu-deriheru', 'fukui-deriheru',
-    'deriheru-ryoukin-guide', 'soap-vs-health', 'fuzoku-season-guide',
-    'fuzoku-hotel-guide', 'panel-photo-mitiwake', 'fuzoku-repeat-guide',
-    'fuzoku-reservation-guide', 'fuzoku-beginner-checklist',
-    'chiba-menesu', 'saitama-menesu', 'kyoto-menesu', 'kawasaki-menesu',
-    'nagoya-menesu-area', 'menesu-oil-guide', 'fuzoku-age-guide',
-    'deriheru-time-guide', 'fuzoku-discount-guide', 'fuzoku-free-guide',
-    'fuzoku-option-guide', 'fuzoku-after-guide', 'deriheru-change-guide',
-    'menesu-difference-guide', 'fuzoku-review-guide', 'fuzoku-photo-diary-guide',
-    'deriheru-area-guide',
-  ];
+  // Guide article slugs — enumerate all directories under src/app/guide/* (except dynamic /guide/shop/[shopId])
+  const guideSlugs = getAllGuideSlugs().filter((s) => s !== 'shop');
 
   if (sitemapId === 0) {
     // Static sitemap: top page, guide pages, prefecture pages, area pages, shop pages

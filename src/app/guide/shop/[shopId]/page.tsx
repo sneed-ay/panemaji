@@ -44,14 +44,16 @@ export function generateMetadata({ params }: { params: { shopId: string } }): Me
     return {
       title,
       description,
-      alternates: { canonical: `https://panemaji.com/guide/shop/${params.shopId}` },
+      // canonical を /shop/[id] に集約して重複コンテンツを防ぐ
+      // (このページは /shop/[id] と内容が重複するため、評価を /shop に集約させる)
+      alternates: { canonical: `https://panemaji.com/shop/${params.shopId}` },
       openGraph: {
         title,
         description,
         type: 'article',
         locale: 'ja_JP',
         siteName: 'パネマジ掲示板',
-        url: `https://panemaji.com/guide/shop/${params.shopId}`,
+        url: `https://panemaji.com/shop/${params.shopId}`,
       },
     };
   } catch {

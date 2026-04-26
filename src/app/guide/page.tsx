@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTopShopsForArticles } from "@/lib/queries";
+import { getAllGuideSlugs, slugToTitle } from "@/lib/guides";
 
 export const revalidate = 86400; // ISR: 24 hours
 
@@ -36,7 +37,7 @@ type Article = {
   href: string;
   title: string;
   summary: string;
-  category: "area" | "howto" | "column" | "shop" | "special" | "compare" | "menesu";
+  category: "area" | "howto" | "column" | "shop" | "special" | "compare" | "menesu" | "other";
 };
 
 const articles: Article[] = [
@@ -186,6 +187,7 @@ const categoryLabels = {
   special: "特集",
   compare: "比較・まとめ",
   menesu: "メンエス特集",
+  other: "その他",
 } as const;
 
 const categoryColors = {
@@ -196,7 +198,26 @@ const categoryColors = {
   special: "bg-red-100 text-red-700",
   compare: "bg-cyan-100 text-cyan-700",
   menesu: "bg-pink-100 text-pink-700",
+  other: "bg-gray-100 text-gray-700",
 } as const;
+
+// orphan 記事 (手書きで articles 配列に列挙されていない記事) のサブ分類
+// 既存の手書きセクションには混ぜず、「その他」セクション内で内訳サブグループとして表示する
+type OrphanGroup = "area" | "menesu" | "howto" | "column" | "misc";
+function inferOrphanGroup(slug: string): OrphanGroup {
+  if (slug.endsWith("-menesu") || slug.startsWith("menesu-")) return "menesu";
+  if (slug.endsWith("-deriheru") || slug.endsWith("-deriheru-guide") || slug.endsWith("-deriheru-guide-detail") || slug.endsWith("-night")) return "area";
+  if (slug.startsWith("fuzoku-") || slug.startsWith("deriheru-") || slug.startsWith("soap-") || slug.startsWith("health-") || slug.startsWith("hotelhel-")) return "howto";
+  if (slug.startsWith("panemaji-") || slug.startsWith("panel-")) return "column";
+  return "misc";
+}
+const orphanGroupLabels: Record<OrphanGroup, string> = {
+  area: "エリア別",
+  menesu: "メンエス系",
+  howto: "ハウツー・コラム",
+  column: "パネマジ関連",
+  misc: "その他",
+};
 
 function ArticleCard({ article }: { article: Article }) {
   return (
@@ -210,18 +231,35 @@ function ArticleCard({ article }: { article: Article }) {
       <h3 className="font-bold text-gray-800 group-hover:text-pink-600 transition-colors mb-1 text-sm sm:text-base">
         {article.title}
       </h3>
-      <p className="text-gray-500 text-xs sm:text-sm">{article.summary}</p>
+      {article.summary && (
+        <p className="text-gray-500 text-xs sm:text-sm">{article.summary}</p>
+      )}
     </a>
   );
 }
 
 export default function GuidePage() {
+  // 既存の手書き分類はそのまま使う
   const menesuArticles = articles.filter((a) => a.category === "menesu");
   const specialArticles = articles.filter((a) => a.category === "special");
   const compareArticles = articles.filter((a) => a.category === "compare");
   const areaArticles = articles.filter((a) => a.category === "area");
   const howtoArticles = articles.filter((a) => a.category === "howto");
   const columnArticles = articles.filter((a) => a.category === "column");
+
+  // articles に列挙されていない記事を抽出 (手書き分類と混ぜず、末尾の「その他」内でサブグループ化)
+  const knownHrefs = new Set(articles.map((a) => a.href));
+  const allSlugs = getAllGuideSlugs().filter((s) => s !== "shop");
+  const orphanSlugs = allSlugs.filter((s) => !knownHrefs.has(`/guide/${s}`));
+  const orphanGroups: Record<OrphanGroup, { slug: string; title: string }[]> = {
+    area: [], menesu: [], howto: [], column: [], misc: [],
+  };
+  for (const slug of orphanSlugs) {
+    orphanGroups[inferOrphanGroup(slug)].push({ slug, title: slugToTitle(slug) });
+  }
+  for (const k of Object.keys(orphanGroups) as OrphanGroup[]) {
+    orphanGroups[k].sort((a, b) => a.title.localeCompare(b.title, "ja"));
+  }
 
   // Dynamic shop articles from DB
   let shopArticles: Article[] = [];
@@ -344,6 +382,40 @@ export default function GuidePage() {
           ))}
         </div>
       </section>
+
+      {/* 全ガイド記事一覧 (自動列挙) — sitemap 同等の網羅性をユーザーにも提供 */}
+      {orphanSlugs.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+            <span className="inline-block w-1 h-6 bg-gray-400 rounded"></span>
+            全ガイド記事一覧
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">上で紹介していないガイド記事も含めた網羅版（{orphanSlugs.length}件）</p>
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-5">
+            {(Object.keys(orphanGroups) as OrphanGroup[]).map((g) =>
+              orphanGroups[g].length === 0 ? null : (
+                <div key={g}>
+                  <h3 className="text-sm font-bold text-gray-700 mb-2 pb-1 border-b border-gray-100">
+                    {orphanGroupLabels[g]} <span className="text-xs text-gray-400 font-normal">({orphanGroups[g].length}件)</span>
+                  </h3>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    {orphanGroups[g].map((item) => (
+                      <li key={item.slug}>
+                        <a
+                          href={`/guide/${item.slug}`}
+                          className="text-pink-600 hover:text-pink-800 hover:underline"
+                        >
+                          {item.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+      )}
 
       {/* CTAリンク */}
       <div className="text-center mt-8">
