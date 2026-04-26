@@ -6,22 +6,54 @@ Claude Codeでこのリポジトリを触る際の必須ルール。最初に読
 
 **絶対ルール:** `areas` テーブルの行は **Mutually Exclusive, Collectively Exhaustive**（重複なし・漏れなし）の独自定義で運用する。
 
+### 唯一の正
+
+- **コード側の正:** `scripts/lib/unified-areas.mjs` の `UNIFIED_AREAS`（機械可読の構造化データ）
+- **ドキュメント側の正:** `docs/area-definition.md`
+- **両者は必ず同期させる**。片方だけ更新するのは絶対NG
+
 ### やってはいけないこと
 
-- ❌ シティヘブン・男性用メンエス情報サイト等の外部ソースのエリア名をそのまま `areas` に `INSERT` する
+- ❌ シティヘブン・駅ちか・男性用メンエス情報サイト等の外部ソースのエリア名をそのまま `areas` に `INSERT` する
 - ❌ 「新宿・歌舞伎町」と「新宿・大久保・高田馬場・中野」のように**同じ地域を指す複数エリア**が共存する状態
 - ❌ 整理せずに新しいスクレイパーを動かしてエリアを増やす
+- ❌ slug に日本語を含める（`fukuiその他` ❌）。slug は **英小文字+ハイフンのみ**（`fukui-other` ✅）
+- ❌ 一時 slug（`-pending`, `-fj-*`, `-ch-*`, `-rd-*`, `-pl-*`, `-meste-*`, `-robin-*`, `*-aXXXX`）を残す
 
 ### やるべきこと
 
-- ✅ **独自エリア定義**は `docs/area-definition.md` に記載（都道府県ごとにMECEな一覧）
-- ✅ 外部ソース取り込み時は必ず **外部エリア名 → 独自定義エリア** のマッピングテーブルを通す
-- ✅ 新しいエリアを独自定義に追加するかは慎重に判断（単純な重複や表記ゆれなら追加しない）
-- ✅ エリア重複を見つけたら、ユーザーに報告する前に**統合マイグレーション案**を提示する
+- ✅ 取込時は **shop の `area_id` を直接 `unified-areas.mjs` の正規 slug の id にする**（一時エリア新設しない）
+- ✅ どうしても一時エリアを使う場合は、**取込完了後に必ず** `node scripts/migrate-areas-mece.mjs --apply` を実行して MECE 状態に戻す
+- ✅ 新しい独自エリアを切る場合は **`unified-areas.mjs` と `docs/area-definition.md` を1コミットで同期**
+- ✅ エリア重複・slug表記ゆれを見つけたら、**統合マイグレーション案**を提示する
 
-### 過去の経緯
+### 取込時の標準コード
 
-複数回（Area dedup v2, v3, v4）整理されているが、その後の外部ソース取り込みで再び荒れるのを繰り返している。ここを厳守しないと毎回同じ議論になる。
+```js
+import { pickArea, UNIFIED_AREAS } from './lib/unified-areas.mjs';
+
+// shop名 + source_url から正規エリアを推定
+const target = pickArea(pref, shopName, sourceUrl, oldAreaName);
+// target.slug は必ず unified-areas.mjs に存在する slug
+// その area_id を取得してINSERT
+```
+
+### 取込完了後の必須実行
+
+```bash
+node scripts/migrate-areas-mece.mjs --apply  # 全shopsをMECE再分配 + 空エリア削除
+node scripts/preview-duplicate-shops.mjs     # 店舗重複確認
+node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
+```
+
+### 過去の汚染実績
+
+- Area dedup v2/v3/v4 で複数回整理されているが、外部ソース取り込みで毎回荒れる
+- 2026-04-26: シティヘブン/駅ちか/ロビン/ぴゅあらば/m-este取込後 areas 429件 → うち 259件がレガシー `-aXXXX` / `-pending` 系（242件は空）
+- `tokyo-other` に 1,140件の shops が雑に集約されていた（shop名の都市名キーワードでの再分配が必要）
+- `fukuiその他`, `kanagawaその他` 等の **slug日英混在** が複数件混入していた
+
+→ `migrate-areas-mece.mjs` で全店舗を `unified-areas.mjs` のキーワード照合で正規エリアに再分配し、**171エリア / レガシー残0** に整理した。これを今後の標準運用とする。
 
 ## 🏪 店名は広告ワードを除いた本来の店名のみ保存
 
