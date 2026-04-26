@@ -15,9 +15,10 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   if (!shop) return {};
   const reviewCount = shop.review_count || 0;
   const girlCount = shop.girl_count || 0;
+  const girlCountLabel = girlCount === 100 ? '100+' : String(girlCount);
   const realPct = shop.real_pct != null && shop.real_pct >= 0 ? shop.real_pct : null;
   const title = `${shop.name}の口コミ掲示板・パネマジ度【${shop.area_name || '東京'}】`;
-  const description = `${shop.name}(${shop.area_name || '東京'})の口コミ掲示板。在籍嬢のパネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCount}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}。${shop.name}の最新レビューと評判。`;
+  const description = `${shop.name}(${shop.area_name || '東京'})の口コミ掲示板。在籍嬢のパネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCountLabel}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}。${shop.name}の最新レビューと評判。`;
   const ogParams = new URLSearchParams({
     name: shop.name,
     shop: shop.area_name || '',
@@ -172,7 +173,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
             <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} size="lg" />
             <div className="text-right">
               <p className="text-xs sm:text-sm text-gray-500">
-                在籍 <span className="text-2xl sm:text-3xl text-blue-600 font-bold">{shop.girl_count}</span> 人
+                在籍 <span className="text-2xl sm:text-3xl text-blue-600 font-bold">{shop.girl_count === 100 ? '100+' : shop.girl_count}</span> 人
               </p>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 口コミ <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.review_count}</span> 件

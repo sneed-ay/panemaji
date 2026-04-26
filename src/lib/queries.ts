@@ -580,7 +580,7 @@ export function getNearbyShops(areaId: number, shopId: number, category: string,
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
-    WHERE s.area_id = ? AND s.id != ? AND s.is_active = 1
+    WHERE s.area_id = ? AND s.id != ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1
     ORDER BY cat_order ASC, COALESCE(rc.review_count, 0) DESC, gc.girl_count DESC
     LIMIT ?
   `).all(category, areaId, shopId, limit) as Shop[];
