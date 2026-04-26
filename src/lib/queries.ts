@@ -181,7 +181,8 @@ const SHOP_STATS_COLS = `
   END as real_pct
 `;
 
-// Shops (only active shops)
+// Shops (only active shops with at least 1 girl)
+// 嬢0の店は一覧から除外 (個別shopページは引き続き表示可能)
 export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
   const catValue = categoryToDbValue(catSlug);
   const catFilter = catValue ? ' AND s.category = ?' : '';
@@ -191,7 +192,7 @@ export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
-    WHERE s.area_id = ? AND s.is_active = 1${catFilter}
+    WHERE s.area_id = ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1${catFilter}
     ORDER BY real_pct DESC, review_count DESC, s.name
   `).all(...params) as Shop[];
 }
@@ -213,7 +214,7 @@ export function searchShops(query: string): Shop[] {
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}
-    WHERE s.name LIKE ? AND s.is_active = 1
+    WHERE s.name LIKE ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1
     ORDER BY real_pct DESC, review_count DESC, s.name
     LIMIT 50
   `).all(q) as Shop[];
