@@ -8,7 +8,7 @@ import AdBanner from '@/components/AdBanner';
 import { generateGirlAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));

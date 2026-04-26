@@ -3,7 +3,7 @@ import { isValidPrefecture, isValidCategory, prefectureSlugToName } from '@/lib/
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export function generateMetadata({ params }: { params: { prefecture: string } }): Metadata {
   if (!isValidPrefecture(params.prefecture)) return {};

@@ -3,7 +3,7 @@ import { isValidPrefecture, isValidCategory, getRecentlyReviewedGirls, prefectur
 import GirlImage from '@/components/GirlImage';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export default function Home({ searchParams }: { searchParams: { pref?: string; cat?: string } }) {
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';

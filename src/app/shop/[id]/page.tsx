@@ -8,7 +8,7 @@ import RelatedGuides from '@/components/RelatedGuides';
 import { generateAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const shop = getShopById(parseInt(params.id));

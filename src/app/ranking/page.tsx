@@ -4,7 +4,7 @@ import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export function generateMetadata({ searchParams }: { searchParams: { pref?: string } }): Metadata {
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';
