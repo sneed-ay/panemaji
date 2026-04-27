@@ -5,11 +5,19 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.cityheaven.net',
-      },
+      { protocol: 'https', hostname: '**.cityheaven.net' },
+      { protocol: 'https', hostname: 'fuzoku-images.ranking-deli.jp' },
+      { protocol: 'https', hostname: 'contents.purelovers.com' },
+      { protocol: 'https', hostname: 'men-esthe.jp' },
+      { protocol: 'https', hostname: 'www.aromaesthe.co.jp' },
+      { protocol: 'https', hostname: 'tokyo.aromaesthe.co.jp' },
+      { protocol: 'https', hostname: 'assets.fuzoku.jp' },
+      { protocol: 'https', hostname: 'fuzoku.jp' },
     ],
+    formats: ['image/webp'],
+    minimumCacheTTL: 86400, // 24h
+    deviceSizes: [320, 480, 640, 750, 828, 1080],
+    imageSizes: [56, 80, 120, 189, 256],
   },
   headers: async () => [
     {

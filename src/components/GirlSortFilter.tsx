@@ -25,9 +25,12 @@ type GirlData = {
 type SortKey = 'name' | 'review_count' | 'real_pct';
 type ViewMode = 'grid' | 'list';
 
+const INITIAL_LIMIT = 24;
+
 export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; query: string }) {
   const [sortKey, setSortKey] = useState<SortKey>('real_pct');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [showAll, setShowAll] = useState(false);
 
   const sorted = useMemo(() => {
     const arr = [...girls];
@@ -112,7 +115,7 @@ export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; qu
         </p>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {sorted.map((girl, index) => {
+          {(showAll ? sorted : sorted.slice(0, INITIAL_LIMIT)).map((girl, index) => {
             const realPct = girl.real_pct ?? -1;
             const hasReviews = (girl.review_count || 0) > 0 && realPct >= 0;
             const pctColor = realPct >= 70 ? 'bg-green-100 text-green-700 border-green-200' : realPct >= 40 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-red-100 text-red-700 border-red-200';
@@ -154,7 +157,7 @@ export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; qu
         </div>
       ) : (
         <div className="space-y-2">
-          {sorted.map((girl) => (
+          {(showAll ? sorted : sorted.slice(0, INITIAL_LIMIT)).map((girl) => (
             <a
               key={girl.id}
               href={`/girl/${girl.id}`}
@@ -175,6 +178,16 @@ export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; qu
               </div>
             </a>
           ))}
+        </div>
+      )}
+      {!showAll && sorted.length > INITIAL_LIMIT && (
+        <div className="text-center mt-4">
+          <button
+            onClick={() => setShowAll(true)}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow"
+          >
+            残り {sorted.length - INITIAL_LIMIT} 名を表示
+          </button>
         </div>
       )}
     </div>
