@@ -263,10 +263,31 @@ db.close();
 gzip -c "$DB_PATH" > "$DB_PATH.gz"
 log "  DB圧縮: $(ls -lh "$DB_PATH.gz" | awk '{print $5}')"
 
-# GitHub Releasesにアップロード
+# GitHub Releasesにアップロード (latest + 日次backup tag)
 if command -v gh &> /dev/null; then
   gh release upload db-latest "$DB_PATH.gz" --repo sneed-ay/panemaji --clobber 2>&1 | tee -a "$LOG_FILE" || log "  [warn] GitHub Release upload failed"
-  log "  GitHub Release: アップロード完了"
+  log "  GitHub Release(db-latest): アップロード完了"
+
+  # 日次バックアップ: db-YYYY-MM-DD タグで別保管 (万一の Restore用)
+  BACKUP_TAG="db-$(date +%Y-%m-%d)"
+  if ! gh release view "$BACKUP_TAG" --repo sneed-ay/panemaji &>/dev/null; then
+    gh release create "$BACKUP_TAG" --repo sneed-ay/panemaji \
+      --title "DB Daily Backup $(date +%Y-%m-%d)" \
+      --notes "Automated daily backup. Restore via: gh release download $BACKUP_TAG -p panemaji.db.gz" \
+      "$DB_PATH.gz" 2>&1 | tee -a "$LOG_FILE" || log "  [warn] backup tag create failed"
+    log "  GitHub Release($BACKUP_TAG): 日次backup作成"
+  else
+    gh release upload "$BACKUP_TAG" "$DB_PATH.gz" --repo sneed-ay/panemaji --clobber 2>&1 | tee -a "$LOG_FILE" || true
+    log "  GitHub Release($BACKUP_TAG): 既存tag更新"
+  fi
+
+  # 30日以上前のbackupタグ削除 (容量管理)
+  CUTOFF_DATE=$(date -v-30d +%Y-%m-%d 2>/dev/null || date -d '30 days ago' +%Y-%m-%d)
+  for old in $(gh release list --repo sneed-ay/panemaji --limit 60 --json tagName --jq '.[].tagName' | grep -E '^db-2[0-9]{3}-[0-9]{2}-[0-9]{2}$'); do
+    if [[ "${old#db-}" < "$CUTOFF_DATE" ]]; then
+      gh release delete "$old" --repo sneed-ay/panemaji --yes --cleanup-tag 2>/dev/null && log "  古いbackup削除: $old" || true
+    fi
+  done
 fi
 
 # git push（コード変更があれば。新規記事やメンテ修正を含む）
