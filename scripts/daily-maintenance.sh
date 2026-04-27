@@ -173,6 +173,28 @@ node scripts/dedup-shops.mjs 2>&1 | tee -a "$LOG_FILE" || log "  [warn] dedup-sh
 log "  [2-8] 嬢重複統合..."
 node scripts/dedup-girls.mjs 2>&1 | tee -a "$LOG_FILE" || log "  [warn] dedup-girls 失敗"
 
+# 2-9: 【絶対ルール】 MECE再分配 (159エリア固定)
+#      どのスクレイパーがレガシー area (`-fj-`, `-aXXXX` 等) を作っても 毎日リセット
+#      CLAUDE.md「エリア数は159で固定」に強制準拠
+log "  [2-9] 【MECE強制】エリア再分配 (159固定)..."
+node scripts/migrate-areas-mece.mjs --apply 2>&1 | tee -a "$LOG_FILE" || log "  [warn] migrate-areas-mece 失敗"
+
+# 2-10: 表記ゆれ嬢の統合 (normalize_girl ベース)
+log "  [2-10] 表記ゆれ嬢統合..."
+node scripts/merge-duplicate-girls.mjs --apply 2>&1 | tee -a "$LOG_FILE" || log "  [warn] merge-girls 失敗"
+
+# 2-11: 表記ゆれ店舗統合 (normalize_shop ベース)
+log "  [2-11] 表記ゆれ店舗統合..."
+node scripts/merge-duplicate-shops.mjs --apply 2>&1 | tee -a "$LOG_FILE" || log "  [warn] merge-shops 失敗"
+
+# 2-12: 健全性チェック (レポートのみ、 areas=159 検証)
+log "  [2-12] 健全性チェック..."
+node scripts/health-check.mjs 2>&1 | tee -a "$LOG_FILE" || true
+
+# 2-13: ANALYZE+VACUUM で DB最適化
+log "  [2-13] DB最適化 (ANALYZE+VACUUM)..."
+sqlite3 "$DB_PATH" "ANALYZE; VACUUM;" 2>&1 | tee -a "$LOG_FILE" || true
+
 # ============================================================================
 # Phase 2.5: 記事処理（新規作成10本 + メンテナンス）
 # ============================================================================
