@@ -249,7 +249,7 @@ export default function GuidePage() {
 
   // articles に列挙されていない記事を抽出 (手書き分類と混ぜず、末尾の「その他」内でサブグループ化)
   const knownHrefs = new Set(articles.map((a) => a.href));
-  const allSlugs = getAllGuideSlugs().filter((s) => s !== "shop");
+  const allSlugs = getAllGuideSlugs().filter((s) => s !== "shop" && s !== "area");
   const orphanSlugs = allSlugs.filter((s) => !knownHrefs.has(`/guide/${s}`));
   const orphanGroups: Record<OrphanGroup, { slug: string; title: string }[]> = {
     area: [], menesu: [], howto: [], column: [], misc: [],

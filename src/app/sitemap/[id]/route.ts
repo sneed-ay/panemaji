@@ -39,7 +39,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   };
 
   // Guide article slugs — enumerate all directories under src/app/guide/* (except dynamic /guide/shop/[shopId])
-  const guideSlugs = getAllGuideSlugs().filter((s) => s !== 'shop');
+  const guideSlugs = getAllGuideSlugs().filter((s) => s !== 'shop' && s !== 'area');
 
   if (sitemapId === 0) {
     // Static sitemap: top page, guide pages, prefecture pages, area pages, shop pages

@@ -34,6 +34,13 @@ export async function GET() {
     <lastmod>${lastmod}</lastmod>
   </sitemap>`,
   );
+  // エリア×業態ガイド sitemap
+  entries.push(
+    `  <sitemap>
+    <loc>${BASE_URL}/sitemap-area-guide.xml</loc>
+    <lastmod>${lastmod}</lastmod>
+  </sitemap>`,
+  );
   // /sitemap/1..N = girl sitemaps (5万件/shard)
   for (let i = 1; i <= girlSitemapCount; i++) {
     entries.push(
