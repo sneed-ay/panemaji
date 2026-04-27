@@ -13,6 +13,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'tokyo.aromaesthe.co.jp' },
       { protocol: 'https', hostname: 'assets.fuzoku.jp' },
       { protocol: 'https', hostname: 'fuzoku.jp' },
+      { protocol: 'https', hostname: 'd1ywb8dvwodsnl.cloudfront.net' },
+      { protocol: 'https', hostname: '**.cloudfront.net' },
     ],
     formats: ['image/webp'],
     minimumCacheTTL: 86400, // 24h

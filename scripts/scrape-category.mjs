@@ -26,6 +26,8 @@ import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { pickArea } from './lib/unified-areas.mjs';
+import { cleanShopName } from './lib/clean-shop-name.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -350,12 +352,19 @@ async function scrapeShopsByCategory(db, page, prefCode, catKey) {
   const areaNames = await discoverAreaNames(page, prefCode);
   await delay();
 
-  const insertArea = db.prepare('INSERT OR IGNORE INTO areas (name, slug, prefecture) VALUES (?, ?, ?)');
-  const updateAreaPref = db.prepare('UPDATE areas SET prefecture = ? WHERE slug = ? AND (prefecture IS NULL OR prefecture = \'\')');
+  // [MECE厳守] レガシー area は作らない。 必ず unified-areas (159固定) の正規slug にマップする
   const getAreaBySlug = db.prepare('SELECT id FROM areas WHERE slug = ?');
   const getShopByUrl = db.prepare('SELECT id FROM shops WHERE source_url = ?');
   const insertShop = db.prepare('INSERT INTO shops (name, area_id, category, source_url, is_active, last_seen_at) VALUES (?, ?, ?, ?, 1, ?)');
   const updateShopSeen = db.prepare('UPDATE shops SET last_seen_at = ?, is_active = 1, name = ?, category = ? WHERE id = ?');
+
+  // 正規エリアid解決
+  const resolveAreaId = (shopName, sourceUrl, oldAreaName) => {
+    const target = pickArea(prefCode, shopName, sourceUrl, oldAreaName);
+    if (!target) return null;
+    const row = getAreaBySlug.get(target.slug);
+    return row ? row.id : null;
+  };
 
   let totalNew = 0, totalUpdated = 0;
   const seenHrefs = new Set();
@@ -379,23 +388,21 @@ async function scrapeShopsByCategory(db, page, prefCode, catKey) {
 
       seenHrefs.add(shop.href);
 
-      // Resolve area
-      const areaCode = shop.areaCode || defaultAreaCode || 'unknown';
-      const areaName = areaNames[areaCode] || areaCode;
-      const areaSlug = `${prefCode}-${areaCode.toLowerCase()}`;
+      // [MECE厳守] cleanShopName + pickArea で正規 slug 解決 (レガシー area 作らない)
+      const cleanedName = cleanShopName(shop.name);
+      if (!cleanedName || cleanedName.length < 2) continue;
 
-      insertArea.run(areaName, areaSlug, prefCode);
-      updateAreaPref.run(prefCode, areaSlug);
-      const areaRow = getAreaBySlug.get(areaSlug);
-      if (!areaRow) continue;
+      const oldAreaName = areaNames[shop.areaCode || defaultAreaCode || ''] || '';
+      const areaId = resolveAreaId(cleanedName, shop.href, oldAreaName);
+      if (!areaId) continue;
 
       const existing = getShopByUrl.get(shop.href);
       if (existing) {
-        updateShopSeen.run(now, shop.name, categoryLabel, existing.id);
+        updateShopSeen.run(now, cleanedName, categoryLabel, existing.id);
         totalUpdated++;
         pUpdated++;
       } else {
-        insertShop.run(shop.name, areaRow.id, categoryLabel, shop.href, now);
+        insertShop.run(cleanedName, areaId, categoryLabel, shop.href, now);
         totalNew++;
         pNew++;
       }
