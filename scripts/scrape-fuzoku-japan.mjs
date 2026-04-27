@@ -23,6 +23,8 @@ import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { pickArea } from './lib/unified-areas.mjs';
+import { cleanShopName } from './lib/clean-shop-name.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -481,26 +483,25 @@ async function scrapeShops(db, page, prefCode, opts = {}) {
   }
 
   const now = new Date().toISOString();
-  const insertArea = db.prepare('INSERT OR IGNORE INTO areas (name, slug, prefecture) VALUES (?, ?, ?)');
-  const updateAreaPref = db.prepare("UPDATE areas SET prefecture = ? WHERE slug = ? AND (prefecture IS NULL OR prefecture = '')");
+  // [MECE厳守] レガシー -fj- areas は作らない。 必ず unified-areas (159固定) の正規slug にマップする
   const getAreaBySlug = db.prepare('SELECT id FROM areas WHERE slug = ?');
   const getShopByUrl = db.prepare('SELECT id FROM shops WHERE source_url = ?');
-  const getShopByName = db.prepare('SELECT id, source_url FROM shops WHERE name = ? AND area_id = ?');
   const insertShop = db.prepare('INSERT INTO shops (name, area_id, category, source_url, is_active, last_seen_at) VALUES (?, ?, ?, ?, 1, ?)');
   const updateShopSeen = db.prepare('UPDATE shops SET last_seen_at = ?, is_active = 1 WHERE id = ?');
+
+  // 正規エリア id解決 (slug→id)
+  const resolveAreaId = (shopName, sourceUrl, oldAreaName) => {
+    const target = pickArea(prefCode, shopName, sourceUrl, oldAreaName);
+    if (!target) return null;
+    const row = getAreaBySlug.get(target.slug);
+    return row ? row.id : null;
+  };
 
   let totalNew = 0, totalUpdated = 0, totalSkipped = 0;
   const seenSlugs = new Set();
 
   for (const area of areas) {
-    const areaSlug = `${prefCode}-fj-${area.slug}`;
-    const areaName = `${area.name}(風俗じゃぱん)`;
-
-    if (!opts.dryRun) {
-      insertArea.run(areaName, areaSlug, prefCode);
-      updateAreaPref.run(prefCode, areaSlug);
-    }
-
+    // [MECE厳守] レガシー -fj- area は作らない。 shop INSERT時に pickArea で正規slug解決
     try {
       // デリヘル (biz_4) の店舗一覧を取得
       const listUrl = `${BASE}/${prefCode}/${area.slug}/biz_4/`;
@@ -523,16 +524,18 @@ async function scrapeShops(db, page, prefCode, opts = {}) {
         }
       }
 
-      const areaRow = opts.dryRun ? null : getAreaBySlug.get(areaSlug);
-      const areaId = areaRow ? areaRow.id : 0;
       let areaNew = 0, areaUpdated = 0;
 
       for (const shop of shops) {
         if (seenSlugs.has(shop.slug)) { totalSkipped++; continue; }
         seenSlugs.add(shop.slug);
 
+        // [MECEルール] 店名はクリーンに
+        const cleanedName = cleanShopName(shop.name);
+        if (!cleanedName || cleanedName.length < 2) { totalSkipped++; continue; }
+
         if (opts.dryRun) {
-          console.log(`    [dry-run] ${shop.name} → ${shop.href}`);
+          console.log(`    [dry-run] ${cleanedName} → ${shop.href}`);
           areaNew++;
           totalNew++;
           continue;
@@ -547,17 +550,11 @@ async function scrapeShops(db, page, prefCode, opts = {}) {
           continue;
         }
 
-        // 店名 + エリアで既存マッチ (cityheaven由来の店舗と照合)
-        const byName = getShopByName.get(shop.name, areaId);
-        if (byName && !byName.source_url) {
-          db.prepare('UPDATE shops SET source_url = ?, last_seen_at = ?, is_active = 1 WHERE id = ?')
-            .run(shop.href, now, byName.id);
-          areaUpdated++;
-          totalUpdated++;
-          continue;
-        }
+        // [MECEルール] pickArea で正規slug解決して area_id を取得 (レガシー作らない)
+        const areaId = resolveAreaId(cleanedName, shop.href, area.name);
+        if (!areaId) { totalSkipped++; continue; }
 
-        insertShop.run(shop.name, areaId, 'デリヘル', shop.href, now);
+        insertShop.run(cleanedName, areaId, 'デリヘル', shop.href, now);
         areaNew++;
         totalNew++;
       }
