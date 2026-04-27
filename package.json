@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "stats": "sqlite3 panemaji.db \"SELECT 'shops_active', COUNT(*) FROM shops WHERE is_active=1; SELECT 'girls_active', COUNT(*) FROM girls WHERE is_active=1; SELECT 'reviews', COUNT(*) FROM reviews; SELECT 'areas', COUNT(*) FROM areas; SELECT '画像あり girls', COUNT(*) FROM girls WHERE is_active=1 AND image_url IS NOT NULL AND image_url != ''; SELECT '嬢0 shops', COUNT(*) FROM shops s WHERE s.is_active=1 AND NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id=s.id AND g.is_active=1);\"",
+    "health": "node scripts/health-check.mjs",
+    "preview-dups": "node scripts/preview-duplicate-shops.mjs && node scripts/preview-duplicate-shops.mjs --limit 10",
+    "merge-dups": "node scripts/merge-duplicate-shops.mjs && node scripts/merge-duplicate-girls.mjs",
+    "merge-dups-apply": "node scripts/merge-duplicate-shops.mjs --apply && node scripts/merge-duplicate-girls.mjs --apply",
+    "migrate-areas": "node scripts/migrate-areas-mece.mjs --apply",
+    "verify-areas": "sqlite3 panemaji.db \"SELECT COUNT(*) FROM areas;\" | grep -q '^159$' && echo 'OK: 159 areas' || echo 'NG: areas count != 159'"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
