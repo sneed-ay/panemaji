@@ -115,6 +115,38 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     ],
   };
 
+  // FAQ structured data (リッチスニペット用)
+  const faqQuestions: Array<{ q: string; a: string }> = [];
+  faqQuestions.push({
+    q: `${shop.name}の在籍嬢は何人ですか？`,
+    a: `${shop.name}には現在${girlCountLabel}人の女性が在籍しています。${totalReviews > 0 ? `口コミは${totalReviews}件あります。` : ''}最新の在籍情報は当ページの一覧でご確認ください。`,
+  });
+  if (shop.area_name) {
+    faqQuestions.push({
+      q: `${shop.name}はどこにありますか？`,
+      a: `${shop.name}は${shop.area_name}エリアの${shop.category || '風俗店'}です。`,
+    });
+  }
+  if (typeof shop.real_pct === 'number' && shop.real_pct >= 0) {
+    faqQuestions.push({
+      q: `${shop.name}のパネル通り率は？`,
+      a: `${shop.name}のパネル通り率(パネマジ度)は${shop.real_pct}%です。${totalReviews}件の口コミから集計しています。`,
+    });
+  }
+  faqQuestions.push({
+    q: `${shop.name}の口コミはどこで見られますか？`,
+    a: `${shop.name}の最新口コミは当ページ「${shop.name}の口コミ掲示板・パネマジ度」で確認できます。実物との一致度を投稿いただけます。`,
+  });
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqQuestions.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
+
   return (
     <div className="space-y-6">
       <script
@@ -124,6 +156,10 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       {/* Breadcrumb */}
       <nav className="text-xs sm:text-sm text-gray-500 break-words">
