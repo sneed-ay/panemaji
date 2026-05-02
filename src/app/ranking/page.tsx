@@ -32,8 +32,42 @@ export default function RankingPage({ searchParams }: { searchParams: { pref?: s
 
   const hasAnyData = topGirls.length > 0 || worstGirls.length > 0 || topShops.length > 0;
 
+  // ItemList JSON-LD (rich result 対応・副作用ゼロ・追加のみ)
+  const itemListJsonLd = topShops.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${prefName}のパネマジランキング (パネル通り率TOP)`,
+    itemListOrder: 'https://schema.org/ItemListOrderDescending',
+    numberOfItems: topShops.length,
+    itemListElement: topShops.slice(0, 10).map((shop, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://panemaji.com/shop/${shop.id}`,
+      name: shop.name,
+    })),
+  } : null;
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'トップ', item: 'https://panemaji.com' },
+      { '@type': 'ListItem', position: 2, name: `${prefName}ランキング`, item: `https://panemaji.com/ranking?pref=${prefSlug}` },
+    ],
+  };
+
   return (
     <div className="space-y-8">
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <nav className="text-xs sm:text-sm text-gray-500">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>

@@ -24,7 +24,7 @@ export async function GET() {
   const entries = rows.map((r) => {
     const lastmod = r.last_seen_at ? r.last_seen_at.substring(0, 10) : today;
     return `  <url>
-    <loc>${BASE_URL}/shop/${r.id}/</loc>
+    <loc>${BASE_URL}/shop/${r.id}</loc>
     <lastmod>${lastmod}</lastmod>
     <image:image>
       <image:loc>${escapeXml(r.img_url)}</image:loc>

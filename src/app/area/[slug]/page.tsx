@@ -31,8 +31,48 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
   const prefSlug = area.prefecture;
   const prefName = prefectureSlugToName(prefSlug);
 
+  // CollectionPage + ItemList JSON-LD (rich result 対応・副作用ゼロ・追加のみ)
+  const collectionJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${area.name}の風俗店 口コミ・掲示板・パネマジ度`,
+    url: `https://panemaji.com/area/${params.slug}`,
+    isPartOf: { '@type': 'WebSite', name: 'パネマジ掲示板', url: 'https://panemaji.com' },
+    about: { '@type': 'Place', name: area.name, containedInPlace: { '@type': 'Place', name: prefName } },
+    ...(shops.length > 0 ? {
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: shops.length,
+        itemListElement: shops.slice(0, 10).map((shop, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          url: `https://panemaji.com/shop/${shop.id}`,
+          name: shop.name,
+        })),
+      },
+    } : {}),
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'トップ', item: 'https://panemaji.com' },
+      { '@type': 'ListItem', position: 2, name: prefName, item: `https://panemaji.com/${prefSlug}` },
+      { '@type': 'ListItem', position: 3, name: area.name, item: `https://panemaji.com/area/${params.slug}` },
+    ],
+  };
+
   return (
     <div className="space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <nav className="text-xs sm:text-sm text-gray-500">
         <a href="/" className="hover:text-blue-600">トップ</a>
         <span className="mx-1 sm:mx-2">&gt;</span>
