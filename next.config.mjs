@@ -37,6 +37,20 @@ const nextConfig = {
       ],
     },
     {
+      // /api/* は thin JSON / 内部用のため検索除外 (副作用ゼロ・SEO品質向上)
+      source: '/api/:path*',
+      headers: [
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+      ],
+    },
+    {
+      // /unlock は client redirect 専用 thin URL (副作用ゼロ・SEO品質向上)
+      source: '/unlock',
+      headers: [
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+      ],
+    },
+    {
       // HTML pages - short cache with stale-while-revalidate
       source: '/:path*',
       headers: [

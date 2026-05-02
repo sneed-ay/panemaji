@@ -74,6 +74,44 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+
+        {/* Sitelinks SearchBox & Organization JSON-LD (副作用ゼロ・追加のみ) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'パネマジ掲示板',
+              alternateName: ['パネマジ', 'パネマジチェッカー'],
+              url: 'https://panemaji.com',
+              inLanguage: 'ja',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: 'https://panemaji.com/search?q={search_term_string}',
+                },
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'パネマジ掲示板',
+              url: 'https://panemaji.com',
+              logo: 'https://panemaji.com/icon-192.png',
+              description:
+                '風俗パネル写真と実物の一致度を口コミでチェックできるレビューサイト。全国47都道府県・15,000店舗以上を網羅。',
+            }),
+          }}
+        />
+
         <>
             <script async src="https://www.googletagmanager.com/gtag/js?id=G-CM0CD47KFB" />
             <script dangerouslySetInnerHTML={{ __html: `

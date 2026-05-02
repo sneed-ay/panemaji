@@ -1,6 +1,15 @@
 import { searchShops, CATEGORY_COLORS } from '@/lib/queries';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic'; // Search must remain dynamic (user-specific query params)
+
+// 検索結果は thin content / クエリ無限のため noindex 推奨 (Google SEO 品質スコア対策)
+// follow は維持してクロールバジェットを失わない
+export const metadata: Metadata = {
+  title: '検索結果',
+  robots: { index: false, follow: true },
+  alternates: { canonical: 'https://panemaji.com/search' },
+};
 
 export default function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
   const query = searchParams.q || '';

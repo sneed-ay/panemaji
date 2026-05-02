@@ -65,6 +65,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const diffCount = shop.panel_diff_count || 0;
   const jiraiCount = shop.jirai_count || 0;
   const totalReviews = shop.review_count || 0;
+  const girlCount = shop.girl_count || 0;
+  const girlCountLabel = girlCount === 100 ? '100+' : String(girlCount);
 
   // Serialize girls for client component
   const girlsData = girls.map((g) => ({
