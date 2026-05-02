@@ -359,7 +359,7 @@ async function scrapeAromaestheGirls(browser, db, stmts, resumeFrom = null) {
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
 
-  const shops = stmts.getShops.all().filter(s => s.source_url.includes('aromaesthe.co.jp'));
+  const shops = stmts.getShops.all().filter(s => s.source_url && s.source_url.includes('aromaesthe.co.jp'));
   console.log(`  対象店舗: ${shops.length}`);
 
   let girlCount = 0;
@@ -496,7 +496,7 @@ async function scrapeFuesGirls(browser, db, stmts, resumeFrom = null) {
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
 
-  const shops = stmts.getShops.all().filter(s => s.source_url.includes('fues.jp'));
+  const shops = stmts.getShops.all().filter(s => s.source_url && s.source_url.includes('fues.jp'));
   console.log(`  対象店舗: ${shops.length}`);
 
   let girlCount = 0;
