@@ -101,7 +101,9 @@ export default function AdstirBanner({ size, placement = 'banner', fallback = nu
       }
     }, 500);
 
-    // 8 秒まで待つ（5 秒だと adstir のレスポンス前にタイムアウトしがち）
+    // 5 秒で fallback (旧8秒)。 AdBlock 環境で adstir SDK URL がブロックされた場合、
+    // network failure は即時に出るが iframe 生成自体は試行が継続するため、 ある程度の
+    // 待機が必要。 一方 8 秒は正常 adstir 配信下でも長すぎ UX マイナス → 5 秒で折衷。
     const fallbackTimer = setTimeout(() => {
       clearInterval(moveTimer);
       const innerDoc = sandbox.contentDocument;
@@ -110,7 +112,7 @@ export default function AdstirBanner({ size, placement = 'banner', fallback = nu
         mountedPlacements.delete(placement);
         setShowFallback(true);
       }
-    }, 8000);
+    }, 5000);
 
     return () => {
       clearInterval(moveTimer);
