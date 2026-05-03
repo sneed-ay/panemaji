@@ -13,8 +13,8 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   if (!area) return {};
   const prefDisplayName = prefectureSlugToName(area.prefecture);
   return {
-    title: `${area.name}の風俗店 口コミ・掲示板・パネマジ度`,
-    description: `${prefDisplayName} ${area.name}エリアの風俗店の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）を口コミでチェック。${area.name}のデリヘル・メンエス・ヘルス店舗のリアルな評判がわかる。`,
+    title: `${area.name}の風俗・ソープ・メンエス 口コミ掲示板・パネマジ度`,
+    description: `${prefDisplayName} ${area.name}エリアの風俗店の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）を口コミでチェック。${area.name}のデリヘル・ソープ・メンエス・ヘルス・ホテヘル店舗のリアルな評判・在籍嬢ランキングがわかる。`,
     alternates: {
       canonical: `https://panemaji.com/area/${params.slug}`,
     },

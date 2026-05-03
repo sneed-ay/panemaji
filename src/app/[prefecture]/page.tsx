@@ -9,8 +9,9 @@ export function generateMetadata({ params }: { params: { prefecture: string } })
   if (!isValidPrefecture(params.prefecture)) return {};
   const prefName = prefectureSlugToName(params.prefecture);
   return {
-    title: `${prefName}の風俗 口コミ・掲示板・パネマジ度`,
-    description: `${prefName}の風俗店舗の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）をチェック。${prefName}のデリヘル・メンエス・ヘルス店のリアルな評判・レビューがわかる。`,
+    title: `${prefName}の風俗・ソープ・メンエス 口コミ掲示板・パネマジ度`,
+    description: `${prefName}の風俗店舗の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）をチェック。${prefName}のデリヘル・ソープ・メンエス・ヘルス店のリアルな評判・在籍嬢一覧・ランキングがわかる。`,
+    alternates: { canonical: `https://panemaji.com/${params.prefecture}` },
   };
 }
 

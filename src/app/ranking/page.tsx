@@ -10,8 +10,9 @@ export function generateMetadata({ searchParams }: { searchParams: { pref?: stri
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';
   const prefName = prefectureSlugToName(prefSlug);
   return {
-    title: `${prefName}のパネマジランキング`,
-    description: `${prefName}の風俗 パネル通り率ランキング・盛りすぎ率ランキング。口コミに基づくリアル度で女性・店舗をランキング。`,
+    title: `${prefName}の風俗ランキング｜パネル通り率・盛りすぎ率TOP`,
+    description: `${prefName}の風俗ランキング。パネル通り率・盛りすぎ率(パネマジ度)で女性・店舗をランキング。デリヘル・ソープ・メンエス・ヘルスの口コミに基づくリアル度TOPを掲載。`,
+    alternates: { canonical: `https://panemaji.com/ranking?pref=${prefSlug}` },
   };
 }
 
