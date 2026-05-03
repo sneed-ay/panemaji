@@ -25,7 +25,7 @@ export default function KyotoDeriheruGuideDetailPage() {
       datePublished="2026-04-13"
       dateModified="2026-04-13"
       description="京都デリヘルの完全ガイド。河原町・木屋町エリアの最新事情と料金相場を徹底解説。"
-      ctaHref="/area/kyoto-city"
+      ctaHref="/kyoto-city"
       ctaLabel="京都エリアの口コミをチェック →"
       relatedLinks={[
         { href: "/guide/osaka-deriheru-guide-detail", label: "大阪デリヘル完全ガイド" },

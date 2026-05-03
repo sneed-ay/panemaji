@@ -50,7 +50,7 @@ export default function OsakaMenesuPage() {
         title="大阪メンエス完全ガイド"
         subtitle="梅田・難波エリアの特徴と選び方を徹底解説"
         breadcrumb="大阪メンエス"
-        ctaHref="/area/osaka"
+        ctaHref="/osaka"
         ctaLabel="大阪エリアのメンエス口コミをチェック →"
         relatedLinks={[
           { href: "/guide/shinjuku-menesu", label: "新宿メンエス完全ガイド" },

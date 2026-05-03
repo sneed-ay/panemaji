@@ -50,7 +50,7 @@ export default function FukuokaMenesuPage() {
         title="福岡メンエス完全ガイド"
         subtitle="博多・天神エリアの特徴を徹底解説"
         breadcrumb="福岡メンエス"
-        ctaHref="/area/fukuoka"
+        ctaHref="/fukuoka"
         ctaLabel="福岡エリアのメンエス口コミをチェック →"
         relatedLinks={[
           { href: "/guide/shinjuku-menesu", label: "新宿メンエス完全ガイド" },

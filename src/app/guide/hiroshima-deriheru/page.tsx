@@ -29,7 +29,7 @@ export default function HiroshimaDeriheruPage() {
       title="広島デリヘルのパネマジ事情｜流川・薬研堀エリア解説"
       subtitle="中国地方最大の風俗街でパネル通りの子を見つけるポイント"
       breadcrumb="広島デリヘル"
-      ctaHref="/area/hiroshima"
+      ctaHref="/hiroshima"
       ctaLabel="広島エリアの口コミをチェック →"
       relatedLinks={[
         { href: "/guide/fukuoka-deriheru", label: "福岡デリヘルのパネマジ事情と中洲エリア" },

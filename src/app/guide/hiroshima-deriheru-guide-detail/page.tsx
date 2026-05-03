@@ -25,7 +25,7 @@ export default function HiroshimaDeriheruGuideDetailPage() {
       datePublished="2026-04-13"
       dateModified="2026-04-13"
       description="広島デリヘルの完全ガイド。流川・薬研堀エリアの特徴と料金相場を徹底解説。"
-      ctaHref="/area/hiroshima-city"
+      ctaHref="/hiroshima-city"
       ctaLabel="広島エリアの口コミをチェック →"
       relatedLinks={[
         { href: "/guide/fukuoka-deriheru-guide", label: "福岡デリヘル完全ガイド" },

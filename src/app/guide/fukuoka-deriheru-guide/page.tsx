@@ -25,7 +25,7 @@ export default function FukuokaDeriheruGuidePage() {
       datePublished="2026-04-13"
       dateModified="2026-04-13"
       description="福岡デリヘルの完全ガイド。中洲・博多・天神エリアの最新事情と料金相場を徹底解説。"
-      ctaHref="/area/fukuoka-city"
+      ctaHref="/fukuoka-city"
       ctaLabel="福岡エリアの口コミをチェック →"
       relatedLinks={[
         { href: "/guide/kumamoto-deriheru-guide", label: "熊本デリヘル完全ガイド" },

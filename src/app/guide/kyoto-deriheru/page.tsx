@@ -29,7 +29,7 @@ export default function KyotoDeriheruPage() {
       title="京都デリヘルのパネマジ事情と河原町・木屋町エリア解説"
       subtitle="古都・京都で写真通りの子を見つけるポイント"
       breadcrumb="京都デリヘル"
-      ctaHref="/area/kyoto"
+      ctaHref="/kyoto"
       ctaLabel="京都エリアの口コミをチェック →"
       relatedLinks={[
         { href: "/guide/osaka-deriheru", label: "大阪デリヘルのパネマジ事情と優良店の選び方" },
