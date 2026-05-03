@@ -121,15 +121,19 @@ db.pragma('journal_mode = WAL');
 
 let total = { cleaned: 0, deduped: 0, deactivated: 0 };
 
-// 2-1: 空名前・1文字記号名の嬢を非アクティブ化
-const r1 = db.prepare(\"UPDATE girls SET is_active = 0 WHERE is_active = 1 AND (name IS NULL OR name = '' OR length(name) <= 1)\").run();
+// 2-1: 空名前・1文字「半角記号/英数字」名の嬢を非アクティブ化
+//      旧: length(name)<=1 で deactivate → 1文字漢字 (椿/愛/凛/桜 等の valid な源氏名) も
+//      誤 deactivate していた (130K件規模)。 GLOB '[!-~?]' で ASCII 印字可能 (記号+英数字+?)
+//      の 1文字 のみ deactivate に絞る。
+const r1 = db.prepare(\"UPDATE girls SET is_active = 0 WHERE is_active = 1 AND (name IS NULL OR name = '' OR (length(name) = 1 AND name GLOB '[!-~?]'))\").run();
 total.cleaned += r1.changes;
-console.log('  [2-1] 空/1文字名 非アクティブ化:', r1.changes);
+console.log('  [2-1] 空/1文字記号 非アクティブ化:', r1.changes);
 
-// 2-2: 宣伝文が名前になっている嬢
-const r2 = db.prepare(\"UPDATE girls SET is_active = 0 WHERE is_active = 1 AND (name LIKE '%ご新規%' OR name LIKE '%イベント開催%' OR name LIKE '%割引%' OR name LIKE '%入店予定%' OR name LIKE '%キャンペーン%' OR name LIKE '%募集中%' OR name LIKE '%求人%' OR name LIKE '%ヘブン見た%')\").run();
+// 2-2: 宣伝文・記号枠が名前になっている嬢
+//      「【」「】」 を含む name (ヘッダ/タグ抽出 bug の残骸) も deactivate に追加
+const r2 = db.prepare(\"UPDATE girls SET is_active = 0 WHERE is_active = 1 AND (name LIKE '%ご新規%' OR name LIKE '%イベント開催%' OR name LIKE '%割引%' OR name LIKE '%入店予定%' OR name LIKE '%キャンペーン%' OR name LIKE '%募集中%' OR name LIKE '%求人%' OR name LIKE '%ヘブン見た%' OR name LIKE '%【%' OR name LIKE '%】%' OR name LIKE '%出勤%' OR name LIKE '%イベント%')\").run();
 total.cleaned += r2.changes;
-console.log('  [2-2] 宣伝文名 非アクティブ化:', r2.changes);
+console.log('  [2-2] 宣伝文/記号名 非アクティブ化:', r2.changes);
 
 // 2-3: 名前の【以降の宣伝コピーを除去
 const r3 = db.prepare(\"UPDATE girls SET name = substr(name, 1, instr(name, '【') - 1) WHERE is_active = 1 AND name LIKE '%【%' AND instr(name, '【') > 1 AND instr(name, '【') <= 15\").run();
