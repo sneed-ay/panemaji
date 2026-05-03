@@ -21,6 +21,22 @@ const nextConfig = {
     deviceSizes: [320, 480, 640, 750, 828, 1080],
     imageSizes: [56, 80, 120, 189, 256],
   },
+  // GSC 解析で発見した「Google indexed だが現在 404」のレガシー area slug を
+  // 都道府県トップにリダイレクト (流入回収・副作用ゼロ)。
+  // - /area/{pref}-a1302, /area/{pref}-aXXXX  → 旧 cityheaven 形式
+  // - /area/{pref}-fj-XXX                     → 旧 fuzoku-japan 形式
+  // - /area/{pref}-ch-XXX                     → 旧 cityheaven (別形式)
+  // - /area/{pref}-rd-XXX, -pl-XXX, -meste-XXX, -robin-XXX → 各ソース由来
+  redirects: async () => [
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-a:n(\\d+)', destination: '/:pref', permanent: true },
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-fj-:rest*', destination: '/:pref', permanent: true },
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-ch-:rest*', destination: '/:pref', permanent: true },
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-rd-:rest*', destination: '/:pref', permanent: true },
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-pl-:rest*', destination: '/:pref', permanent: true },
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-meste-:rest*', destination: '/:pref', permanent: true },
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-robin-:rest*', destination: '/:pref', permanent: true },
+  ],
+
   headers: async () => [
     {
       // Static assets - long cache
