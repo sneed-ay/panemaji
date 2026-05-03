@@ -14,9 +14,20 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const girl = getGirlWithReviewStats(parseInt(params.id));
   if (!girl) return {};
   const shop = getShopById(girl.shop_id);
-  const title = `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`;
-  const description = `${girl.name}さんはパネル通り？パネマジ度の口コミ・評価をチェック。${girl.age ? girl.age + '歳' : ''}${girl.bust ? ' ' + girl.bust + '(' + (girl.cup || '') + ')' : ''}`;
   const realPct = girl.real_pct != null && girl.real_pct >= 0 ? girl.real_pct : null;
+  const reviewCount = girl.review_count || 0;
+  // shop名・カテゴリ・年齢・スリーサイズ・リアル度・口コミ件数を含めて keyword density 強化
+  const title = `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`;
+  const specs: string[] = [];
+  if (girl.age) specs.push(`${girl.age}歳`);
+  if (girl.bust) specs.push(`B${girl.bust}${girl.cup ? '(' + girl.cup + ')' : ''}`);
+  if (girl.waist) specs.push(`W${girl.waist}`);
+  if (girl.hip) specs.push(`H${girl.hip}`);
+  const specStr = specs.length > 0 ? ` ${specs.join('・')}。` : '';
+  const realPctStr = realPct !== null ? ` パネル通り率${realPct}%。` : '';
+  const reviewStr = reviewCount > 0 ? ` 口コミ${reviewCount}件。` : '';
+  const categoryStr = shop?.category ? `${shop.category}` : '風俗';
+  const description = `${girl.name}さん（${girl.shop_name}・${categoryStr}）のパネル写真と実物の一致度をチェック。${specStr}${realPctStr}${reviewStr}在籍店舗の口コミ掲示板・パネマジ度を確認できます。`;
   const ogParams = new URLSearchParams({
     name: girl.name,
     shop: girl.shop_name || '',
