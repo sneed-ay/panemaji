@@ -1,4 +1,4 @@
-import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import CategoryTabs from '@/components/CategoryTabs';
@@ -133,9 +133,37 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
       </div>
 
       {shops.length === 0 ? (
-        <p className="text-gray-500 bg-white rounded-lg shadow p-8 text-center">
-          {catSlug ? 'この条件に該当する店舗はありません' : 'この地域の店舗データはまだありません'}
-        </p>
+        <div className="bg-white rounded-lg shadow p-6 sm:p-8 text-center">
+          <p className="text-gray-700 mb-4">
+            {catSlug
+              ? `${area.name}にはこの条件に該当する店舗はありません。`
+              : `${area.name}の店舗データは現在掲載されていません。`}
+          </p>
+          <p className="text-sm text-gray-500 mb-5">
+            {prefName}内の他のエリアからお探しいただけます。
+          </p>
+          {/* 同 prefecture の他エリアへの誘導 (CTR改善・thin content解消) */}
+          <div className="flex flex-wrap justify-center gap-2 mb-5">
+            {getAreasByPrefecture(prefSlug)
+              .filter((a) => a.slug !== params.slug)
+              .slice(0, 12)
+              .map((a) => (
+                <a
+                  key={a.slug}
+                  href={`/area/${a.slug}`}
+                  className="bg-gray-100 hover:bg-pink-50 hover:text-pink-700 text-gray-700 px-3 py-1.5 rounded text-sm no-underline transition-colors"
+                >
+                  {a.name}
+                </a>
+              ))}
+          </div>
+          <a
+            href={`/${prefSlug}`}
+            className="inline-block bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-5 rounded-lg no-underline transition-colors"
+          >
+            {prefName}トップへ
+          </a>
+        </div>
       ) : (
         <div className="space-y-3">
           {shops.map((shop) => {
