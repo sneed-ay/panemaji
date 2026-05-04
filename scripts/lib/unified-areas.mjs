@@ -19,7 +19,7 @@
 export const UNIFIED_AREAS = {
   // ============== 北海道・東北 ==============
   hokkaido: [
-    { name: '札幌・すすきの', slug: 'sapporo-susukino', order: 1, keywords: ['すすきの', '薄野', '札幌中央区', '札幌大通', '札幌駅前', '札幌駅', '大通公園', '狸小路', '中島公園'] },
+    { name: '札幌・すすきの', slug: 'sapporo-susukino', order: 1, keywords: ['すすきの', '薄野', '札幌中央区', '札幌大通', '札幌駅前', '札幌駅', '大通公園', '狸小路', '中島公園', '札幌店', '札幌本店'] },
     { name: '札幌・北区/東区', slug: 'sapporo-kitahigashi', order: 2, keywords: ['札幌北区', '北24条', '麻生', '新琴似', '屯田', '札幌東区', '環状通', '苗穂', '東苗穂', '元町'] },
     { name: '札幌・西区/手稲', slug: 'sapporo-nishi-teine', order: 3, keywords: ['札幌西区', '手稲', '琴似', '二十四軒', '宮の沢'] },
     { name: '札幌・南区/豊平', slug: 'sapporo-minami-toyohira', order: 4, keywords: ['札幌南区', '真駒内', '豊平', '月寒', '平岸', '美園'] },
@@ -106,7 +106,7 @@ export const UNIFIED_AREAS = {
     { name: '群馬その他', slug: 'gunma-other', order: 99, keywords: ['群馬その他', '富岡', '安中', '藤岡', '玉村', '吉岡'] },
   ],
   saitama: [
-    { name: '大宮・さいたま', slug: 'omiya', order: 1, keywords: ['大宮', 'さいたま', '北与野', '日進'] },
+    { name: '大宮・さいたま', slug: 'omiya', order: 1, keywords: ['大宮', 'さいたま', '北与野', '日進', '埼玉店', '埼玉本店'] },
     { name: '浦和', slug: 'urawa', order: 2, keywords: ['浦和', '与野', '南浦和', '北浦和', '武蔵浦和', '中浦和'] },
     { name: '川口・西川口・蕨', slug: 'kawaguchi-nishikawaguchi', order: 3, keywords: ['川口', '蕨', '戸田', '西川口'] },
     { name: '川越', slug: 'kawagoe', order: 4, keywords: ['川越'] },
@@ -120,7 +120,7 @@ export const UNIFIED_AREAS = {
     { name: '埼玉その他', slug: 'saitama-other', order: 99, keywords: ['埼玉その他', '秩父', '長瀞', '羽生', '加須'] },
   ],
   chiba: [
-    { name: '千葉市', slug: 'chiba-city', order: 1, keywords: ['千葉駅', '千葉市', '千葉中央', '蘇我', '稲毛'] },
+    { name: '千葉市', slug: 'chiba-city', order: 1, keywords: ['千葉駅', '千葉市', '千葉中央', '蘇我', '稲毛', '千葉店', '千葉本店'] },
     { name: '船橋・市川', slug: 'funabashi-ichikawa', order: 2, keywords: ['船橋', '市川', '浦安', '行徳', '本八幡'] },
     { name: '松戸・柏', slug: 'matsudo-kashiwa', order: 3, keywords: ['松戸', '柏', '流山', '我孫子', '鎌ヶ谷'] },
     { name: '津田沼・幕張', slug: 'tsudanuma-makuhari', order: 4, keywords: ['津田沼', '幕張', '習志野'] },
@@ -134,7 +134,7 @@ export const UNIFIED_AREAS = {
     { name: '千葉その他', slug: 'chiba-other', order: 99, keywords: ['千葉その他', '野田', '関宿'] },
   ],
   tokyo: [
-    { name: '新宿・歌舞伎町', slug: 'shinjuku', order: 1, keywords: ['新宿', '歌舞伎町', '西新宿', '東新宿'] },
+    { name: '新宿・歌舞伎町', slug: 'shinjuku', order: 1, keywords: ['新宿', '歌舞伎町', '西新宿', '東新宿', '東京店', '東京本店'] },
     { name: '大久保・高田馬場', slug: 'okubo-takadanobaba', order: 2, keywords: ['大久保', '新大久保', '高田馬場'] },
     { name: '池袋', slug: 'ikebukuro', order: 3, keywords: ['池袋'] },
     { name: '渋谷・恵比寿', slug: 'shibuya-ebisu', order: 4, keywords: ['渋谷', '恵比寿', '代官山', '原宿', '表参道', '神宮前', '道玄坂'] },
@@ -156,8 +156,8 @@ export const UNIFIED_AREAS = {
     { name: '東京その他', slug: 'tokyo-other', order: 99, keywords: ['東京その他', '23区外', '練馬', '世田谷', '下北沢', '自由が丘', '二子玉川', '三軒茶屋', '中目黒', '学芸大学', '都立大学', '成城'] },
   ],
   kanagawa: [
-    { name: '横浜駅・西口', slug: 'yokohama-station', order: 1, keywords: ['横浜駅', '横浜西口', 'みなとみらい', '桜木町', '新横浜', '横浜東口'] },
-    { name: '関内・伊勢佐木・福富町', slug: 'kannai-isezaki', order: 2, keywords: ['関内', '日ノ出町', '福富町', '曙町', '野毛', '宮川町', '伊勢佐木', '馬車道'] },
+    { name: '関内・伊勢佐木・福富町', slug: 'kannai-isezaki', order: 1, keywords: ['関内', '日ノ出町', '福富町', '曙町', '野毛', '宮川町', '伊勢佐木', '馬車道', '横浜店', '横浜本店'] },
+    { name: '横浜駅・西口', slug: 'yokohama-station', order: 2, keywords: ['横浜駅', '横浜西口', 'みなとみらい', '桜木町', '新横浜', '横浜東口'] },
     { name: '横浜南部', slug: 'yokohama-south', order: 3, keywords: ['戸塚', '上大岡', '港南', '磯子', '金沢文庫', '杉田', '八景'] },
     { name: '横浜北部', slug: 'yokohama-north', order: 4, keywords: ['鶴見', '港北', '日吉', '綱島', '北山田', 'センター北', 'センター南', '青葉区'] },
     { name: '川崎', slug: 'kawasaki', order: 5, keywords: ['川崎', '武蔵小杉', '溝の口', '鹿島田', '新川崎'] },
@@ -232,7 +232,7 @@ export const UNIFIED_AREAS = {
     { name: '静岡その他', slug: 'shizuoka-other', order: 99, keywords: ['静岡その他', '御殿場', '裾野', '小山', '伊豆の国'] },
   ],
   aichi: [
-    { name: '名古屋・栄錦', slug: 'nagoya-sakae', order: 1, keywords: ['栄', '名古屋駅', '名駅', '錦', '伏見', '丸の内', '中区'] },
+    { name: '名古屋・栄錦', slug: 'nagoya-sakae', order: 1, keywords: ['栄', '名古屋駅', '名駅', '錦', '伏見', '丸の内', '中区', '名古屋店', '名古屋本店'] },
     { name: '名古屋・金山大須', slug: 'nagoya-kanayama-osu', order: 2, keywords: ['金山', '大須', '上前津', '鶴舞'] },
     { name: '名古屋・千種今池東山', slug: 'nagoya-chikusa-imaike', order: 3, keywords: ['千種', '今池', '池下', '東山', '覚王山', '本山', '星ヶ丘', '八事'] },
     { name: '名古屋・名東天白', slug: 'nagoya-meito-tempaku', order: 4, keywords: ['名東', '天白', '平針', '植田', '一社'] },
@@ -262,7 +262,7 @@ export const UNIFIED_AREAS = {
     { name: '滋賀その他', slug: 'shiga-other', order: 99, keywords: ['滋賀その他', '高島', '朽木'] },
   ],
   kyoto: [
-    { name: '木屋町・河原町', slug: 'kiyamachi-kawaramachi', order: 1, keywords: ['木屋町', '河原町', '三条', '四条'] },
+    { name: '木屋町・河原町', slug: 'kiyamachi-kawaramachi', order: 1, keywords: ['木屋町', '河原町', '三条', '四条', '京都店', '京都本店'] },
     { name: '烏丸・四条', slug: 'karasuma-shijo', order: 2, keywords: ['烏丸', '室町', '御池'] },
     { name: '京都駅・東山', slug: 'kyoto-station-higashiyama', order: 3, keywords: ['京都駅', '八条', '七条', '東山', '祇園', '清水'] },
     { name: '西院・西大路', slug: 'saiin-nishioji', order: 4, keywords: ['西院', '西大路', '二条', '二条城', '円町', '太秦'] },
@@ -272,7 +272,7 @@ export const UNIFIED_AREAS = {
     { name: '京都その他', slug: 'kyoto-other', order: 99, keywords: ['京都その他', '福知山', '舞鶴', '綾部', '亀岡', '長岡京', '向日', '宮津', '京丹後'] },
   ],
   osaka: [
-    { name: '梅田・北新地', slug: 'umeda-kitashinchi', order: 1, keywords: ['梅田', '北新地', '大阪駅', '茶屋町', '中崎町', 'キタ', '中之島'] },
+    { name: '梅田・北新地', slug: 'umeda-kitashinchi', order: 1, keywords: ['梅田', '北新地', '大阪駅', '茶屋町', '中崎町', 'キタ', '中之島', '大阪店', '大阪本店'] },
     { name: '難波・心斎橋', slug: 'namba-shinsaibashi', order: 2, keywords: ['難波', '心斎橋', '道頓堀', 'ミナミ', '千日前', '日本橋', '長堀', '西心斎橋'] },
     { name: '天王寺・阿倍野', slug: 'tennoji-abeno', order: 3, keywords: ['天王寺', '阿倍野', '寺田町', '上本町', '桃谷', '谷町九丁目'] },
     { name: '京橋・天満', slug: 'kyobashi-tenma', order: 4, keywords: ['京橋', '天満', '桜ノ宮', '都島'] },
@@ -290,7 +290,7 @@ export const UNIFIED_AREAS = {
     { name: '大阪その他', slug: 'osaka-other', order: 99, keywords: ['大阪その他', '千早赤阪', '太子'] },
   ],
   hyogo: [
-    { name: '三宮・神戸', slug: 'sannomiya-kobe', order: 1, keywords: ['三宮', '神戸駅', '元町', '旧居留地', '北野', '新神戸', '福原'] },
+    { name: '三宮・神戸', slug: 'sannomiya-kobe', order: 1, keywords: ['三宮', '神戸駅', '元町', '旧居留地', '北野', '新神戸', '福原', '神戸店', '神戸本店'] },
     { name: '姫路', slug: 'himeji', order: 2, keywords: ['姫路'] },
     { name: '西宮・芦屋', slug: 'nishinomiya-ashiya', order: 3, keywords: ['西宮', '芦屋', '夙川', '苦楽園'] },
     { name: '尼崎', slug: 'amagasaki', order: 4, keywords: ['尼崎', '立花', '武庫之荘', '塚口'] },
@@ -382,7 +382,7 @@ export const UNIFIED_AREAS = {
   ],
   // ============== 九州・沖縄 ==============
   fukuoka: [
-    { name: '中州・天神・博多', slug: 'fukuoka-tenjin-hakata', order: 1, keywords: ['中州', '中洲', '天神', '博多', '福岡市', '福岡駅'] },
+    { name: '中州・天神・博多', slug: 'fukuoka-tenjin-hakata', order: 1, keywords: ['中州', '中洲', '天神', '博多', '福岡市', '福岡駅', '福岡店', '福岡本店'] },
     { name: '北九州・小倉', slug: 'kitakyushu-kokura', order: 2, keywords: ['小倉', '北九州', '八幡', '戸畑', '若松', '門司'] },
     { name: '久留米', slug: 'kurume', order: 3, keywords: ['久留米', 'うきは'] },
     { name: '福岡西区・東区', slug: 'fukuoka-nishihigashi', order: 4, keywords: ['福岡西区', '福岡東区', '香椎', '千早'] },
@@ -437,7 +437,7 @@ export const UNIFIED_AREAS = {
     { name: '鹿児島その他', slug: 'kagoshima-other', order: 99, keywords: ['鹿児島その他', '種子島', '屋久島', '奄美'] },
   ],
   okinawa: [
-    { name: '那覇', slug: 'naha', order: 1, keywords: ['那覇', '国際通り', '松山町', '久茂地'] },
+    { name: '那覇', slug: 'naha', order: 1, keywords: ['那覇', '国際通り', '松山町', '久茂地', '沖縄店', '沖縄本店'] },
     { name: '沖縄市・コザ', slug: 'okinawa-koza', order: 2, keywords: ['沖縄市', 'コザ', '北谷', '嘉手納', '読谷', '北中城', '中城', '美浜'] },
     { name: '宜野湾・浦添', slug: 'ginowan-urasoe', order: 3, keywords: ['宜野湾', '浦添'] },
     { name: '名護・恩納', slug: 'nago-onna', order: 4, keywords: ['名護', '恩納', '国頭', '本部', '今帰仁'] },
@@ -449,13 +449,17 @@ export const UNIFIED_AREAS = {
  * shop名 + source_url + oldAreaName から正規エリアを推定
  *
  * v5b 改:
- * - 第1段: shopName + sourceUrl のみで照合 (一番確実な手がかり)
+ * - 第1段: shopName + sourceUrl のみで日本語キーワード照合 (一番確実な手がかり)
  * - 第2段: 第1段で 0 score なら oldAreaName を含めて再照合 (URL がローマ字のみ等のケース)
+ * - 第3段: 第2段までも無マッチなら cityheaven A-code から推定 (URL に含まれる機械可読シグナル)
  * - 最後の砦: {pref}-other (なければ pref メインエリア = order: 1)
  *
  * これにより v4 から v5b の移行で「v4 で誤分類された shop が old_area_name バイアスで
- * 同じ間違ったエリアに固定されてしまう」問題を回避する。
+ * 同じ間違ったエリアに固定されてしまう」問題を回避しつつ、
+ * 日本語シグナル無し (m-este等) でも cityheaven 由来 shop は A-code から救済する。
  */
+import { pickAreaByUrl } from './url-area-resolver.mjs';
+
 function _pickByText(list, text) {
   let best = null;
   let bestScore = 0;
@@ -484,9 +488,19 @@ export function pickArea(pref, shopName, sourceUrl, oldAreaName) {
     best = _pickByText(list, secondary);
   }
 
+  // 第3段: URL から推定 (cityheaven A-code, esthe-zukan path 等)
+  if (!best && sourceUrl) {
+    const slug = pickAreaByUrl(pref, sourceUrl);
+    if (slug) {
+      best = list.find((a) => a.slug === slug) || null;
+    }
+  }
+
   if (best) return best;
-  // fallback: -other があればそれ、 なければ pref の order:1
-  return list.find((a) => a.order === 99) || list.find((a) => a.order === 1);
+  // fallback: pref の order:1 (主要エリア) を最優先。 何も signal が無い chain shop は
+  // 「-other」より「pref の主要エリア」に置いた方が UX 上自然。
+  // ※ -other は明示的に「○○その他」「県外」シグナルがある shop だけに使う運用に変更。
+  return list.find((a) => a.order === 1) || list.find((a) => a.order === 99);
 }
 
 export function getAllAreas() {
