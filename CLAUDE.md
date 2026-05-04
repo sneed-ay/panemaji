@@ -7,31 +7,31 @@ Claude Codeでこのリポジトリを触る際の必須ルール。最初に読
 > **このセクションのルールは「忘れていい」「あとで」「次回」が一切許されない。**
 > ユーザーが「網羅率」「店舗追加」「拡充」など何を指示しても、 取込のたびに必ず守る。
 
-1. **areas テーブルの行数は常に 159**。 取込前後で `SELECT COUNT(*) FROM areas` が 159 でなければ即時 `node scripts/migrate-areas-mece.mjs --apply` を実行。
+1. **areas テーブルの行数は常に 325**。 取込前後で `SELECT COUNT(*) FROM areas` が 325 でなければ即時 `node scripts/migrate-areas-mece.mjs --apply` を実行。
 2. **取込スクリプトを並行起動しない**（特に puppeteer 系）。 並行で起動すると puppeteer-core/SemVer の package 競合・iframe detached エラーで daily-maintenance.sh が途中死亡し、 後段の `migrate-areas-mece.mjs --apply` が走らずに areas が膨張したまま放置される（過去に複数回発生）。 puppeteer 系は **1個ずつ順次** 起動すること。
 3. **取込ジョブの「Done」条件は 必ず以下4点全て満たした時のみ:**
    - `node scripts/migrate-areas-mece.mjs --apply` 実行済
-   - `SELECT COUNT(*) FROM areas` = 159
+   - `SELECT COUNT(*) FROM areas` = 325
    - `node scripts/health-check.mjs` で `レガシーslug残: 0` ✅・`店舗重複候補グループ: 0` ✅
    - 上記 3 つのいずれかが NG なら原因究明・修復まで完了
 4. **取込前に他の取込／daily-maintenance プロセスが動いていないか必ず確認** (`ps -ef | grep "scripts/scrape-\|daily-maintenance"`)。 動いてたら完了を待つか kill する。 並行起動は puppeteer 競合と DB lock を引き起こす。
 5. **CLAUDE.md のルールは「読んだ」では足りない。 取込のたびに上記 1–4 を実行で示す。**
 
-## 🚨 エリア定義は必ず MECE の独自定義（**159エリア固定**）
+## 🚨 エリア定義は必ず MECE の独自定義（**325エリア固定 / v5b**）
 
-**絶対ルール:** `areas` テーブルの行は **Mutually Exclusive, Collectively Exhaustive**（重複なし・漏れなし）の独自定義で運用する。**エリア数は159で固定**、これより増やしてはいけない。
+**絶対ルール:** `areas` テーブルの行は **Mutually Exclusive, Collectively Exhaustive**（重複なし・漏れなし）の独自定義で運用する。**エリア数は325で固定**、これより増減してはいけない。
 
 ### 唯一の正（マスターデータ）
 
-- **コード側の正:** `scripts/lib/unified-areas.mjs` の `UNIFIED_AREAS`（**159エリア / 47都道府県** の機械可読マスター）
+- **コード側の正:** `scripts/lib/unified-areas.mjs` の `UNIFIED_AREAS`（**325エリア / 47都道府県** の機械可読マスター・v5b）
 - **ドキュメント側の正:** `docs/area-definition.md`
 - **両者は必ず同期させる**。片方だけ更新するのは絶対NG
-- **エリアを追加したい場合は、必ずユーザーに承認を取った上で両者を1コミットで同時更新**
+- **エリアを追加・分割・統合したい場合は、必ずユーザーに承認を取った上で両者を1コミットで同時更新**
 
 ### エリア数は増えない
 
-- 取込で店舗が追加されても、 **エリア数は絶対に159から増えない**
-- 新規店舗は必ず既存159エリアのいずれかにマップする（`pickArea()` でキーワード照合）
+- 取込で店舗が追加されても、 **エリア数は絶対に325から増えない**
+- 新規店舗は必ず既存325エリアのいずれかにマップする（`pickArea()` でキーワード照合）
 - どこにも該当しなければ `{pref}-other` または該当pref の `order:1` エリアにフォールバック
 - 一時エリア (`-pending`, `-fj-`, `-ch-`, `-rd-`, `-pl-`, `-meste-`, `-robin-`, `-aXXXX` 等) は禁止
 
@@ -76,7 +76,7 @@ node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
 - `tokyo-other` に 1,140件の shops が雑に集約されていた（shop名の都市名キーワードでの再分配が必要）
 - `fukuiその他`, `kanagawaその他` 等の **slug日英混在** が複数件混入していた
 
-→ `migrate-areas-mece.mjs` で全店舗を `unified-areas.mjs` のキーワード照合で正規エリアに再分配。**159エリア / レガシー残0 / 余分slug 0** に整理した。これを今後の標準運用とする。
+→ `migrate-areas-mece.mjs` で全店舗を `unified-areas.mjs` のキーワード照合で正規エリアに再分配。**v4 159エリア → v5b 325エリア (2026-05-04 SEO long-tail 細分化) / レガシー残0 / 余分slug 0** に整理した。これを今後の標準運用とする。
 
 ### 取込時のチェックリスト（必須）
 
@@ -92,7 +92,7 @@ node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
    node scripts/preview-duplicate-shops.mjs     # 店舗重複確認
    node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
    ```
-6. ✅ 完了後 `SELECT COUNT(*) FROM areas` が **159** であることを必ず検証
+6. ✅ 完了後 `SELECT COUNT(*) FROM areas` が **325** であることを必ず検証
 
 ## 🏪 店名は広告ワードを除いた本来の店名のみ保存
 

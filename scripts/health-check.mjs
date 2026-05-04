@@ -4,7 +4,7 @@
  *
  * 出力:
  *   - shops/girls/reviews/areas 件数
- *   - エリアMECE違反 (159以外)
+ *   - エリアMECE違反 (325以外 / v5b)
  *   - 嬢0 shops 数 (ソース別)
  *   - 嬢ちょうど100 shops 数
  *   - 画像なし girls / shops
@@ -42,8 +42,8 @@ console.log('📊 基本カウント');
 for (const [k, v] of Object.entries(stats)) console.log(`  ${k}: ${fmt(v)}`);
 
 // 2. エリアMECE
-console.log(`\n🚨 エリアMECE (159固定ルール)`);
-console.log(`  ${status(stats.areas === 159)} areas total = ${stats.areas} (期待: 159)`);
+console.log(`\n🚨 エリアMECE (325固定ルール / v5b)`);
+console.log(`  ${status(stats.areas === 325)} areas total = ${stats.areas} (期待: 325)`);
 const legacy = db.prepare(`
   SELECT COUNT(*) c FROM areas
   WHERE slug LIKE '%-pending' OR slug LIKE '%-fj-%' OR slug LIKE '%-ch-A%'

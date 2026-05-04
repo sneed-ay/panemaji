@@ -74,6 +74,7 @@ const moveStat = {}; // {pref: {dest_slug: count}}
 const txn = db.transaction(() => {
   for (const s of shops) {
     if (!s.prefecture) { unmapped++; continue; }
+    // v5b: pickArea が 2段階照合 (shop名+URL → old_area_name fallback) するので old を渡してOK
     const target = pickArea(s.prefecture, s.name, s.source_url, s.old_area_name);
     if (!target) { unmapped++; continue; }
     const targetId = slugToId.get(target.slug);

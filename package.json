@@ -13,15 +13,17 @@
     "merge-dups": "node scripts/merge-duplicate-shops.mjs && node scripts/merge-duplicate-girls.mjs",
     "merge-dups-apply": "node scripts/merge-duplicate-shops.mjs --apply && node scripts/merge-duplicate-girls.mjs --apply",
     "migrate-areas": "node scripts/migrate-areas-mece.mjs --apply",
-    "verify-areas": "sqlite3 panemaji.db \"SELECT COUNT(*) FROM areas;\" | grep -q '^159$' && echo 'OK: 159 areas' || echo 'NG: areas count != 159'"
+    "verify-areas": "sqlite3 panemaji.db \"SELECT COUNT(*) FROM areas;\" | grep -q '^325$' && echo 'OK: 325 areas' || echo 'NG: areas count != 325'",
+    "gsc": "node scripts/fetch-gsc.mjs",
+    "ga": "node scripts/fetch-ga.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
     "canvas": "^3.2.1",
     "googleapis": "^171.4.0",
     "next": "14.2.35",
-    "puppeteer": "^24.39.1",
-    "puppeteer-core": "^24.39.1",
+    "puppeteer": "^24.42.0",
+    "puppeteer-core": "^24.42.0",
     "react": "^18",
     "react-dom": "^18",
     "resend": "^6.4.2",
