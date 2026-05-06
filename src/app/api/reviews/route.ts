@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { addReview, getLatestReviews, getGirlById, getGirlWithReviewStats } from '@/lib/queries';
-import { postTweet, canTweetNow } from '@/lib/twitter';
+import { addReview, getLatestReviews, getGirlById } from '@/lib/queries';
 
 export async function GET() {
   const reviews = getLatestReviews(20);
@@ -42,45 +41,8 @@ export async function POST(request: NextRequest) {
     }
     revalidatePath('/'); // Latest reviews on homepage
 
-    // Post to X asynchronously with rate limiting (max 1 tweet per 10 min)
-    if (canTweetNow()) {
-      const girlWithStats = getGirlWithReviewStats(girl_id);
-      if (girlWithStats) {
-        const ratingEmoji: Record<string, string> = {
-          panel_match: 'パネル通り ✅',
-          panel_diff: '許せる 🟡',
-          jirai: '盛りすぎ 🚨',
-        };
-        const ratingText = ratingEmoji[panel_rating] || panel_rating;
-
-        const reviewCount = girlWithStats.review_count ?? 0;
-        const realPct = girlWithStats.real_pct ?? -1;
-        const realScore = realPct >= 0 ? Math.round(realPct) : 0;
-
-        const commentLine = comment ? `\n💬 ${comment}` : '';
-
-        // Add @mention if girl has X account
-        const twitterUrl = girlWithStats.twitter_url || '';
-        const twitterHandle = twitterUrl.replace(/^https?:\/\/(x\.com|twitter\.com)\//, '').replace(/\/.*$/, '');
-        const mentionLine = twitterHandle ? `\n\n@${twitterHandle}` : '';
-
-        const tweetText = `【新規口コミ🔥】
-🏠 ${girlWithStats.shop_name}
-👩 ${girlWithStats.name} さん
-📊 ${ratingText}
-${commentLine}
-📈 累計リアル度: ${realScore}%（${reviewCount}件）
-
-⬇️ パネマジ掲示板
-https://panemaji.com/girl/${girl_id}?t=${Date.now()}${mentionLine}`;
-
-        postTweet(tweetText).catch((err) => {
-          console.error('[Twitter] Async tweet failed:', err);
-        });
-      }
-    } else {
-      console.log('[Twitter] Rate limited: skipping tweet (10min interval not elapsed)');
-    }
+    // X (Twitter) 投稿は廃止: 旧 @aichan_ura_ai アカウントは停止 + 運用しないため。
+    // girls.twitter_url フィールドは引き続き保存・表示用に存在 (上記 line 33 で記録)。
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {
