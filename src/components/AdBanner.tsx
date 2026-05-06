@@ -140,7 +140,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
 
   return (
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
-      <div className="text-[10px] text-gray-400 mb-1">PR</div>
       <div className="px-2">
         {adType === 'fanza' && <FanzaWidget />}
         {adType === 'note' && <NoteAdImage size={size} />}

@@ -73,18 +73,18 @@ export const AD_CONFIG = {
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // バナー配信比率: FANZA 40% / note 40% / adstir 20%
+  // バナー配信比率: note 50% / FANZA 40% / adstir 10%
   // - FanzaWidget が空商品のとき → NoteAdImage にフォールバック
   // - AdstirBanner が 3秒で広告iframe生成失敗時 → NoteAdImage にフォールバック
   // 2026-04-23: adstir CPM ¥2.71 と低迷したため FANZA に比重を移した。
   // 2026-05-03: AdBlock 環境で adstir SDK URL がブロックされ空打ちになるため
   //             比率を更に FANZA 寄せ (75→80%)、 adstir フォールバック発火を 8s→3s に短縮。
-  //             FANZA は自前API経由配信なので AdBlock 通過率が高い。
   // 2026-05-06: note 自社広告を再開 (新リンク + 新バナー7点)。
   //             比率は fanza:note:adstir = 4:4:2 (note を主軸に戻す)。
+  // 2026-05-06 (PM): note の CTR が高かったので主軸に。 5:4:1 に再調整。
   fanzaRatio: 4,
-  noteRatio: 4,
-  adstirRatio: 2,
+  noteRatio: 5,
+  adstirRatio: 1,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,

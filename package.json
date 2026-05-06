@@ -15,7 +15,9 @@
     "migrate-areas": "node scripts/migrate-areas-mece.mjs --apply",
     "verify-areas": "sqlite3 panemaji.db \"SELECT COUNT(*) FROM areas;\" | grep -q '^325$' && echo 'OK: 325 areas' || echo 'NG: areas count != 325'",
     "gsc": "node scripts/fetch-gsc.mjs",
-    "ga": "node scripts/fetch-ga.mjs"
+    "ga": "node scripts/fetch-ga.mjs",
+    "ad-clicks": "node scripts/ad-clicks-daily.mjs",
+    "ad-clicks-prod": "gh release download db-latest --repo sneed-ay/panemaji -p panemaji.db.gz -O /tmp/prod.db.gz --clobber && gunzip -f /tmp/prod.db.gz && DB_PATH=/tmp/prod.db node scripts/ad-clicks-daily.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
