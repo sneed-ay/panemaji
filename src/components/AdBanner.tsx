@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AD_CONFIG, getAdLink, wrapClickUrl } from '@/lib/ad-config';
 import AdstirBanner from './AdstirBanner';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
@@ -118,9 +118,12 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
 
+    // 過去の dismiss 状態が localStorage に残っているとユーザーが「広告が二度と出ない」と感じるため
+    // ×ボタン廃止に伴い、既存の ad_dismissed_* キーを掃除する (1回だけ走る無害な後始末)
     try {
-      const raw = localStorage.getItem(`ad_dismissed_${size}`);
-      if (raw && Date.now() < parseInt(raw, 10)) return;
+      for (const key of ['ad_dismissed_header', 'ad_dismissed_rectangle', 'ad_dismissed_footer']) {
+        localStorage.removeItem(key);
+      }
     } catch {}
 
     const picked = pickAdType();
@@ -129,11 +132,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
 
     // banner_view: バナーが表示されるたびに計測（adType別にGAで集計可能）
     trackAdEvent('banner_view', picked, { ad_size: size });
-  }, [size]);
-
-  const handleDismiss = useCallback(() => {
-    setVisible(false);
-    try { localStorage.setItem(`ad_dismissed_${size}`, String(Date.now() + 86400000)); } catch {}
   }, [size]);
 
   if (!AD_CONFIG.enabled || !visible) return null;
@@ -145,9 +143,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
         {adType === 'note' && <NoteAdImage size={size} />}
         {adType === 'adstir' && <AdstirBanner size={size} placement="banner" fallback={<NoteAdImage size={size} />} />}
       </div>
-      <button onClick={handleDismiss}
-        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-full text-xs"
-        aria-label="閉じる">×</button>
     </div>
   );
 }
