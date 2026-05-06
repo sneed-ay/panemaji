@@ -16,8 +16,18 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const shop = getShopById(girl.shop_id);
   const realPct = girl.real_pct != null && girl.real_pct >= 0 ? girl.real_pct : null;
   const reviewCount = girl.review_count || 0;
-  // shop名・カテゴリ・年齢・スリーサイズ・リアル度・口コミ件数を含めて keyword density 強化
-  const title = `${girl.name}（${girl.shop_name}）のパネマジ度・口コミ`;
+  // Google SERP の 30字制限に合わせ、 shop名長で動的に短縮。
+  // layout.tsx で `%s｜パネマジ掲示板` (8字) が後付されるので page 側 title は 22-24 字目標。
+  // 嬢名 + shop名 + 「パネマジ度」 を入れたいが shop名長で分岐する。
+  const totalLen = girl.name.length + (girl.shop_name?.length || 0);
+  let title: string;
+  if (totalLen <= 18 && girl.shop_name) {
+    title = `${girl.name}（${girl.shop_name}）パネマジ度・口コミ`;
+  } else if (girl.shop_name && girl.shop_name.length <= 14) {
+    title = `${girl.name}（${girl.shop_name}）の口コミ`;
+  } else {
+    title = `${girl.name} のパネマジ度・口コミ`;
+  }
   const specs: string[] = [];
   if (girl.age) specs.push(`${girl.age}歳`);
   if (girl.bust) specs.push(`B${girl.bust}${girl.cup ? '(' + girl.cup + ')' : ''}`);

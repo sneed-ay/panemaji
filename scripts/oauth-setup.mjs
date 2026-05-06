@@ -6,8 +6,15 @@
 import { TwitterApi } from 'twitter-api-v2';
 import readline from 'readline';
 
-const API_KEY = 'HGGhQIAWtSJl4NDxxvRMxCmVb';
-const API_SECRET = 'AyBk6nngIq5kkq9lNC7dfSdNMFsebNZk4qQjLMC2HrXi7rAjVv';
+// 旧キーはリポ public で漏洩したため、X dashboard で revoke 後に新規発行 → env で渡す
+//   TWITTER_APP_KEY=xxx TWITTER_APP_SECRET=yyy node scripts/oauth-setup.mjs
+const API_KEY = process.env.TWITTER_APP_KEY;
+const API_SECRET = process.env.TWITTER_APP_SECRET;
+if (!API_KEY || !API_SECRET) {
+  console.error('❌ TWITTER_APP_KEY と TWITTER_APP_SECRET を環境変数で渡してください');
+  console.error('  例: TWITTER_APP_KEY=xxx TWITTER_APP_SECRET=yyy node scripts/oauth-setup.mjs');
+  process.exit(1);
+}
 
 async function main() {
   console.log('🔑 OAuth 1.0a PIN-based認証フロー開始...\n');

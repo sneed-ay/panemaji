@@ -12,9 +12,15 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const area = getAreaBySlug(params.slug);
   if (!area) return {};
   const prefDisplayName = prefectureSlugToName(area.prefecture);
+  // area.name は「銀座・新橋・有楽町・八重洲・日本橋」のように 15字超もある。
+  // layout.tsx で `%s｜パネマジ掲示板` (8字) 後付。 page 側 title は 22-24 字目標。
+  const areaLen = area.name.length;
+  const title = areaLen <= 14
+    ? `${area.name} 風俗 口コミ・パネマジ度`           // 例: "新宿・歌舞伎町 風俗 口コミ・パネマジ度" (19字)
+    : `${area.name} 口コミ・パネマジ度`;                // 長エリア用に短縮
   return {
-    title: `${area.name}の風俗・ソープ・メンエス 口コミ掲示板・パネマジ度`,
-    description: `${prefDisplayName} ${area.name}エリアの風俗店の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）を口コミでチェック。${area.name}のデリヘル・ソープ・メンエス・ヘルス・ホテヘル店舗のリアルな評判・在籍嬢ランキングがわかる。`,
+    title,
+    description: `${prefDisplayName} ${area.name}エリアの風俗店の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）をチェック。${area.name}のデリヘル・ソープ・メンエス・ヘルスのリアル評判・在籍嬢ランキング。`,
     alternates: {
       canonical: `https://panemaji.com/area/${params.slug}`,
     },

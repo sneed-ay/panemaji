@@ -29,7 +29,15 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
 
   return (
     <div className="space-y-5">
-      <h1 className="sr-only">{currentPrefName}の風俗 口コミ掲示板・パネマジ度チェック | パネル写真と実物の一致度</h1>
+      {/* 0. Page heading (h1) - SEO keyword + UX 両対応で visible に変更 */}
+      <header className="px-1 pt-1">
+        <h1 className="text-lg sm:text-xl font-bold text-gray-800 leading-tight">
+          {currentPrefName}の風俗 口コミ・パネマジ度
+        </h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+          パネル写真と実物の一致度を口コミでチェック
+        </p>
+      </header>
       {/* 1. Search Bar - prominent at top */}
       <div className="bg-white rounded-lg shadow p-3 sm:p-4">
         <form action="/search" method="GET" className="flex gap-2">

@@ -2,11 +2,18 @@ import { TwitterApi } from 'twitter-api-v2';
 import db from './db';
 
 // X account: @aichan_ura_ai (ura_ai@sneed.jp)
+//
+// 認証情報は環境変数から読む。Render の Environment にて以下を設定:
+//   TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET
+//
+// セキュリティ: 旧キーはリポ public で漏洩したため X dashboard で revoke 推奨。
+// 現状アカウント停止中で `postTweet()` 自体が早期 return しているため、
+// 環境変数未設定でも実害はない (canTweetNow は DB 読みのみで API 呼ばない)。
 const TWITTER_CONFIG = {
-  appKey: 'HGGhQIAWtSJl4NDxxvRMxCmVb',
-  appSecret: 'AyBk6nngIq5kkq9lNC7dfSdNMFsebNZk4qQjLMC2HrXi7rAjVv',
-  accessToken: '1992923099453661184-vty2JWmgdljvFQAXZatGneHJVBAOet',
-  accessSecret: 'ifdy60XNn129xEyrlmph0kYfAtci5jCwI9rJXpFC3tS1X',
+  appKey: process.env.TWITTER_APP_KEY || '',
+  appSecret: process.env.TWITTER_APP_SECRET || '',
+  accessToken: process.env.TWITTER_ACCESS_TOKEN || '',
+  accessSecret: process.env.TWITTER_ACCESS_SECRET || '',
 };
 
 const TWEET_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -41,6 +48,12 @@ export async function postTweet(text: string): Promise<void> {
   // X account suspended - disable posting
   console.log('[Twitter] Posting disabled (account suspended)');
   return;
+
+  // 環境変数未設定時はガード (アカウント復活後の安全装置)
+  if (!TWITTER_CONFIG.appKey || !TWITTER_CONFIG.appSecret || !TWITTER_CONFIG.accessToken || !TWITTER_CONFIG.accessSecret) {
+    console.warn('[Twitter] env vars not set - skip post:', text.slice(0, 50));
+    return;
+  }
 
   try {
     console.log('[Twitter] Posting tweet...');
