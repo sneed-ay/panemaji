@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { wrapClickUrl } from '@/lib/ad-config';
+import { AD_CONFIG, wrapClickUrl } from '@/lib/ad-config';
 import AdstirBanner from './AdstirBanner';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
 import { pickFreshFanza } from '@/lib/fanzaPool';
@@ -51,14 +51,16 @@ function LockerNoteFallback() {
     }
   }, []);
   const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
-  const noteUrl = 'https://note.com/kaito_ura/n/n5a879e870165?utm_source=panemaji&utm_medium=locker';
+  const noteUrl = `${AD_CONFIG.noteAd.link}?utm_source=panemaji&utm_medium=locker`;
+  const adImages = AD_CONFIG.noteAd.images;
+  const adSrc = adImages[Math.floor(Math.random() * adImages.length)];
   return (
     <div className="flex justify-center">
       <a href={wrapClickUrl(noteUrl, { adType: 'note', adSize: 'locker', adPage: pagePath })}
         target="_blank" rel="noopener noreferrer sponsored"
         onClick={() => trackLockerAd('banner_click', 'note')}>
         <img
-          src={`/ad/sp-ad${Math.floor(Math.random() * 4) + 1}.jpg`}
+          src={adSrc}
           alt="PR"
           className="w-full max-w-[300px] h-auto rounded-lg"
         />

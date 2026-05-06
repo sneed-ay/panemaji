@@ -5,9 +5,19 @@ export const AD_CONFIG = {
   enabled: true,
 
   // 自社広告（note誘導）
+  // 2026-05-06: 旧 n5a879e870165 → 新 n7a45cd2a0008 / バナー素材を 7枚に刷新
+  // (3デザイン × 複数BG variant: 無料SEX 3点, ナンバーワン 2点, パパ活 2点)
   noteAd: {
-    link: 'https://note.com/kaito_ura/n/n5a879e870165',
-    images: ['/ad/sp-ad1.jpg', '/ad/sp-ad2.jpg', '/ad/sp-ad3.jpg', '/ad/sp-ad4.jpg'],
+    link: 'https://note.com/kaito_ura/n/n7a45cd2a0008',
+    images: [
+      '/ad/note-1.jpg', // 無料SEX (木枠ポスター)
+      '/ad/note-2.jpg', // 無料SEX (グラデーション)
+      '/ad/note-3.jpg', // ナンバーワン (夜景)
+      '/ad/note-4.jpg', // パパ活 (ワインレッド)
+      '/ad/note-5.jpg', // 無料SEX (白BG)
+      '/ad/note-6.jpg', // ナンバーワン (白BG)
+      '/ad/note-7.jpg', // パパ活 (白BG)
+    ],
     utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
   },
 
@@ -63,16 +73,18 @@ export const AD_CONFIG = {
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // バナー配信比率: FANZA 80% / adstir 20% (noteは両者の no-fill フォールバック専用)
+  // バナー配信比率: FANZA 40% / note 40% / adstir 20%
   // - FanzaWidget が空商品のとき → NoteAdImage にフォールバック
-  // - AdstirBanner が 3秒で広告iframe生成失敗時 → NoteAdImage にフォールバック (旧8秒)
+  // - AdstirBanner が 3秒で広告iframe生成失敗時 → NoteAdImage にフォールバック
   // 2026-04-23: adstir CPM ¥2.71 と低迷したため FANZA に比重を移した。
   // 2026-05-03: AdBlock 環境で adstir SDK URL がブロックされ空打ちになるため
   //             比率を更に FANZA 寄せ (75→80%)、 adstir フォールバック発火を 8s→3s に短縮。
   //             FANZA は自前API経由配信なので AdBlock 通過率が高い。
+  // 2026-05-06: note 自社広告を再開 (新リンク + 新バナー7点)。
+  //             比率は fanza:note:adstir = 4:4:2 (note を主軸に戻す)。
   fanzaRatio: 4,
-  noteRatio: 0,
-  adstirRatio: 1,
+  noteRatio: 4,
+  adstirRatio: 2,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,
