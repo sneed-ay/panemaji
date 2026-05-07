@@ -181,4 +181,11 @@ else
   " 2>/dev/null
 fi
 
+# メモリ抑制 (Render Starter 512MB):
+# - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap (OS+SQLite+native で 100MB 確保)
+# - --gc-interval=100         ... GC を頻繁に発動させて leak を貯めない
+# - UV_THREADPOOL_SIZE=2      ... libuv worker pool を縮小 (デフォルト 4 → 2)
+export NODE_OPTIONS="--max-old-space-size=400"
+export UV_THREADPOOL_SIZE=2
+
 exec npm run start

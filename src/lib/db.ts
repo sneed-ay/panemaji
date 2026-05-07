@@ -16,6 +16,10 @@ function getDb(): Database.Database {
   _db.pragma('journal_mode = WAL');
   _db.pragma('busy_timeout = 5000');
   _db.pragma('foreign_keys = ON');
+  // メモリ抑制: WAL を 1000 page (~4MB) ごとに自動 checkpoint → WAL ファイル肥大化防止
+  _db.pragma('wal_autocheckpoint = 1000');
+  // メモリ抑制: 137MB DB を mmap で仮想空間に展開しない (Render 512MB 用)
+  _db.pragma('mmap_size = 0');
 
   _db.exec(`
     CREATE TABLE IF NOT EXISTS areas (
@@ -140,9 +144,12 @@ function getDb(): Database.Database {
     _db.exec('ALTER TABLE areas ADD COLUMN display_order INTEGER DEFAULT 999');
   }
 
-  // Optimize SQLite for read-heavy workload
-  _db.pragma('cache_size = -20000'); // 20MB cache
-  _db.pragma('temp_store = MEMORY');
+  // Optimize SQLite for read-heavy workload (memory-aware: Render Starter 512MB)
+  // 20MB → 4MB に縮小 (本番 OOM 対策・read pattern は index hit メインで cache 巨大化不要)
+  _db.pragma('cache_size = -4000'); // 4MB cache
+  // temp_store: MEMORY → DEFAULT (1 = file) に変更
+  // 422k girls の ORDER BY 等で温まる temp が memory に貯まらないよう disk fallback
+  _db.pragma('temp_store = FILE');
 
   return _db;
 }

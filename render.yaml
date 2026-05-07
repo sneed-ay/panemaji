@@ -17,3 +17,9 @@ services:
         value: "3000"
       - key: DB_PATH
         value: /data/panemaji.db
+      # メモリ抑制 (Render Starter 512MB): V8 heap を 400MB に cap
+      # init-db.sh でも export してるが Blueprint 経由でも記録 (二重保険)
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=400"
+      - key: UV_THREADPOOL_SIZE
+        value: "2"

@@ -4,7 +4,7 @@ import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
 import type { Metadata } from 'next';
 
-export const revalidate = 300;
+export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
 
 export function generateMetadata({ searchParams }: { searchParams: { pref?: string } }): Metadata {
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';

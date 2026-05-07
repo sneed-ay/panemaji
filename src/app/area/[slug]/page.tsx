@@ -6,7 +6,7 @@ import GirlImage from '@/components/GirlImage';
 import RelatedGuides from '@/components/RelatedGuides';
 import type { Metadata } from 'next';
 
-export const revalidate = 300;
+export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const area = getAreaBySlug(params.slug);

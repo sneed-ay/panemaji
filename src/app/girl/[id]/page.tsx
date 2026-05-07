@@ -8,7 +8,7 @@ import AdBanner from '@/components/AdBanner';
 import { generateGirlAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
-export const revalidate = 300;
+export const revalidate = 3600; // 5min → 60min (低トラフィック long-tail / Render Starter 512MB)
 
 export function generateMetadata({ params }: { params: { id: string } }): Metadata {
   const girl = getGirlWithReviewStats(parseInt(params.id));

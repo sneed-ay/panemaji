@@ -3,7 +3,7 @@ import { isValidPrefecture, isValidCategory, getRecentlyReviewedGirls, prefectur
 import GirlImage from '@/components/GirlImage';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 
-export const revalidate = 300;
+export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
 
 export default function Home({ searchParams }: { searchParams: { pref?: string; cat?: string } }) {
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';

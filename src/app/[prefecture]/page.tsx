@@ -3,7 +3,7 @@ import { isValidPrefecture, isValidCategory, prefectureSlugToName } from '@/lib/
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-export const revalidate = 300;
+export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
 
 export function generateMetadata({ params }: { params: { prefecture: string } }): Metadata {
   if (!isValidPrefecture(params.prefecture)) return {};

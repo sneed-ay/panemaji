@@ -403,6 +403,27 @@ export function getGirlIdsPaginated(offset: number, limit: number): { id: number
   return db.prepare('SELECT id, last_seen_at FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').all(limit, offset) as { id: number; last_seen_at: string | null }[];
 }
 
+// メモリ効率版: 50k 行を全部 array で持たずに iterator で逐次返す
+// (Render Starter 512MB sitemap 用)
+export function iterateAllShopIds(): IterableIterator<{ id: number; last_seen_at: string | null }> {
+  return db.prepare('SELECT id, last_seen_at FROM shops WHERE is_active = 1 ORDER BY id').iterate() as IterableIterator<{ id: number; last_seen_at: string | null }>;
+}
+
+export function iterateGirlIdsPaginated(offset: number, limit: number): IterableIterator<{ id: number; last_seen_at: string | null }> {
+  return db.prepare('SELECT id, last_seen_at FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').iterate(limit, offset) as IterableIterator<{ id: number; last_seen_at: string | null }>;
+}
+
+// 画像 sitemap 用: 50k 行を iterator で逐次返す
+export function iterateShopsWithImages(limit: number): IterableIterator<{ id: number; name: string; last_seen_at: string | null; img_url: string }> {
+  return db.prepare(`
+    SELECT s.id, s.name, s.last_seen_at,
+      (SELECT g.image_url FROM girls g WHERE g.shop_id=s.id AND g.is_active=1 AND g.image_url IS NOT NULL AND g.image_url != '' LIMIT 1) AS img_url
+    FROM shops s
+    WHERE s.is_active=1 AND EXISTS (SELECT 1 FROM girls g WHERE g.shop_id=s.id AND g.is_active=1 AND g.image_url IS NOT NULL AND g.image_url != '')
+    LIMIT ?
+  `).iterate(limit) as IterableIterator<{ id: number; name: string; last_seen_at: string | null; img_url: string }>;
+}
+
 // Returns MAX(shops.last_seen_at) per area for sitemap lastmod
 export function getAreaLastModMap(): Map<number, string | null> {
   const rows = db.prepare(`
