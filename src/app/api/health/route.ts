@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as v8 from 'node:v8';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +12,6 @@ export async function GET() {
   const uptimeSec = Math.round(process.uptime());
 
   // V8 heap の上限 (NODE_OPTIONS=--max-old-space-size=400 で 400MB cap)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const v8 = require('v8') as typeof import('v8');
   const heap = v8.getHeapStatistics();
   const heapLimitMB = Math.round(heap.heap_size_limit / 1024 / 1024);
   const heapUsedMB = Math.round(heap.used_heap_size / 1024 / 1024);
