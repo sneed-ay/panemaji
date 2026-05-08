@@ -17,9 +17,10 @@ services:
         value: "3000"
       - key: DB_PATH
         value: /data/panemaji.db
-      # メモリ抑制 (Render Starter 512MB): V8 heap を 400MB に cap
-      # init-db.sh でも export してるが Blueprint 経由でも記録 (二重保険)
+      # メモリ抑制 (Render Starter 512MB):
+      # - --max-old-space-size=400: V8 heap を 400MB に cap
+      # - --expose-gc: memory-watchdog が global.gc() 定期発動して lazy GC 蓄積を予防
       - key: NODE_OPTIONS
-        value: "--max-old-space-size=400"
+        value: "--max-old-space-size=400 --expose-gc"
       - key: UV_THREADPOOL_SIZE
         value: "2"

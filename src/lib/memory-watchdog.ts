@@ -78,12 +78,33 @@ export function startMemoryWatchdog(): void {
   }, CHECK_INTERVAL_MS);
 
   // GC ヒント発火 (V8 が積極的に GC してメモリを OS に返さない場合がある)
-  // --expose-gc が必要なので、 利用可能な場合のみ
-  if (typeof (globalThis as { gc?: () => void }).gc === 'function') {
+  // --expose-gc が必要 (NODE_OPTIONS=--expose-gc, init-db.sh で設定済)
+  // sitemap streaming の ArrayBuffer 蓄積 を予防するため 2 分ごと + external 高い時は即発動
+  const gcFn = (globalThis as { gc?: () => void }).gc;
+  if (typeof gcFn === 'function') {
+    console.log('[memory-watchdog] --expose-gc detected, periodic gc() enabled (every 2min + on-demand)');
+
+    // 2 分ごとの定期 gc
+    setInterval(() => {
+      try { gcFn(); } catch {}
+    }, 2 * 60_000);
+
+    // メイン watchdog タイマーで external > 100MB なら preemptive gc
     setInterval(() => {
       try {
-        (globalThis as { gc?: () => void }).gc?.();
+        const mem = process.memoryUsage();
+        const externalMB = mem.external / 1024 / 1024;
+        if (externalMB > 100) {
+          gcFn();
+          const after = process.memoryUsage();
+          const reclaimedMB = Math.round((mem.external - after.external) / 1024 / 1024);
+          if (reclaimedMB > 5) {
+            console.log(`[memory-watchdog] preemptive gc reclaimed ${reclaimedMB}MB external (was ${Math.round(externalMB)}MB)`);
+          }
+        }
       } catch {}
-    }, 5 * 60_000); // 5分ごと
+    }, 30_000); // 30 秒ごと external チェック
+  } else {
+    console.warn('[memory-watchdog] global.gc not available — pass --expose-gc in NODE_OPTIONS for proactive GC');
   }
 }
