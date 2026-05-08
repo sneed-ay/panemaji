@@ -203,11 +203,11 @@ export default function RootLayout({
                 <span className="hidden sm:inline text-white/30 mx-1">|</span>
                 <a href="/area/shinjuku" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">新宿</a>
                 <a href="/area/ikebukuro" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">池袋</a>
-                <a href="/area/shibuya" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">渋谷</a>
-                <a href="/area/gotanda" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">五反田</a>
-                <a href="/area/shinbashi" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">新橋</a>
-                <a href="/area/ueno" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs hidden sm:inline-block">上野</a>
-                <a href="/area/kinshicho" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs hidden sm:inline-block">錦糸町</a>
+                <a href="/area/shibuya-ebisu" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">渋谷</a>
+                <a href="/area/gotanda-meguro" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">五反田</a>
+                <a href="/area/shinbashi-ginza" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs">新橋</a>
+                <a href="/area/ueno-uguisudani" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs hidden sm:inline-block">上野</a>
+                <a href="/area/kinshicho-kameido" className="shrink-0 px-2 py-1 rounded-md hover:bg-white/15 transition-colors no-underline text-white/70 hover:text-white text-xs hidden sm:inline-block">錦糸町</a>
               </div>
             </div>
           </nav>

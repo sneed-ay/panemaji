@@ -14,13 +14,15 @@ export const metadata: Metadata = {
  * 明確に noindex + 関連リンク提供で UX を改善する。
  */
 export default function NotFound() {
+  // 注意: slug は v5b マイグレーション後の compound slug を使う
+  // (旧 'shibuya' / 'gotanda' / 'ueno' / 'kinshicho' は area DB に存在しないため 404)
   const popularAreas = [
     { name: '新宿', slug: 'shinjuku' },
     { name: '池袋', slug: 'ikebukuro' },
-    { name: '渋谷・恵比寿', slug: 'shibuya' },
-    { name: '五反田・目黒', slug: 'gotanda' },
-    { name: '上野・鶯谷', slug: 'ueno' },
-    { name: '錦糸町・亀戸', slug: 'kinshicho' },
+    { name: '渋谷・恵比寿', slug: 'shibuya-ebisu' },
+    { name: '五反田・目黒', slug: 'gotanda-meguro' },
+    { name: '上野・鶯谷', slug: 'ueno-uguisudani' },
+    { name: '錦糸町・亀戸', slug: 'kinshicho-kameido' },
   ];
   const popularPrefs = [
     { name: '東京都', slug: 'tokyo' },

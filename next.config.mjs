@@ -30,9 +30,72 @@ const nextConfig = {
   // - /area/{pref}-ch-XXX                     → 旧 cityheaven (別形式)
   // - /area/{pref}-rd-XXX, -pl-XXX, -meste-XXX, -robin-XXX → 各ソース由来
   redirects: async () => [
+    // ──────────────────────────────────────────────────────────────────
+    // v5b マイグレーション (5/4): area slug を compound 化したが、
+    // 簡易 slug (/area/shibuya 等) が 404 になり SEO bleeding 発生。
+    // → 簡易 slug → 正規 compound slug への 308 redirect で 救済
+    //   (旧 indexed URL + 内部リンク + ユーザー入力 URL を全部 catch)
+    // ──────────────────────────────────────────────────────────────────
+
+    // 東京: 簡易 → compound
+    { source: '/area/shibuya', destination: '/area/shibuya-ebisu', permanent: true },
+    { source: '/area/ebisu', destination: '/area/shibuya-ebisu', permanent: true },
+    { source: '/area/gotanda', destination: '/area/gotanda-meguro', permanent: true },
+    { source: '/area/meguro', destination: '/area/gotanda-meguro', permanent: true },
+    { source: '/area/ueno', destination: '/area/ueno-uguisudani', permanent: true },
+    { source: '/area/uguisudani', destination: '/area/ueno-uguisudani', permanent: true },
+    { source: '/area/kinshicho', destination: '/area/kinshicho-kameido', permanent: true },
+    { source: '/area/kameido', destination: '/area/kinshicho-kameido', permanent: true },
+    { source: '/area/shinbashi', destination: '/area/shinbashi-ginza', permanent: true },
+    { source: '/area/ginza', destination: '/area/shinbashi-ginza', permanent: true },
+    { source: '/area/akihabara', destination: '/area/akihabara-kanda', permanent: true },
+    { source: '/area/kanda', destination: '/area/akihabara-kanda', permanent: true },
+    { source: '/area/roppongi', destination: '/area/roppongi-akasaka', permanent: true },
+    { source: '/area/akasaka', destination: '/area/roppongi-akasaka', permanent: true },
+    { source: '/area/tachikawa', destination: '/area/tachikawa-hachioji-machida', permanent: true },
+    { source: '/area/hachioji', destination: '/area/tachikawa-hachioji-machida', permanent: true },
+    { source: '/area/machida', destination: '/area/tachikawa-hachioji-machida', permanent: true },
+    { source: '/area/kichijoji', destination: '/area/kichijoji-mitaka', permanent: true },
+    { source: '/area/mitaka', destination: '/area/kichijoji-mitaka', permanent: true },
+    { source: '/area/nakano', destination: '/area/nakano-koenji', permanent: true },
+    { source: '/area/koenji', destination: '/area/nakano-koenji', permanent: true },
+
+    // 大阪
+    { source: '/area/umeda', destination: '/area/umeda-kitashinchi', permanent: true },
+    { source: '/area/kitashinchi', destination: '/area/umeda-kitashinchi', permanent: true },
+    { source: '/area/namba', destination: '/area/namba-shinsaibashi', permanent: true },
+    { source: '/area/shinsaibashi', destination: '/area/namba-shinsaibashi', permanent: true },
+
+    // 兵庫
+    { source: '/area/kobe', destination: '/area/sannomiya-kobe', permanent: true },
+    { source: '/area/sannomiya', destination: '/area/sannomiya-kobe', permanent: true },
+
+    // 福岡
+    { source: '/area/hakata', destination: '/area/fukuoka-tenjin-hakata', permanent: true },
+    { source: '/area/tenjin', destination: '/area/fukuoka-tenjin-hakata', permanent: true },
+
+    // 愛知
+    { source: '/area/sakae', destination: '/area/nagoya-sakae', permanent: true },
+    { source: '/area/nagoya', destination: '/area/nagoya-sakae', permanent: true },
+
+    // 北海道
+    { source: '/area/susukino', destination: '/area/sapporo-susukino', permanent: true },
+    { source: '/area/sapporo', destination: '/area/sapporo-susukino', permanent: true },
+
+    // 宮城
+    { source: '/area/kokubuncho', destination: '/area/sendai-kokubuncho', permanent: true },
+    { source: '/area/sendai', destination: '/area/sendai-kokubuncho', permanent: true },
+
+    // 神奈川
+    { source: '/area/yokohama', destination: '/area/yokohama-station', permanent: true },
+
+    // ──────────────────────────────────────────────────────────────────
+    // 旧 area slug (legacy) → 都道府県 top へのフォールバック
+    // ──────────────────────────────────────────────────────────────────
     // /area/{pref} (都道府県 slug を /area/ 配下に書いた旧リンク・典型 404)
     // 例: /area/fukuoka /area/hiroshima /area/osaka → 都道府県top にリダイレクト
-    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)', destination: '/:pref', permanent: true },
+    // (注: /area/fukuoka と /area/nagoya 等は上の compound redirect で先に matchするので OK)
+    { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)', destination: '/:pref', permanent: true },
     { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-a:n(\\d+)', destination: '/:pref', permanent: true },
     { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-fj-:rest*', destination: '/:pref', permanent: true },
     { source: '/area/:pref(tokyo|kanagawa|saitama|chiba|osaka|aichi|hokkaido|fukuoka|hyogo|kyoto|miyagi|hiroshima|shizuoka|niigata|ibaraki|tochigi|gunma|yamanashi|nagano|gifu|mie|shiga|nara|wakayama|tottori|shimane|okayama|yamaguchi|tokushima|kagawa|ehime|kochi|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa|aomori|iwate|akita|yamagata|fukushima|toyama|ishikawa|fukui)-ch-:rest*', destination: '/:pref', permanent: true },
