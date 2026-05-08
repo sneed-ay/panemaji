@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://panemaji.com';
 const GIRLS_PER_SITEMAP = 50000;
+const BATCH_ROWS = 200; // 1 pull() あたり 200 行送出
 
 function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -13,8 +14,11 @@ function buildUrlEntry(loc: string, lastmod: string, changefreq: string, priorit
   return `  <url>\n    <loc>${escapeXml(loc)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${changefreq}</changefreq>\n    <priority>${priority.toFixed(1)}</priority>\n  </url>\n`;
 }
 
-// メモリ最適化: 50,000行 array.join を ReadableStream の chunk 送出に変更
-// (Render Starter 512MB 対策・大型 sitemap で OOM しないよう)
+const HEADER = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+const FOOTER = `</urlset>\n`;
+
+// メモリ最適化 v3: pull() pattern で 1 batch ずつ enqueue → ArrayBuffer 滞留ゼロ
+// (Render Starter 512MB 対策・ v2 の start() 内同期 enqueue は並行リクエストで leak)
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   // Lazy import to avoid build-time DB connection
   const { getAllAreas, iterateAllShopIds, iterateGirlIdsPaginated, getPrefectureSlugs, getAreaLastModMap, getPrefectureLastModMap } = await import('@/lib/queries');
@@ -35,12 +39,9 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : today;
   };
 
-  // sitemap 0 (静的) は事前に上限件数決まってる (47 + 325 + 19k shops + ~10 guide = 20k 弱)
-  // sitemap N (動的) は最大 50,000 girls/shard
-  // どちらも ReadableStream で chunk 送出してピークメモリを抑制
-
   if (sitemapId === 0) {
     // 静的 sitemap: top + guide + prefecture + area + shop
+    // 静的部分 (top + guides + prefectures + areas) は事前に1度送出、 shop は iterator で pull
     const guideSlugs = getAllGuideSlugs().filter((s) => s !== 'shop' && s !== 'area');
     const prefSlugs = getPrefectureSlugs();
     const prefLastMod = getPrefectureLastModMap();
@@ -48,46 +49,56 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const areaLastMod = getAreaLastModMap();
     const shopIter = iterateAllShopIds();
 
-    const stream = new ReadableStream({
-      start(controller) {
-        try {
-          controller.enqueue(encoder.encode(
-            `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`,
-          ));
-          const CHUNK = 1000;
-          let buf = '';
-          const flush = () => {
-            if (buf) {
-              controller.enqueue(encoder.encode(buf));
-              buf = '';
-            }
-          };
+    let phase: 'header' | 'static' | 'shops' | 'footer' | 'done' = 'header';
 
-          // Top
-          buf += buildUrlEntry(BASE_URL, today, 'daily', 1.0);
-          // Guide index + articles
-          buf += buildUrlEntry(`${BASE_URL}/guide`, today, 'weekly', 0.8);
-          for (const slug of guideSlugs) {
-            buf += buildUrlEntry(`${BASE_URL}/guide/${slug}`, today, 'weekly', 0.7);
+    const stream = new ReadableStream({
+      pull(controller) {
+        try {
+          if (phase === 'header') {
+            controller.enqueue(encoder.encode(HEADER));
+            phase = 'static';
+            return;
           }
-          // Prefectures
-          for (const slug of prefSlugs) {
-            buf += buildUrlEntry(`${BASE_URL}/${slug}`, toLastMod(prefLastMod.get(slug)), 'daily', 0.9);
+          if (phase === 'static') {
+            // 1 回で静的部分全部送出 (~600 行で ~100KB、 問題なし)
+            let buf = '';
+            buf += buildUrlEntry(BASE_URL, today, 'daily', 1.0);
+            buf += buildUrlEntry(`${BASE_URL}/guide`, today, 'weekly', 0.8);
+            for (const slug of guideSlugs) {
+              buf += buildUrlEntry(`${BASE_URL}/guide/${slug}`, today, 'weekly', 0.7);
+            }
+            for (const slug of prefSlugs) {
+              buf += buildUrlEntry(`${BASE_URL}/${slug}`, toLastMod(prefLastMod.get(slug)), 'daily', 0.9);
+            }
+            for (const area of areas) {
+              buf += buildUrlEntry(`${BASE_URL}/area/${area.slug}`, toLastMod(areaLastMod.get(area.id)), 'daily', 0.8);
+            }
+            controller.enqueue(encoder.encode(buf));
+            phase = 'shops';
+            return;
           }
-          // Areas
-          for (const area of areas) {
-            buf += buildUrlEntry(`${BASE_URL}/area/${area.slug}`, toLastMod(areaLastMod.get(area.id)), 'daily', 0.8);
+          if (phase === 'shops') {
+            let buf = '';
+            let count = 0;
+            while (count < BATCH_ROWS) {
+              const next = shopIter.next();
+              if (next.done) {
+                if (buf) controller.enqueue(encoder.encode(buf));
+                phase = 'footer';
+                return;
+              }
+              buf += buildUrlEntry(`${BASE_URL}/shop/${next.value.id}`, toLastMod(next.value.last_seen_at), 'weekly', 0.7);
+              count++;
+            }
+            controller.enqueue(encoder.encode(buf));
+            return;
           }
-          // Shops (iterate で 1 行ずつ → 19k array allocation 回避)
-          let i = 0;
-          for (const shop of shopIter) {
-            buf += buildUrlEntry(`${BASE_URL}/shop/${shop.id}`, toLastMod(shop.last_seen_at), 'weekly', 0.7);
-            i++;
-            if (i % CHUNK === 0) flush();
+          if (phase === 'footer') {
+            controller.enqueue(encoder.encode(FOOTER));
+            phase = 'done';
+            controller.close();
+            return;
           }
-          flush();
-          controller.enqueue(encoder.encode(`</urlset>\n`));
-          controller.close();
         } catch (e) {
           try { shopIter.return?.(undefined); } catch {}
           controller.error(e);
@@ -112,34 +123,48 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const iter = iterateGirlIdsPaginated(offset, GIRLS_PER_SITEMAP);
   const first = iter.next();
   if (first.done) {
+    try { iter.return?.(undefined); } catch {}
     return new NextResponse('Not Found', { status: 404 });
   }
 
+  let phase: 'header' | 'first' | 'rest' | 'footer' | 'done' = 'header';
+
   const stream = new ReadableStream({
-    start(controller) {
+    pull(controller) {
       try {
-        controller.enqueue(encoder.encode(
-          `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`,
-        ));
-        const CHUNK = 1000;
-        let buf = '';
-        let i = 0;
-        // 最初の peek 行を先に出す
-        const firstGirl = first.value;
-        buf += buildUrlEntry(`${BASE_URL}/girl/${firstGirl.id}`, toLastMod(firstGirl.last_seen_at), 'weekly', 0.6);
-        i++;
-        // 残りを iterator から逐次出す
-        for (const girl of iter) {
-          buf += buildUrlEntry(`${BASE_URL}/girl/${girl.id}`, toLastMod(girl.last_seen_at), 'weekly', 0.6);
-          i++;
-          if (i % CHUNK === 0) {
-            controller.enqueue(encoder.encode(buf));
-            buf = '';
-          }
+        if (phase === 'header') {
+          controller.enqueue(encoder.encode(HEADER));
+          phase = 'first';
+          return;
         }
-        if (buf) controller.enqueue(encoder.encode(buf));
-        controller.enqueue(encoder.encode(`</urlset>\n`));
-        controller.close();
+        if (phase === 'first') {
+          const firstGirl = first.value;
+          controller.enqueue(encoder.encode(buildUrlEntry(`${BASE_URL}/girl/${firstGirl.id}`, toLastMod(firstGirl.last_seen_at), 'weekly', 0.6)));
+          phase = 'rest';
+          return;
+        }
+        if (phase === 'rest') {
+          let buf = '';
+          let count = 0;
+          while (count < BATCH_ROWS) {
+            const next = iter.next();
+            if (next.done) {
+              if (buf) controller.enqueue(encoder.encode(buf));
+              phase = 'footer';
+              return;
+            }
+            buf += buildUrlEntry(`${BASE_URL}/girl/${next.value.id}`, toLastMod(next.value.last_seen_at), 'weekly', 0.6);
+            count++;
+          }
+          controller.enqueue(encoder.encode(buf));
+          return;
+        }
+        if (phase === 'footer') {
+          controller.enqueue(encoder.encode(FOOTER));
+          phase = 'done';
+          controller.close();
+          return;
+        }
       } catch (e) {
         try { iter.return?.(undefined); } catch {}
         controller.error(e);

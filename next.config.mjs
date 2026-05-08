@@ -2,6 +2,8 @@
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['better-sqlite3', 'twitter-api-v2'],
+    // src/instrumentation.ts (memory-watchdog 起動) を有効化
+    instrumentationHook: true,
   },
   images: {
     remotePatterns: [

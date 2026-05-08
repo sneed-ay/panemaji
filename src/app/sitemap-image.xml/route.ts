@@ -4,42 +4,63 @@ const BASE_URL = 'https://panemaji.com';
 
 // 画像sitemap (Google画像検索SEO効果)
 // /sitemap-image.xml で 画像URL付き shop ページを列挙
-// メモリ最適化: 50,000行を array.join で組み立てると ~80MB ピーク → ReadableStream で逐次送出に変更
+//
+// メモリ最適化 v2:
+//   - v1: array.join で 50k 行を一括組立 → ~80MB ピーク
+//   - v2: ReadableStream の start() 内で全 chunk を 同期 enqueue → 内部キュー滞留で
+//         並行リクエスト時に ArrayBuffer leak (~321MB 蓄積を観測)
+//   - v3: pull() で 1 batch ずつ enqueue → consumer (HTTP socket) drain 同期で 滞留ゼロ
+//
 // (Render Starter 512MB 対策)
 export const revalidate = 86400; // 1日
 
 const escapeXml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
+const HEADER = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n        xmlns:image="http://www.google.com/schemas/sitemap-image/0.9">\n`;
+const FOOTER = `</urlset>\n`;
+const BATCH_ROWS = 200; // 1 pull() あたり 200 行送出 → ~30KB chunk (HTTP MTU 数倍)
+
 export async function GET() {
   const { iterateShopsWithImages } = await import('@/lib/queries');
   const today = new Date().toISOString().split('T')[0];
   const encoder = new TextEncoder();
 
-  // ReadableStream + iterate(): 50k 行を array で持たず行単位で送出 → ピーク ~80MB → ~数MB
-  // cancel ハンドラで iterator を確実に閉じる (client 切断時の DB busy 回避)
   const iter = iterateShopsWithImages(50000);
+  let headerSent = false;
+  let footerSent = false;
+
   const stream = new ReadableStream({
-    start(controller) {
+    pull(controller) {
       try {
-        controller.enqueue(encoder.encode(
-          `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n        xmlns:image="http://www.google.com/schemas/sitemap-image/0.9">\n`,
-        ));
-        const CHUNK = 1000;
+        if (!headerSent) {
+          controller.enqueue(encoder.encode(HEADER));
+          headerSent = true;
+          return; // 次の pull で行データ送出
+        }
+        if (footerSent) {
+          controller.close();
+          return;
+        }
+
         let buf = '';
-        let i = 0;
-        for (const r of iter) {
+        let count = 0;
+        while (count < BATCH_ROWS) {
+          const next = iter.next();
+          if (next.done) {
+            // 残りバッファ + footer
+            if (buf) controller.enqueue(encoder.encode(buf));
+            controller.enqueue(encoder.encode(FOOTER));
+            footerSent = true;
+            controller.close();
+            return;
+          }
+          const r = next.value;
           const lastmod = r.last_seen_at ? r.last_seen_at.substring(0, 10) : today;
           buf += `  <url>\n    <loc>${BASE_URL}/shop/${r.id}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <image:image>\n      <image:loc>${escapeXml(r.img_url)}</image:loc>\n      <image:title>${escapeXml(r.name)}</image:title>\n    </image:image>\n  </url>\n`;
-          i++;
-          if (i % CHUNK === 0) {
-            controller.enqueue(encoder.encode(buf));
-            buf = '';
-          }
+          count++;
         }
-        if (buf) controller.enqueue(encoder.encode(buf));
-        controller.enqueue(encoder.encode(`</urlset>\n`));
-        controller.close();
+        controller.enqueue(encoder.encode(buf));
       } catch (e) {
         try { iter.return?.(undefined); } catch {}
         controller.error(e);
