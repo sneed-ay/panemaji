@@ -38,12 +38,17 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     category: shop.category || '',
   });
   const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
+  // 嬢ゼロ + 口コミゼロ の thin content shop は noindex
+  // (Google から「中身のない URL」 と判定される SEO リスク回避)
+  const isThinContent = girlCount === 0 && reviewCount === 0;
+
   return {
     title,
     description,
     alternates: {
       canonical: `https://panemaji.com/shop/${params.id}`,
     },
+    robots: isThinContent ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description,

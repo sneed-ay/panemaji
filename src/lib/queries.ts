@@ -245,6 +245,8 @@ const GIRL_STATS_COLS = `
 `;
 
 // Girls (only active by default)
+// 並び順: 画像あり優先 → real_pct → review_count → name
+//   (UX 改善: 画像なし girl が混在で見栄え悪い問題への対応)
 export function getGirlsByShop(shopId: number, search?: string): Girl[] {
   const where = search
     ? 'WHERE g.shop_id = ? AND g.is_active = 1 AND g.name LIKE ?'
@@ -256,7 +258,7 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
     JOIN shops s ON g.shop_id = s.id
     ${GIRL_STATS_JOIN}
     ${where}
-    ORDER BY real_pct DESC, review_count DESC, g.name
+    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, real_pct DESC, review_count DESC, g.name
   `).all(...params) as Girl[];
 }
 
@@ -305,6 +307,9 @@ export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
   `).all(shopId, limit) as Review[];
 }
 
+// 画像あり girl の review を優先 (UX: TOP / 都道府県ページ の 最新口コミ枠で
+// placeholder 連発を回避)。 過去 14 日以内の画像なし review は補助で混ぜて
+// freshness は維持。
 export function getLatestReviews(limit: number = 20, prefectureSlug?: string): Review[] {
   if (prefectureSlug) {
     return db.prepare(`
@@ -314,7 +319,7 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
       JOIN shops s ON g.shop_id = s.id
       JOIN areas a ON s.area_id = a.id
       WHERE a.prefecture = ?
-      ORDER BY r.created_at DESC
+      ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, r.created_at DESC
       LIMIT ?
     `).all(prefectureSlug, limit) as Review[];
   }
@@ -323,7 +328,7 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id
-    ORDER BY r.created_at DESC
+    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, r.created_at DESC
     LIMIT ?
   `).all(limit) as Review[];
 }
@@ -395,8 +400,12 @@ export function getStatsByPrefecture(prefectureSlug: string, catSlug?: string) {
 }
 
 // Sitemap helpers
+// 嬢ゼロ shop (8,366件 / 全 shop の 42.7%) は sitemap から除外:
+// thin content として Google index 対象外にする (crawl budget 効率化)
+const SHOP_HAS_GIRLS_FILTER = "AND EXISTS (SELECT 1 FROM girls g WHERE g.shop_id=shops.id AND g.is_active=1)";
+
 export function getAllShopIds(): { id: number; last_seen_at: string | null }[] {
-  return db.prepare('SELECT id, last_seen_at FROM shops WHERE is_active = 1 ORDER BY id').all() as { id: number; last_seen_at: string | null }[];
+  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_HAS_GIRLS_FILTER} ORDER BY id`).all() as { id: number; last_seen_at: string | null }[];
 }
 
 export function getGirlIdsPaginated(offset: number, limit: number): { id: number; last_seen_at: string | null }[] {
@@ -406,7 +415,7 @@ export function getGirlIdsPaginated(offset: number, limit: number): { id: number
 // メモリ効率版: 50k 行を全部 array で持たずに iterator で逐次返す
 // (Render Starter 512MB sitemap 用)
 export function iterateAllShopIds(): IterableIterator<{ id: number; last_seen_at: string | null }> {
-  return db.prepare('SELECT id, last_seen_at FROM shops WHERE is_active = 1 ORDER BY id').iterate() as IterableIterator<{ id: number; last_seen_at: string | null }>;
+  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_HAS_GIRLS_FILTER} ORDER BY id`).iterate() as IterableIterator<{ id: number; last_seen_at: string | null }>;
 }
 
 export function iterateGirlIdsPaginated(offset: number, limit: number): IterableIterator<{ id: number; last_seen_at: string | null }> {
@@ -458,6 +467,7 @@ export function getPrefectureSlugs(): string[] {
 // Ranking queries
 
 // Top girls by real_pct (panel match rate) - requires minimum reviews
+// 画像あり優先 (UX: ranking ページの見栄え向上)
 export function getTopRealGirls(prefectureSlug: string, limit: number = 20, catSlug?: string): Girl[] {
   const catValue = categoryToDbValue(catSlug);
   const catFilter = catValue ? ' AND s.category = ?' : '';
@@ -469,12 +479,13 @@ export function getTopRealGirls(prefectureSlug: string, limit: number = 20, catS
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
     WHERE g.is_active = 1 AND a.prefecture = ?${catFilter} AND COALESCE(rs.review_count, 0) >= 3
-    ORDER BY real_pct DESC, rs.review_count DESC
+    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, real_pct DESC, rs.review_count DESC
     LIMIT ?
   `).all(...params) as Girl[];
 }
 
 // Worst girls by real_pct (panel fraud rate) - requires minimum reviews
+// 画像あり優先 (UX: ranking ページの見栄え向上)
 export function getWorstRealGirls(prefectureSlug: string, limit: number = 20, catSlug?: string): Girl[] {
   const catValue = categoryToDbValue(catSlug);
   const catFilter = catValue ? ' AND s.category = ?' : '';
@@ -486,7 +497,7 @@ export function getWorstRealGirls(prefectureSlug: string, limit: number = 20, ca
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
     WHERE g.is_active = 1 AND a.prefecture = ?${catFilter} AND COALESCE(rs.review_count, 0) >= 3
-    ORDER BY real_pct ASC, rs.review_count DESC
+    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, real_pct ASC, rs.review_count DESC
     LIMIT ?
   `).all(...params) as Girl[];
 }
@@ -537,6 +548,7 @@ export function getPopularGirlsInArea(areaId: number, excludeGirlId: number, lim
 }
 
 // Get other girls in same shop for girl detail page (more results, review-few-first)
+// 画像あり優先 (UX: girl 詳細ページの「他の在籍」セクション向上)
 export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: number, limit: number = 6): Girl[] {
   return db.prepare(`
     SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
@@ -544,7 +556,7 @@ export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: numbe
     JOIN shops s ON g.shop_id = s.id
     ${GIRL_STATS_JOIN}
     WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
-    ORDER BY COALESCE(rs.review_count, 0) ASC, g.name
+    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, COALESCE(rs.review_count, 0) ASC, g.name
     LIMIT ?
   `).all(shopId, excludeGirlId, limit) as Girl[];
 }
@@ -556,6 +568,7 @@ export function getShopAreaId(shopId: number): number | undefined {
 }
 
 // Recently reviewed girls (for top page)
+// 画像あり girl のみ表示 (UX: TOP ページの最近の口コミ枠の見栄え向上 / placeholder 撲滅)
 export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
   const prefClause = prefectureSlug ? 'AND a.prefecture = ?' : '';
   const args: (string | number)[] = prefectureSlug ? [prefectureSlug, limit] : [limit];
@@ -572,7 +585,9 @@ export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
-    WHERE g.is_active = 1 AND s.is_active = 1 ${prefClause}
+    WHERE g.is_active = 1 AND s.is_active = 1
+      AND g.image_url IS NOT NULL AND g.image_url != ''
+      ${prefClause}
     GROUP BY g.id
     ORDER BY MAX(r.created_at) DESC
     LIMIT ?
@@ -580,6 +595,7 @@ export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
 }
 
 // Popular girls in area for area page (no exclusion)
+// 画像あり優先 (UX: area ページ TOP5 表示の見栄え向上)
 export function getPopularGirlsInAreaTop(areaId: number, limit: number = 5): Girl[] {
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
@@ -588,7 +604,7 @@ export function getPopularGirlsInAreaTop(areaId: number, limit: number = 5): Gir
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
     WHERE s.area_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) > 0
-    ORDER BY rs.review_count DESC, real_pct DESC
+    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, rs.review_count DESC, real_pct DESC
     LIMIT ?
   `).all(areaId, limit) as Girl[];
 }
