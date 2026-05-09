@@ -45,12 +45,18 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     category: shop?.category || '',
   });
   const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
+  // thin content girl は noindex (GSC indexing 改善):
+  //   - image_url なし AND reviews = 0 → 107,213 件 (26%) を de-prioritize
+  //   - sitemap からも除外済 (queries.ts GIRL_QUALITY_FILTER)
+  // ページ自体は 200 のまま (内部リンク・直URLで到達可能)
+  const isThinContent = (!girl.image_url || girl.image_url === '') && reviewCount === 0;
   return {
     title,
     description,
     alternates: {
       canonical: `https://panemaji.com/girl/${params.id}`,
     },
+    robots: isThinContent ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description,

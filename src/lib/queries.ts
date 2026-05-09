@@ -400,26 +400,56 @@ export function getStatsByPrefecture(prefectureSlug: string, catSlug?: string) {
 }
 
 // Sitemap helpers
-// 嬢ゼロ shop (8,366件 / 全 shop の 42.7%) は sitemap から除外:
-// thin content として Google index 対象外にする (crawl budget 効率化)
-const SHOP_HAS_GIRLS_FILTER = "AND EXISTS (SELECT 1 FROM girls g WHERE g.shop_id=shops.id AND g.is_active=1)";
+// GSC indexing 改善のため、 sitemap に含めるのは「質の高い URL のみ」 に絞る:
+//
+// shop:
+//   girls >= 3 OR 1件以上 review あり
+//   → 8,335 件 (44%) の thin shop を除外、 残り 10,503 件
+//
+// girl:
+//   image_url あり OR 1件以上 review あり
+//   → 107,213 件 (26%) の thin girl を除外、 残り 310,606 件
+//
+// 効果:
+//   - Google "サイト全体に低品質シグナル" 判定が消える
+//   - crawl budget が 高品質 URL に集中
+//   - "クロール済み・インデックス未登録" カテゴリ削減期待
+//
+// 注: thin URL 自体は 200 で生きる (直リンク・内部リンクで到達可能)。
+//     sitemap で priority signal を下げるだけ。
+const SHOP_QUALITY_FILTER = `
+  AND (
+    (SELECT COUNT(*) FROM girls g WHERE g.shop_id=shops.id AND g.is_active=1) >= 3
+    OR EXISTS (SELECT 1 FROM reviews r JOIN girls g ON g.id=r.girl_id WHERE g.shop_id=shops.id)
+  )`;
+
+const GIRL_QUALITY_FILTER = `
+  AND (
+    (image_url IS NOT NULL AND image_url != '')
+    OR EXISTS (SELECT 1 FROM reviews r WHERE r.girl_id=girls.id)
+  )`;
 
 export function getAllShopIds(): { id: number; last_seen_at: string | null }[] {
-  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_HAS_GIRLS_FILTER} ORDER BY id`).all() as { id: number; last_seen_at: string | null }[];
+  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_QUALITY_FILTER} ORDER BY id`).all() as { id: number; last_seen_at: string | null }[];
 }
 
 export function getGirlIdsPaginated(offset: number, limit: number): { id: number; last_seen_at: string | null }[] {
-  return db.prepare('SELECT id, last_seen_at FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').all(limit, offset) as { id: number; last_seen_at: string | null }[];
+  return db.prepare(`SELECT id, last_seen_at FROM girls WHERE is_active = 1 ${GIRL_QUALITY_FILTER} ORDER BY id LIMIT ? OFFSET ?`).all(limit, offset) as { id: number; last_seen_at: string | null }[];
 }
 
 // メモリ効率版: 50k 行を全部 array で持たずに iterator で逐次返す
-// (Render Starter 512MB sitemap 用)
+// (Render Starter 512MB sitemap 用 + GSC 質シグナル向上)
 export function iterateAllShopIds(): IterableIterator<{ id: number; last_seen_at: string | null }> {
-  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_HAS_GIRLS_FILTER} ORDER BY id`).iterate() as IterableIterator<{ id: number; last_seen_at: string | null }>;
+  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_QUALITY_FILTER} ORDER BY id`).iterate() as IterableIterator<{ id: number; last_seen_at: string | null }>;
 }
 
 export function iterateGirlIdsPaginated(offset: number, limit: number): IterableIterator<{ id: number; last_seen_at: string | null }> {
-  return db.prepare('SELECT id, last_seen_at FROM girls WHERE is_active = 1 ORDER BY id LIMIT ? OFFSET ?').iterate(limit, offset) as IterableIterator<{ id: number; last_seen_at: string | null }>;
+  return db.prepare(`SELECT id, last_seen_at FROM girls WHERE is_active = 1 ${GIRL_QUALITY_FILTER} ORDER BY id LIMIT ? OFFSET ?`).iterate(limit, offset) as IterableIterator<{ id: number; last_seen_at: string | null }>;
+}
+
+// 動的に girl 数を返す (sitemap shard 計算用) — 質フィルタ込み
+export function getActiveGirlCountForSitemap(): number {
+  return (db.prepare(`SELECT COUNT(*) AS c FROM girls WHERE is_active=1 ${GIRL_QUALITY_FILTER}`).get() as { c: number }).c;
 }
 
 // 画像 sitemap 用: 50k 行を iterator で逐次返す

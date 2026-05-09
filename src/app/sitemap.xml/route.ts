@@ -11,8 +11,9 @@ export const revalidate = 86400;
 export async function GET() {
   let girlCount = FALLBACK_GIRL_COUNT;
   try {
-    const { getActiveGirlCount } = await import('@/lib/queries');
-    girlCount = getActiveGirlCount();
+    // 質フィルタ後の数で shard 計算 (image OR review がない girls は sitemap 対象外)
+    const { getActiveGirlCountForSitemap } = await import('@/lib/queries');
+    girlCount = getActiveGirlCountForSitemap();
   } catch {
     // DB 未接続時 (build 時など) は fallback を使う
   }

@@ -38,9 +38,11 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     category: shop.category || '',
   });
   const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
-  // 嬢ゼロ + 口コミゼロ の thin content shop は noindex
-  // (Google から「中身のない URL」 と判定される SEO リスク回避)
-  const isThinContent = girlCount === 0 && reviewCount === 0;
+  // thin content shop は noindex (GSC indexing 改善):
+  //   - girls < 3 AND reviews = 0 → 8,335 件 (44%) を de-prioritize
+  //   - sitemap からも除外済 (queries.ts SHOP_QUALITY_FILTER)
+  // 効果: Google が低品質 URL を「クロール済み・未インデックス」 化、 全体 index 率向上
+  const isThinContent = girlCount < 3 && reviewCount === 0;
 
   return {
     title,
