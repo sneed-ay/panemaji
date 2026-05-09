@@ -80,26 +80,6 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc list-inside space-y-2">
               <li>
-                <strong>株式会社ユナイテッド（adstir）</strong> —{" "}
-                <a
-                  href="https://mt.united.jp/rule.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-pink-600 hover:underline"
-                >
-                  プライバシーポリシー
-                </a>
-                {" / "}
-                <a
-                  href="https://ja.ad-stir.com/sp/optout.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-pink-600 hover:underline"
-                >
-                  オプトアウト
-                </a>
-              </li>
-              <li>
                 <strong>DMMアフィリエイト（FANZA）</strong> — DMM.com が配信する商品広告。商品画像クリック時に DMM のサイトへ遷移します。
               </li>
               <li>

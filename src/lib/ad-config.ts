@@ -33,11 +33,10 @@ export const AD_CONFIG = {
     defaultFloor: 'videoa',
   },
 
-  // adstir SSP広告（審査通過済み / panemaji_rectangle 300x250）
-  // spot はメディア内の広告枠通し番号（公式タグで ad_spot: 1 が正しい）
-  // 302792 は広告枠IDで内部識別子なのでSDKには渡さない
+  // adstir SSP広告 — 2026-05-09 撤去: CPM がゴミカス低 (¥2.71) で収益貢献ゼロ。
+  // 比率は note + FANZA に再配分。 設定は残置するが enabled: false で完全停止。
   adstir: {
-    enabled: true,
+    enabled: false,
     appId: 'MEDIA-da9880ba',
     spot: 1,
     scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
@@ -73,18 +72,16 @@ export const AD_CONFIG = {
   exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
   juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
-  // バナー配信比率: note 50% / FANZA 40% / adstir 10%
-  // - FanzaWidget が空商品のとき → NoteAdImage にフォールバック
-  // - AdstirBanner が 3秒で広告iframe生成失敗時 → NoteAdImage にフォールバック
-  // 2026-04-23: adstir CPM ¥2.71 と低迷したため FANZA に比重を移した。
-  // 2026-05-03: AdBlock 環境で adstir SDK URL がブロックされ空打ちになるため
-  //             比率を更に FANZA 寄せ (75→80%)、 adstir フォールバック発火を 8s→3s に短縮。
-  // 2026-05-06: note 自社広告を再開 (新リンク + 新バナー7点)。
-  //             比率は fanza:note:adstir = 4:4:2 (note を主軸に戻す)。
-  // 2026-05-06 (PM): note の CTR が高かったので主軸に。 5:4:1 に再調整。
-  fanzaRatio: 4,
+  // バナー配信比率
+  // 2026-04-23: adstir CPM ¥2.71 で低迷 → FANZA 比重 up
+  // 2026-05-03: AdBlock で adstir SDK ブロック → FANZA 寄せ + フォールバック 3s 短縮
+  // 2026-05-06: note 自社広告を再開、 fanza:note:adstir = 4:4:2
+  // 2026-05-06 (PM): note CTR 高 → 5:4:1
+  // 2026-05-09: adstir 完全撤去 (CPM ゴミカス + AdBlock ブロック)
+  //             → fanza:note = 5:5 (両方主軸、 1:1)
+  fanzaRatio: 5,
   noteRatio: 5,
-  adstirRatio: 1,
+  adstirRatio: 0,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,

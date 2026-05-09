@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AD_CONFIG, wrapClickUrl } from '@/lib/ad-config';
-import AdstirBanner from './AdstirBanner';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
 import { pickFreshFanza } from '@/lib/fanzaPool';
+// adstir 撤去 (2026-05-09)。 import 削除でバンドル軽量化。
 
 const UNLOCK_KEY = 'content_unlocked';
 const UNLOCK_DURATION = 86400000; // 24時間
@@ -112,18 +112,16 @@ function LockerFanzaBanner() {
 }
 
 /**
- * ロッカー内広告: メインと同じ比率で FANZA / adstir / note を抽選。
+ * ロッカー内広告: メインと同じ比率で FANZA / note を抽選。
  * 1枠1広告ルールを遵守し、抽選された1種類だけ描画する。
- * no-fill / no-ad 時のみ LockerNoteFallback に自動差し替え。
+ * no-fill 時のみ LockerNoteFallback に自動差し替え。
+ * (adstir は 2026-05-09 撤去)
  */
 function LockerAd() {
   // 初回マウント時に抽選結果を固定（再レンダリングで切り替わらないように）
   const [adType] = useState<AdType>(() => pickAdType());
 
   if (adType === 'fanza') return <LockerFanzaBanner />;
-  if (adType === 'adstir') {
-    return <AdstirBanner size="locker" placement="locker" fallback={<LockerNoteFallback />} />;
-  }
   return <LockerNoteFallback />;
 }
 

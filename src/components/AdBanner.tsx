@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AD_CONFIG, getAdLink, wrapClickUrl } from '@/lib/ad-config';
-import AdstirBanner from './AdstirBanner';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
 import { pickFreshFanza } from '@/lib/fanzaPool';
+// adstir は 2026-05-09 撤去 (ratio 0 + enabled:false)。 import 削除でバンドル軽量化
 
 type AdSize = 'header' | 'rectangle' | 'footer';
 
@@ -141,7 +141,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
       <div className="px-2">
         {adType === 'fanza' && <FanzaWidget />}
         {adType === 'note' && <NoteAdImage size={size} />}
-        {adType === 'adstir' && <AdstirBanner size={size} placement="banner" fallback={<NoteAdImage size={size} />} />}
       </div>
     </div>
   );

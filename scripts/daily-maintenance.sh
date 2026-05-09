@@ -80,25 +80,76 @@ db.close();
 log ""
 log "=== Phase 1: データ収集 ==="
 
+# ----------------------------------------------------------------------
+# puppeteer hang watchdog
+# 過去事例 (5/3, 5/5, 5/8 全 cancelled / 私が手動でも遭遇):
+#   "Attempted to use detached Frame" 連発で全店舗 retry 失敗 → 30 分タイムアウト
+#   合計 14 都道府県 × 30 分 = 7h 浪費 → GitHub Actions 5h timeout で死亡
+# 対策:
+#   各 puppeteer scrape を background 起動し、進捗 stall (60 秒新ログ無し) なら
+#   即 kill して次フェーズに進む。 健康な場合は通常通り完走。
+# ----------------------------------------------------------------------
+run_with_stall_watchdog() {
+  local label="$1"
+  local stall_secs="${2:-90}"   # 何秒新ログ無しなら kill するか
+  local hard_timeout="${3:-3600}"
+  shift 3
+  local pre_lines
+  pre_lines=$(/usr/bin/wc -l < "$LOG_FILE" 2>/dev/null || /bin/echo 0)
+
+  # 子プロセスを background 起動
+  ( $TIMEOUT "$hard_timeout" "$@" >> "$LOG_FILE" 2>&1 ) &
+  local pid=$!
+
+  local last_lines=$pre_lines
+  local stall_count=0
+  while /bin/kill -0 $pid 2>/dev/null; do
+    /bin/sleep 15
+    local cur
+    cur=$(/usr/bin/wc -l < "$LOG_FILE" 2>/dev/null || /bin/echo 0)
+    if [ "$cur" -gt "$last_lines" ]; then
+      last_lines=$cur
+      stall_count=0
+    else
+      stall_count=$((stall_count + 15))
+      if [ "$stall_count" -ge "$stall_secs" ]; then
+        log "  [stall-watchdog] $label が ${stall_secs}s 進捗無し → kill"
+        # 子プロセスツリーごと kill (puppeteer の chrome 含む)
+        /usr/bin/pkill -P $pid 2>/dev/null
+        /bin/kill $pid 2>/dev/null
+        /bin/sleep 2
+        /bin/kill -9 $pid 2>/dev/null
+        # 念のため孤立 chrome / chromium プロセスも kill
+        /usr/bin/pkill -f "puppeteer|chrome.*--user-data" 2>/dev/null
+        return 124
+      fi
+    fi
+  done
+  /bin/wait $pid 2>/dev/null
+  return $?
+}
+
 # 1-1: cityheaven全国更新（デリヘル + 他カテゴリ差分）
+# fetch+regex 軽量実装で puppeteer 不使用 → 通常通り timeout 制御のみ
 log "  [1-1] cityheaven 全国更新..."
 $TIMEOUT 14400 node scripts/update-all.mjs $FORCE_FLAG >> "$LOG_FILE" 2>&1 || log "  [warn] update-all.mjs がタイムアウトまたはエラー"
 
-# 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）
+# 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）— puppeteer 系
+# stall watchdog 経由で hang 自動回避
 if [ "$QUICK_MODE" = false ]; then
   log "  [1-2] カテゴリ別スクレイプ（ソープ/ヘルス/ホテヘル/エステ）..."
   for pref in tokyo osaka kanagawa aichi hokkaido fukuoka miyagi saitama chiba hyogo kyoto hiroshima shizuoka niigata; do
-    $TIMEOUT 1800 node scripts/scrape-category.mjs "$pref" all >> "$LOG_FILE" 2>&1 || true
+    run_with_stall_watchdog "scrape-category $pref" 90 1800 node scripts/scrape-category.mjs "$pref" all || true
   done
 fi
 
-# 1-3: メンエス（aromaesthe + fues）
+# 1-3: メンエス（aromaesthe + fues）— puppeteer 系
 log "  [1-3] メンエスデータ更新..."
-$TIMEOUT 7200 node scripts/scrape-menesu.mjs all >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-menesu がタイムアウト"
+run_with_stall_watchdog "scrape-menesu" 120 7200 node scripts/scrape-menesu.mjs all || log "  [warn] scrape-menesu stall/timeout"
 
-# 1-4: men-esthe.jp
+# 1-4: men-esthe.jp — puppeteer 系
 log "  [1-4] men-esthe.jp データ更新..."
-$TIMEOUT 3600 node scripts/scrape-menesthe.mjs girls >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-menesthe がタイムアウト"
+run_with_stall_watchdog "scrape-menesthe" 120 3600 node scripts/scrape-menesthe.mjs girls || log "  [warn] scrape-menesthe stall/timeout"
 
 # 1-5: 0人店・100人上限店の再取得
 log "  [1-5] 0人/100人上限店の再取得..."
