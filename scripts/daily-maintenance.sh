@@ -81,13 +81,19 @@ log ""
 log "=== Phase 1: データ収集 ==="
 
 # ----------------------------------------------------------------------
-# puppeteer hang watchdog
-# 過去事例 (5/3, 5/5, 5/8 全 cancelled / 私が手動でも遭遇):
-#   "Attempted to use detached Frame" 連発で全店舗 retry 失敗 → 30 分タイムアウト
-#   合計 14 都道府県 × 30 分 = 7h 浪費 → GitHub Actions 5h timeout で死亡
-# 対策:
-#   各 puppeteer scrape を background 起動し、進捗 stall (60 秒新ログ無し) なら
-#   即 kill して次フェーズに進む。 健康な場合は通常通り完走。
+# puppeteer hang watchdog (二重監視: stall + browser-death error rate)
+#
+# 過去事例:
+#   5/3, 5/5, 5/8: "Attempted to use detached Frame" 連発で全店舗 retry 失敗
+#   → 30 分タイムアウト × 14 都道府県 = 7h 浪費 → GH Actions 5h cancel
+#
+# 5/9 v1 watchdog (stall のみ) は不十分:
+#   → "detached Frame" がエラーログを 15s 内で大量に吐くと「進捗あり」と誤判定
+#
+# v2: 二重監視
+#   (1) stall_secs (default 90s) 進捗ゼロ → kill
+#   (2) 直近の追加ログに detached Frame / Target closed / Protocol error が
+#       20 回以上 → browser 死んでるので即 kill (return 125)
 # ----------------------------------------------------------------------
 run_with_stall_watchdog() {
   local label="$1"
@@ -108,6 +114,20 @@ run_with_stall_watchdog() {
     local cur
     cur=$(/usr/bin/wc -l < "$LOG_FILE" 2>/dev/null || /bin/echo 0)
     if [ "$cur" -gt "$last_lines" ]; then
+      # (2) browser-death detection: 直近 15s で追加された行に
+      #     detached Frame / Target closed / Protocol error が 20 回以上ならbrowser死
+      local lines_added=$((cur - last_lines))
+      local err_count
+      err_count=$(/usr/bin/tail -n "$lines_added" "$LOG_FILE" 2>/dev/null | /usr/bin/grep -cE 'detached Frame|Target closed|Session closed|Protocol error|Connection closed' 2>/dev/null || /bin/echo 0)
+      if [ "$err_count" -ge 20 ]; then
+        log "  [browser-dead-watchdog] $label で browser-death エラー ${err_count}件/15s → 即 kill"
+        /usr/bin/pkill -P $pid 2>/dev/null
+        /bin/kill $pid 2>/dev/null
+        /bin/sleep 2
+        /bin/kill -9 $pid 2>/dev/null
+        /usr/bin/pkill -f "puppeteer|chrome.*--user-data" 2>/dev/null
+        return 125
+      fi
       last_lines=$cur
       stall_count=0
     else
