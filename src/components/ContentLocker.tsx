@@ -41,7 +41,7 @@ function trackLockerAd(event: 'banner_click' | 'banner_impression', adType: AdTy
   } catch {}
 }
 
-/** note 自社バナー（adstir/FANZA no-fill 時 or pickAdType で note 当選時のフォールバック） */
+/** note 自社バナー (kaito_ura) — FANZA no-fill 時 or pickAdType で note 当選時 */
 function LockerNoteFallback() {
   const impressionRef = useRef(false);
   useEffect(() => {
@@ -59,6 +59,34 @@ function LockerNoteFallback() {
       <a href={wrapClickUrl(noteUrl, { adType: 'note', adSize: 'locker', adPage: pagePath })}
         target="_blank" rel="noopener noreferrer sponsored"
         onClick={() => trackLockerAd('banner_click', 'note')}>
+        <img
+          src={adSrc}
+          alt="PR"
+          className="w-full max-w-[300px] h-auto rounded-lg"
+        />
+      </a>
+    </div>
+  );
+}
+
+/** Parally 自社バナー (sneed) — pickAdType で parally 当選時 */
+function LockerParallyBanner() {
+  const impressionRef = useRef(false);
+  useEffect(() => {
+    if (!impressionRef.current) {
+      impressionRef.current = true;
+      trackLockerAd('banner_impression', 'parally');
+    }
+  }, []);
+  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const parallyUrl = `${AD_CONFIG.parallyAd.link}?utm_source=panemaji&utm_medium=locker`;
+  const adImages = AD_CONFIG.parallyAd.images;
+  const adSrc = adImages[Math.floor(Math.random() * adImages.length)];
+  return (
+    <div className="flex justify-center">
+      <a href={wrapClickUrl(parallyUrl, { adType: 'parally', adSize: 'locker', adPage: pagePath })}
+        target="_blank" rel="noopener noreferrer sponsored"
+        onClick={() => trackLockerAd('banner_click', 'parally')}>
         <img
           src={adSrc}
           alt="PR"
@@ -112,16 +140,16 @@ function LockerFanzaBanner() {
 }
 
 /**
- * ロッカー内広告: メインと同じ比率で FANZA / note を抽選。
+ * ロッカー内広告: メインと同じ比率で FANZA / note / parally を抽選。
  * 1枠1広告ルールを遵守し、抽選された1種類だけ描画する。
- * no-fill 時のみ LockerNoteFallback に自動差し替え。
- * (adstir は 2026-05-09 撤去)
+ * (adstir は 2026-05-09 撤去、 parally は 2026-05-10 追加で 1:1:1)
  */
 function LockerAd() {
   // 初回マウント時に抽選結果を固定（再レンダリングで切り替わらないように）
   const [adType] = useState<AdType>(() => pickAdType());
 
   if (adType === 'fanza') return <LockerFanzaBanner />;
+  if (adType === 'parally') return <LockerParallyBanner />;
   return <LockerNoteFallback />;
 }
 

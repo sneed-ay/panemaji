@@ -1,12 +1,12 @@
 /**
- * Ad configuration: FANZA(コンテキスト連動) / note / adstir / Adsterra
+ * Ad configuration: FANZA(コンテキスト連動) / note (kaito_ura) / parally (sneed)
+ * adstir は 2026-05-09 撤去
  */
 export const AD_CONFIG = {
   enabled: true,
 
-  // 自社広告（note誘導）
-  // 2026-05-06: 旧 n5a879e870165 → 新 n7a45cd2a0008 / バナー素材を 7枚に刷新
-  // (3デザイン × 複数BG variant: 無料SEX 3点, ナンバーワン 2点, パパ活 2点)
+  // 自社広告 #1: kaito_ura note 記事誘導
+  // 2026-05-06: 旧 n5a879e870165 → 新 n7a45cd2a0008 / バナー素材 7枚
   noteAd: {
     link: 'https://note.com/kaito_ura/n/n7a45cd2a0008',
     images: [
@@ -19,6 +19,21 @@ export const AD_CONFIG = {
       '/ad/note-7.jpg', // パパ活 (白BG)
     ],
     utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
+  },
+
+  // 自社広告 #2: parally note 記事誘導 (2026-05-10 追加)
+  // 2次元エロ・1億円稼げる系のバナー (3 メッセージ × 2 デザイン variant = 6 枚)
+  parallyAd: {
+    link: 'https://note.com/sneed/n/n81d0caefa93f',
+    images: [
+      '/ad/parally-1.png', // エロ漫画好きなら1億円稼げる！ (淡白BG)
+      '/ad/parally-2.png', // エロマニアだったから月100万稼げた！！ (ハート背景)
+      '/ad/parally-3.png', // 性癖「2次元エロ」を隠していたら月100万円稼げた方法 (白BG)
+      '/ad/parally-4.png', // エロ漫画好きなら1億円稼げる！ (虹/星BG variant)
+      '/ad/parally-5.png', // 性癖「2次元エロ」を隠していたら月100万円稼げた方法 (¥コインBG variant)
+      '/ad/parally-6.png', // エロマニアだったから月100万稼げた！！ (黒金 variant)
+    ],
+    utm: { source: 'panemaji', medium: 'banner', campaign: 'parally_ad' },
   },
 
   // FANZA動的ウィジェット（DMMアフィリエイト - コンテキスト連動）
@@ -74,20 +89,20 @@ export const AD_CONFIG = {
 
   // バナー配信比率
   // 2026-04-23: adstir CPM ¥2.71 で低迷 → FANZA 比重 up
-  // 2026-05-03: AdBlock で adstir SDK ブロック → FANZA 寄せ + フォールバック 3s 短縮
-  // 2026-05-06: note 自社広告を再開、 fanza:note:adstir = 4:4:2
-  // 2026-05-06 (PM): note CTR 高 → 5:4:1
-  // 2026-05-09: adstir 完全撤去 (CPM ゴミカス + AdBlock ブロック)
-  //             → fanza:note = 5:5 (両方主軸、 1:1)
-  fanzaRatio: 5,
-  noteRatio: 5,
+  // 2026-05-03: AdBlock で adstir SDK ブロック → FANZA 寄せ
+  // 2026-05-06: note 自社広告再開、 fanza:note:adstir = 4:4:2 → 5:4:1
+  // 2026-05-09: adstir 完全撤去 → fanza:note = 5:5
+  // 2026-05-10: parally 追加 → fanza:note:parally = 1:1:1 (三分割均等)
+  fanzaRatio: 1,
+  noteRatio: 1,
+  parallyRatio: 1,
   adstirRatio: 0,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,
 };
 
-/** Build the full ad link with UTM parameters */
+/** Build the full ad link with UTM parameters (kaito_ura note ad) */
 export function getAdLink(content: string): string {
   const { noteAd } = AD_CONFIG;
   const params = new URLSearchParams({
@@ -97,6 +112,18 @@ export function getAdLink(content: string): string {
     utm_content: content,
   });
   return `${noteAd.link}?${params.toString()}`;
+}
+
+/** Build the full ad link with UTM parameters (parally note ad) */
+export function getParallyAdLink(content: string): string {
+  const { parallyAd } = AD_CONFIG;
+  const params = new URLSearchParams({
+    utm_source: parallyAd.utm.source,
+    utm_medium: parallyAd.utm.medium,
+    utm_campaign: parallyAd.utm.campaign,
+    utm_content: content,
+  });
+  return `${parallyAd.link}?${params.toString()}`;
 }
 
 /**
