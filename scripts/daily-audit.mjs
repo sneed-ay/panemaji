@@ -231,6 +231,32 @@ async function main() {
   const outFile = path.join(LOG_DIR, `audit-${date}.json`);
   fs.writeFileSync(outFile, JSON.stringify(report, null, 2));
 
+  // ─── 7. 日次 trend CSV に append (日次変化を後から 分析できる) ─────
+  // 1 行 1 日。 列: timestamp, overall, alerts, warnings, speed_home_ms, rss_pct, areas, dup_shops, db_age_h
+  const trendCsv = path.join(LOG_DIR, 'audit-trend.csv');
+  const home = report.speed.find(s => s.label === 'home');
+  const csvCols = [
+    report.timestamp_jst,
+    report.summary.overall,
+    report.summary.alerts,
+    report.summary.warnings,
+    home?.ttfb_ms ?? '',
+    report.prod_health?.rss_pct ?? '',
+    report.db_integrity?.areas ?? '',
+    report.db_integrity?.dup_shops ?? '',
+    report.cron_status?.age_h ?? '',
+  ];
+  const csvLine = csvCols.map(v => String(v).replace(/[\n,]/g, ' ')).join(',') + '\n';
+  try {
+    if (!fs.existsSync(trendCsv)) {
+      fs.writeFileSync(trendCsv, 'timestamp_jst,overall,alerts,warnings,home_ttfb_ms,rss_pct,areas,dup_shops,db_age_h\n');
+    }
+    fs.appendFileSync(trendCsv, csvLine);
+  } catch (e) {
+    // append 失敗しても 本処理には影響させない
+    console.error('[warn] trend csv append failed:', e.message);
+  }
+
   if (VERBOSE) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🩺 panemaji daily-audit  [${report.summary.overall.toUpperCase()}]`);
