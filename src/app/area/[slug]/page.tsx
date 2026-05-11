@@ -1,4 +1,5 @@
 import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture, getRelatedAreas } from '@/lib/queries';
+import { getAreaDescription } from '@/lib/area-descriptions';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import CategoryTabs from '@/components/CategoryTabs';
@@ -40,12 +41,20 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
   // SEO: 同 pref 内の他エリア (アクティブ店舗数の多い順 8件) — 内部リンク強化
   const relatedAreas = getRelatedAreas(prefSlug, area.id, 8);
 
+  // 独自エリア解説 (area-descriptions.ts) を CollectionPage.description に 流用
+  const areaDesc = getAreaDescription(params.slug);
+  const areaSchemaDescription = areaDesc
+    ? `${areaDesc.overview} ${areaDesc.access}`.slice(0, 500)
+    : `${prefName} ${area.name}エリアの風俗店の口コミ・パネマジ度を 一覧でチェック。 在籍嬢のリアル度ランキングと 利用者の評価を 掲載しています。`;
+
   // CollectionPage + ItemList JSON-LD (rich result 対応・副作用ゼロ・追加のみ)
   const collectionJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: `${area.name}の風俗店 口コミ・掲示板・パネマジ度`,
+    description: areaSchemaDescription,
     url: `https://panemaji.com/area/${params.slug}`,
+    inLanguage: 'ja-JP',
     isPartOf: { '@type': 'WebSite', name: 'パネマジ掲示板', url: 'https://panemaji.com' },
     about: { '@type': 'Place', name: area.name, containedInPlace: { '@type': 'Place', name: prefName } },
     ...(shops.length > 0 ? {
@@ -166,6 +175,21 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
         currentCat={catSlug || ''}
         basePath={`/area/${params.slug}`}
       />
+
+      {/* エリア概要 (SEO 上長文コンテンツ + ユーザー UX 両対応 — 該当エリアのみ) */}
+      {areaDesc && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-5 space-y-2 text-sm text-gray-700">
+          <h2 className="text-sm sm:text-base font-bold text-gray-800">{area.name}エリア概要</h2>
+          <p className="leading-relaxed">{areaDesc.overview}</p>
+          <details className="text-xs text-gray-600">
+            <summary className="cursor-pointer hover:text-blue-600 transition-colors">アクセス・利用のコツ を見る</summary>
+            <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-gray-100">
+              <p><span className="font-bold text-gray-700">アクセス:</span> {areaDesc.access}</p>
+              <p><span className="font-bold text-gray-700">利用のコツ:</span> {areaDesc.tips}</p>
+            </div>
+          </details>
+        </div>
+      )}
 
       {/* Popular Girls TOP5 */}
       {popularGirls.length > 0 && (
