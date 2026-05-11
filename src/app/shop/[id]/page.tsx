@@ -113,6 +113,20 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
   // JSON-LD LocalBusiness structured data
   const alternateNames = generateAlternateNames(shop.name);
+  // 最新口コミを Review schema に 流用 (rich result 用)
+  const ratingMap: Record<string, number> = { panel_match: 5, panel_diff: 3, jirai: 1 };
+  const shopReviewsJsonLd = latestReviews.slice(0, 5).map(r => ({
+    '@type': 'Review' as const,
+    author: { '@type': 'Person' as const, name: '匿名ユーザー' },
+    datePublished: r.created_at?.substring(0, 10),
+    reviewRating: {
+      '@type': 'Rating' as const,
+      ratingValue: ratingMap[r.panel_rating] || 3,
+      bestRating: 5,
+      worstRating: 1,
+    },
+    ...(r.comment ? { reviewBody: r.comment.slice(0, 200) } : {}),
+  }));
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -132,6 +146,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
         reviewCount: shop.review_count,
       },
     } : {}),
+    // 最新口コミを 5 件まで Review schema として 添える
+    ...(shopReviewsJsonLd.length > 0 ? { review: shopReviewsJsonLd } : {}),
   };
 
   const breadcrumbJsonLd = {
