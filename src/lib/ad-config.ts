@@ -93,8 +93,10 @@ export const AD_CONFIG = {
   // 2026-05-06: note 自社広告再開、 fanza:note:adstir = 4:4:2 → 5:4:1
   // 2026-05-09: adstir 完全撤去 → fanza:note = 5:5
   // 2026-05-10: parally 追加 → fanza:note:parally = 1:1:1 (三分割均等)
+  // 2026-05-11: kaito_ura note を一旦 OFF → fanza:parally = 1:1 (parally 効果検証 A/B)
+  //             note は LockerFanzaBanner の no-fill fallback でのみ残置
   fanzaRatio: 1,
-  noteRatio: 1,
+  noteRatio: 0,
   parallyRatio: 1,
   adstirRatio: 0,
   ninjaRatio: 0,
