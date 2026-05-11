@@ -386,6 +386,22 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
       <RelatedGuides areaSlug={shop.area_slug} />
 
+      {/* よくある質問 (SEO: FAQ schema と一致する visible 表示) */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-5">
+        <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">{shop.name}に関する よくある質問</h2>
+        <div className="space-y-2">
+          {faqQuestions.map((f, i) => (
+            <details key={i} className="group border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
+              <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors py-1.5 list-none flex items-start gap-1.5">
+                <span className="text-blue-500 text-xs mt-0.5 group-open:rotate-90 transition-transform inline-block">▶</span>
+                <span className="flex-1">{f.q}</span>
+              </summary>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mt-2 ml-4 pl-2 border-l-2 border-gray-100">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+
       {/* 同 prefecture の他エリア (内部リンク + 回遊・SEO) */}
       {relatedAreas.length > 0 && prefName && (
         <RelatedAreas areas={relatedAreas} prefectureName={prefName} />
