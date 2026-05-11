@@ -155,10 +155,16 @@ async function main() {
       const shops = db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active=1').get().c;
       const girls = db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;
       const reviews = db.prepare('SELECT COUNT(*) c FROM reviews').get().c;
+      // 画像カバレッジ — 嬢ページ品質の重要指標
+      const girlsWithImg = db.prepare(`SELECT COUNT(*) c FROM girls WHERE is_active=1 AND image_url IS NOT NULL AND image_url != ''`).get().c;
+      const girlImagePct = girls > 0 ? Math.round((girlsWithImg / girls) * 1000) / 10 : 0;
       report.db_integrity = {
         areas, legacy_slugs: legacy.length, dup_shops: dupShops,
         shops_active: shops, girls_active: girls, reviews,
+        girl_image_pct: girlImagePct,
+        girls_no_image: girls - girlsWithImg,
       };
+      if (girlImagePct < 70) report.warnings.push(`嬢の画像カバレッジが ${girlImagePct}% (${girls - girlsWithImg}人 画像なし) — fill-missing-images-safe.mjs を 検討`);
       if (areas !== 325) report.alerts.push(`areas count = ${areas} (CLAUDE.md ルール: 325 固定) → migrate-areas-mece --apply 必要`);
       if (legacy.length > 0) report.alerts.push(`legacy area slug ${legacy.length} 件残存: ${legacy.slice(0, 5).map(r => r.slug).join(', ')}${legacy.length > 5 ? ' …' : ''}`);
       if (dupShops > 0) report.alerts.push(`shop 重複 ${dupShops} グループ → merge-duplicate-shops --apply 必要`);
@@ -245,11 +251,13 @@ async function main() {
     report.db_integrity?.areas ?? '',
     report.db_integrity?.dup_shops ?? '',
     report.cron_status?.age_h ?? '',
+    report.db_integrity?.girl_image_pct ?? '',
+    report.db_integrity?.girls_no_image ?? '',
   ];
   const csvLine = csvCols.map(v => String(v).replace(/[\n,]/g, ' ')).join(',') + '\n';
   try {
     if (!fs.existsSync(trendCsv)) {
-      fs.writeFileSync(trendCsv, 'timestamp_jst,overall,alerts,warnings,home_ttfb_ms,rss_pct,areas,dup_shops,db_age_h\n');
+      fs.writeFileSync(trendCsv, 'timestamp_jst,overall,alerts,warnings,home_ttfb_ms,rss_pct,areas,dup_shops,db_age_h,girl_image_pct,girls_no_image\n');
     }
     fs.appendFileSync(trendCsv, csvLine);
   } catch (e) {
@@ -274,6 +282,7 @@ async function main() {
     if (report.db_integrity) {
       const d = report.db_integrity;
       console.log(`\n🗄️  DB  shops=${d.shops_active}  girls=${d.girls_active}  reviews=${d.reviews}  areas=${d.areas}  dup_shops=${d.dup_shops}  legacy_slugs=${d.legacy_slugs}`);
+      console.log(`   嬢の画像カバレッジ: ${d.girl_image_pct}% (${d.girls_no_image} 人画像なし)`);
     }
     if (report.data_freshness) {
       const f = report.data_freshness;
