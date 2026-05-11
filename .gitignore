@@ -53,3 +53,6 @@ menesu-progress.json
 fuzoku-japan-progress.json
 cityheaven-progress.json
 .DS_Store
+
+# daily-maintenance.sh lock (runtime, never commit)
+.daily-maintenance.lock
