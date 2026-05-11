@@ -1,5 +1,5 @@
 import HomeContent from '@/components/HomeContent';
-import { isValidPrefecture, isValidCategory, prefectureSlugToName, getAreasByPrefecture } from '@/lib/queries';
+import { isValidPrefecture, isValidCategory, prefectureSlugToName, getAreasByPrefecture, getStatsByPrefecture } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -24,6 +24,7 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
   const catSlug = searchParams.cat && isValidCategory(searchParams.cat) ? searchParams.cat : undefined;
   const prefName = prefectureSlugToName(params.prefecture);
   const areas = getAreasByPrefecture(params.prefecture);
+  const stats = getStatsByPrefecture(params.prefecture);
   const url = `https://panemaji.com/${params.prefecture}`;
 
   // CollectionPage + ItemList (areas) — 副作用ゼロ、 構造化データ追加のみ
@@ -78,6 +79,14 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
           text: areas.length > 0
             ? `${prefName}には現在 ${areas.length} エリアの店舗情報を 掲載しています。 ${areas.slice(0, 5).map(a => a.name).join('、')}など 主要エリアを 中心に カバーしています。`
             : `${prefName}は 現在エリア情報を 整備中です。`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `${prefName}の掲載店舗数・口コミ数は？`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${prefName}には現在 ${stats.shopCount.toLocaleString()} 店舗、 ${stats.girlCount.toLocaleString()} 人の在籍嬢、 ${stats.reviewCount.toLocaleString()} 件のユーザー口コミを 掲載しています (パネマジ掲示板 調べ)。`,
         },
       },
       {
