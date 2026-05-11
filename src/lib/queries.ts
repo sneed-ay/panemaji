@@ -150,6 +150,33 @@ export function getAreaBySlug(slug: string): Area | undefined {
   return db.prepare('SELECT * FROM areas WHERE slug = ?').get(slug) as Area | undefined;
 }
 
+/**
+ * 同じ都道府県内の他エリアを「アクティブ店舗数の多い順」で返す。
+ * SEO の internal linking 強化 (近隣エリア widget) 用。
+ *
+ * @param prefectureSlug 都道府県 slug (例: tokyo)
+ * @param excludeAreaId  除外する現在のエリア ID
+ * @param limit          最大件数 (default 8)
+ */
+export function getRelatedAreas(
+  prefectureSlug: string,
+  excludeAreaId: number,
+  limit = 8,
+): (Area & { shop_count: number })[] {
+  return db.prepare(`
+    SELECT a.*, COALESCE(sc.shop_count, 0) as shop_count
+    FROM areas a
+    LEFT JOIN (
+      SELECT area_id, COUNT(*) as shop_count
+      FROM shops WHERE is_active = 1
+      GROUP BY area_id
+    ) sc ON sc.area_id = a.id
+    WHERE a.prefecture = ? AND a.id != ?
+    ORDER BY shop_count DESC, a.display_order, a.id
+    LIMIT ?
+  `).all(prefectureSlug, excludeAreaId, limit) as (Area & { shop_count: number })[];
+}
+
 // Shop stats via LEFT JOIN aggregation (replaces multiple correlated subqueries)
 const SHOP_STATS_JOIN = `
   LEFT JOIN (
@@ -199,7 +226,7 @@ export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
 
 export function getShopById(id: number): Shop | undefined {
   return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, a.prefecture as area_prefecture, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
     ${SHOP_STATS_JOIN}

@@ -50,11 +50,19 @@ export default function ArticleLayout({
     "@type": "Article",
     headline: title,
     description: description || subtitle,
-    author: { "@type": "Organization", name: "パネマジ掲示板" },
-    publisher: { "@type": "Organization", name: "パネマジ掲示板", url: "https://panemaji.com" },
+    inLanguage: "ja-JP",
+    author: { "@type": "Organization", name: "パネマジ掲示板", url: "https://panemaji.com" },
+    publisher: {
+      "@type": "Organization",
+      name: "パネマジ掲示板",
+      url: "https://panemaji.com",
+      logo: { "@type": "ImageObject", url: "https://panemaji.com/icon-192.png", width: 192, height: 192 },
+    },
+    image: ["https://panemaji.com/icon-192.png"],
     datePublished,
     dateModified,
     mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
+    isPartOf: { "@type": "WebSite", name: "パネマジ掲示板", url: "https://panemaji.com" },
   };
 
   return (

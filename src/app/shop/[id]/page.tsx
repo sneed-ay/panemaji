@@ -1,10 +1,11 @@
-import { getShopById, getGirlsByShop, getReviewsByShop, getNearbyShops, CATEGORY_COLORS } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
 import AdBanner from '@/components/AdBanner';
 import RelatedGuides from '@/components/RelatedGuides';
+import RelatedAreas from '@/components/RelatedAreas';
 import { generateAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
@@ -79,6 +80,11 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const girls = getGirlsByShop(shopId, query || undefined);
   const latestReviews = getReviewsByShop(shopId, 5);
   const nearbyShops = getNearbyShops(shop.area_id, shopId, shop.category, 5);
+  // SEO: 同 prefecture の他エリア (現在の area を除外) — internal linking 強化
+  const relatedAreas = shop.area_prefecture
+    ? getRelatedAreas(shop.area_prefecture, shop.area_id, 8)
+    : [];
+  const prefName = shop.area_prefecture ? prefectureSlugToName(shop.area_prefecture) : '';
 
   const matchCount = shop.panel_match_count || 0;
   const diffCount = shop.panel_diff_count || 0;
@@ -115,6 +121,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     url: `https://panemaji.com/shop/${shop.id}`,
     description: shop.description || `${shop.area_name}エリアの風俗店「${shop.name}」`,
     ...(shop.area_name ? { areaServed: shop.area_name } : {}),
+    // EEAT: 鮮度シグナル — last_seen_at から dateModified
+    ...(shop.last_seen_at ? { dateModified: shop.last_seen_at } : {}),
     ...(typeof shop.review_count === 'number' && shop.review_count > 0 && typeof shop.real_pct === 'number' && shop.real_pct >= 0 ? {
       aggregateRating: {
         '@type': 'AggregateRating',
@@ -210,6 +218,12 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
             </div>
             {shop.description && (
               <p className="text-gray-600 mt-2 text-sm break-words">{shop.description}</p>
+            )}
+            {/* 最終更新日 (EEAT: 鮮度シグナル) */}
+            {shop.last_seen_at && (
+              <p className="text-[10px] sm:text-xs text-gray-400 mt-2">
+                最終更新: <time dateTime={shop.last_seen_at}>{new Date(shop.last_seen_at).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })}</time>
+              </p>
             )}
             {/* External Link */}
             {shop.source_url && (
@@ -355,6 +369,11 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
       )}
 
       <RelatedGuides areaSlug={shop.area_slug} />
+
+      {/* 同 prefecture の他エリア (内部リンク + 回遊・SEO) */}
+      {relatedAreas.length > 0 && prefName && (
+        <RelatedAreas areas={relatedAreas} prefectureName={prefName} />
+      )}
     </div>
   );
 }

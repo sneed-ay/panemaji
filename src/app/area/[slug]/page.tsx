@@ -1,9 +1,10 @@
-import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture, getRelatedAreas } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import CategoryTabs from '@/components/CategoryTabs';
 import GirlImage from '@/components/GirlImage';
 import RelatedGuides from '@/components/RelatedGuides';
+import RelatedAreas from '@/components/RelatedAreas';
 import type { Metadata } from 'next';
 
 export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
@@ -36,6 +37,8 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
   const popularGirls = getPopularGirlsInAreaTop(area.id, 5);
   const prefSlug = area.prefecture;
   const prefName = prefectureSlugToName(prefSlug);
+  // SEO: 同 pref 内の他エリア (アクティブ店舗数の多い順 8件) — 内部リンク強化
+  const relatedAreas = getRelatedAreas(prefSlug, area.id, 8);
 
   // CollectionPage + ItemList JSON-LD (rich result 対応・副作用ゼロ・追加のみ)
   const collectionJsonLd = {
@@ -49,12 +52,30 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
       mainEntity: {
         '@type': 'ItemList',
         numberOfItems: shops.length,
-        itemListElement: shops.slice(0, 10).map((shop, i) => ({
-          '@type': 'ListItem',
-          position: i + 1,
-          url: `https://panemaji.com/shop/${shop.id}`,
-          name: shop.name,
-        })),
+        itemListElement: shops.slice(0, 10).map((shop, i) => {
+          const hasRating = (shop.review_count ?? 0) > 0 && (shop.real_pct ?? -1) >= 0;
+          const item: Record<string, unknown> = {
+            '@type': 'LocalBusiness',
+            '@id': `https://panemaji.com/shop/${shop.id}#shop`,
+            name: shop.name,
+            url: `https://panemaji.com/shop/${shop.id}`,
+            address: { '@type': 'PostalAddress', addressLocality: area.name, addressRegion: prefName, addressCountry: 'JP' },
+          };
+          if (hasRating) {
+            item.aggregateRating = {
+              '@type': 'AggregateRating',
+              ratingValue: Math.round((shop.real_pct as number) / 20 * 10) / 10,
+              bestRating: 5,
+              worstRating: 0,
+              reviewCount: shop.review_count,
+            };
+          }
+          return {
+            '@type': 'ListItem',
+            position: i + 1,
+            item,
+          };
+        }),
       },
     } : {}),
   };
@@ -69,6 +90,51 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
     ],
   };
 
+  // FAQ JSON-LD — 検索結果の rich snippet 用 (副作用ゼロ、 schema のみ追加)
+  // shops が空でも "近隣エリア" 系の質問は意味があるので 表示する
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `${area.name}でパネマジ (パネルマジック) を見破る方法は？`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `パネマジ掲示板では ${area.name}エリアの 各店舗・嬢ごとに 実際の利用者の「パネル写真と実物の一致度 (パネマジ度)」を集計しています。 店舗ページでパネマジ度 (リアル度) を確認してから 予約することで パネマジ被害を回避できます。`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `${area.name}の風俗店の口コミはどこで見られる？`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${area.name}の デリヘル・ソープ・メンエス・ヘルス各店舗の 口コミは パネマジ掲示板の各店舗ページで 閲覧できます。 ユーザー投稿のみで構成され、 パネル写真と実物の 一致度、 接客評価、 リピートしたいかなど 実利用者目線の 評価が 集まっています。`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `${area.name}で 在籍数が多い店舗は？`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: shops.length > 0
+            ? `${area.name}には現在 ${shops.length} 店舗を 掲載しています。 在籍嬢数が 多い順・パネマジ度 (リアル度) 高い順に 並び替えてご確認いただけます。`
+            : `${area.name}は 現在掲載店舗がありません。 ${prefName}内の 他エリアから 探してみてください。`,
+        },
+      },
+    ],
+  };
+
+  // Place schema — エリアそのものの 地理情報
+  const placeJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Place',
+    name: area.name,
+    address: { '@type': 'PostalAddress', addressRegion: prefName, addressCountry: 'JP' },
+    containedInPlace: { '@type': 'Place', name: prefName },
+    url: `https://panemaji.com/area/${params.slug}`,
+  };
+
   return (
     <div className="space-y-6">
       <script
@@ -78,6 +144,14 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(placeJsonLd) }}
       />
       <nav className="text-xs sm:text-sm text-gray-500">
         <a href="/" className="hover:text-blue-600">トップ</a>
@@ -209,6 +283,9 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
       )}
 
       <RelatedGuides areaSlug={params.slug} prefSlug={prefSlug} />
+
+      {/* 近隣エリア: 内部リンク + 回遊 (SEO) */}
+      <RelatedAreas areas={relatedAreas} prefectureName={prefName} currentCat={catSlug} />
     </div>
   );
 }

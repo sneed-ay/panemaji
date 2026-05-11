@@ -180,6 +180,7 @@ export type Shop = {
   area_id: number;
   area_name?: string;
   area_slug?: string;
+  area_prefecture?: string;
   category: string;
   description: string | null;
   source_url: string | null;
