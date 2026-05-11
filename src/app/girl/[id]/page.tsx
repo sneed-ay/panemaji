@@ -85,6 +85,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
   const otherGirls = getOtherGirlsInShopExpanded(girl.shop_id, girlId, 6);
   const areaId = getShopAreaId(girl.shop_id);
   const popularGirls = areaId ? getPopularGirlsInArea(areaId, girlId, 4) : [];
+  const shop = getShopById(girl.shop_id);
 
   // Vote breakdown
   const matchCount = girl.panel_match_count || 0;
@@ -119,6 +120,17 @@ export default function GirlPage({ params }: { params: { id: string } }) {
     ...(alternateNames.length > 0 ? { alternateName: alternateNames } : {}),
     url: `https://panemaji.com/girl/${girl.id}`,
     ...(girl.image_url ? { image: girl.image_url } : {}),
+    // EEAT: 最新取得日 を dateModified として 提示 (鮮度シグナル)
+    ...(girl.last_seen_at ? { dateModified: girl.last_seen_at } : {}),
+    // worksFor: 所属店舗との関連 (Google Knowledge Graph 用)
+    ...(girl.shop_name ? {
+      worksFor: {
+        '@type': 'Organization',
+        name: girl.shop_name,
+        ...(shop?.area_name ? { areaServed: shop.area_name } : {}),
+        url: `https://panemaji.com/shop/${girl.shop_id}`,
+      },
+    } : {}),
     ...(reviews.length > 0 ? {
       aggregateRating: {
         '@type': 'AggregateRating',
