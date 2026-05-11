@@ -59,45 +59,36 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
   };
 
   // FAQ schema — rich result 候補 (副作用ゼロ)
+  // FAQ Q&A は schema + 視覚 UI で 共用
+  const faqItems: Array<{ q: string; a: string }> = [
+    {
+      q: `${prefName}でパネマジを 見破る方法は？`,
+      a: `パネマジ掲示板では ${prefName}内の各風俗店・嬢ごとの「パネル写真と実物の一致度 (パネマジ度)」をユーザー口コミから集計しています。 リアル度の高い店舗 / 嬢を 選ぶことで パネマジ被害を 大幅に減らせます。`,
+    },
+    {
+      q: `${prefName}には どんなエリアがある？`,
+      a: areas.length > 0
+        ? `${prefName}には現在 ${areas.length} エリアの店舗情報を 掲載しています。 ${areas.slice(0, 5).map(a => a.name).join('、')}など 主要エリアを 中心に カバーしています。`
+        : `${prefName}は 現在エリア情報を 整備中です。`,
+    },
+    {
+      q: `${prefName}の掲載店舗数・口コミ数は？`,
+      a: `${prefName}には現在 ${stats.shopCount.toLocaleString()} 店舗、 ${stats.girlCount.toLocaleString()} 人の在籍嬢、 ${stats.reviewCount.toLocaleString()} 件のユーザー口コミを 掲載しています (パネマジ掲示板 調べ)。`,
+    },
+    {
+      q: `${prefName}の店舗カテゴリは？`,
+      a: `${prefName}では デリヘル、 ソープ、 ヘルス、 ホテヘル、 メンエス、 エステ・アロマの 6 カテゴリの店舗を 掲載しています。 各カテゴリで パネマジ度ランキング・口コミ・在籍嬢情報を ご覧いただけます。`,
+    },
+  ];
+
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `${prefName}でパネマジを 見破る方法は？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `パネマジ掲示板では ${prefName}内の各風俗店・嬢ごとの「パネル写真と実物の一致度 (パネマジ度)」をユーザー口コミから集計しています。 リアル度の高い店舗 / 嬢を 選ぶことで パネマジ被害を 大幅に減らせます。`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `${prefName}には どんなエリアがある？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: areas.length > 0
-            ? `${prefName}には現在 ${areas.length} エリアの店舗情報を 掲載しています。 ${areas.slice(0, 5).map(a => a.name).join('、')}など 主要エリアを 中心に カバーしています。`
-            : `${prefName}は 現在エリア情報を 整備中です。`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `${prefName}の掲載店舗数・口コミ数は？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `${prefName}には現在 ${stats.shopCount.toLocaleString()} 店舗、 ${stats.girlCount.toLocaleString()} 人の在籍嬢、 ${stats.reviewCount.toLocaleString()} 件のユーザー口コミを 掲載しています (パネマジ掲示板 調べ)。`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `${prefName}の店舗カテゴリは？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `${prefName}では デリヘル、 ソープ、 ヘルス、 ホテヘル、 メンエス、 エステ・アロマの 6 カテゴリの店舗を 掲載しています。 各カテゴリで パネマジ度ランキング・口コミ・在籍嬢情報を ご覧いただけます。`,
-        },
-      },
-    ],
+    mainEntity: faqItems.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
   };
 
   return (
@@ -106,6 +97,21 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <HomeContent prefSlug={params.prefecture} catSlug={catSlug} />
+      {/* よくある質問 (SEO: FAQ schema と一致する visible 表示) */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-5 mt-5">
+        <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">{prefName}に関する よくある質問</h2>
+        <div className="space-y-2">
+          {faqItems.map(({ q, a }, i) => (
+            <details key={i} className="group border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
+              <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors py-1.5 list-none flex items-start gap-1.5">
+                <span className="text-blue-500 text-xs mt-0.5 group-open:rotate-90 transition-transform inline-block">▶</span>
+                <span className="flex-1">{q}</span>
+              </summary>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mt-2 ml-4 pl-2 border-l-2 border-gray-100">{a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
