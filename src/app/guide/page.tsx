@@ -275,8 +275,40 @@ export default function GuidePage() {
     // DB not available during build - empty is fine
   }
 
+  // /guide index ページの JSON-LD (副作用ゼロ、 schema 追加のみ)
+  const totalGuides = articles.length + Object.values(orphanGroups).reduce((s, arr) => s + arr.length, 0) + shopArticles.length;
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "トップ", item: "https://panemaji.com" },
+      { "@type": "ListItem", position: 2, name: "ガイド", item: "https://panemaji.com/guide" },
+    ],
+  };
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "コラム・ガイド一覧",
+    url: "https://panemaji.com/guide",
+    description: "パネマジ掲示板のコラム・ガイド記事一覧。エリア別ガイド、パネマジ対策、デリヘルの選び方など。",
+    isPartOf: { "@type": "WebSite", name: "パネマジ掲示板", url: "https://panemaji.com" },
+    inLanguage: "ja-JP",
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: totalGuides,
+      itemListElement: [...articles.slice(0, 30), ...shopArticles.slice(0, 10)].map((a, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `https://panemaji.com${a.href}`,
+        name: a.title,
+      })),
+    },
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }} />
       <nav className="text-sm text-gray-500 mb-6">
         <a href="/" className="hover:text-pink-600">トップ</a>
         <span className="mx-2">/</span>
