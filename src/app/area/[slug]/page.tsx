@@ -99,39 +99,34 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
     ],
   };
 
+  // FAQ Q&A は schema + 表示UI で 共用 (一貫性: Google が schema と 視覚を 突き合わせる)
+  const faqItems: Array<{ q: string; a: string }> = [
+    {
+      q: `${area.name}でパネマジ (パネルマジック) を見破る方法は？`,
+      a: `パネマジ掲示板では ${area.name}エリアの 各店舗・嬢ごとに 実際の利用者の「パネル写真と実物の一致度 (パネマジ度)」を集計しています。 店舗ページでパネマジ度 (リアル度) を確認してから 予約することで パネマジ被害を回避できます。`,
+    },
+    {
+      q: `${area.name}の風俗店の口コミはどこで見られる？`,
+      a: `${area.name}の デリヘル・ソープ・メンエス・ヘルス各店舗の 口コミは パネマジ掲示板の各店舗ページで 閲覧できます。 ユーザー投稿のみで構成され、 パネル写真と実物の 一致度、 接客評価、 リピートしたいかなど 実利用者目線の 評価が 集まっています。`,
+    },
+    {
+      q: `${area.name}で 在籍数が多い店舗は？`,
+      a: shops.length > 0
+        ? `${area.name}には現在 ${shops.length} 店舗を 掲載しています。 在籍嬢数が 多い順・パネマジ度 (リアル度) 高い順に 並び替えてご確認いただけます。`
+        : `${area.name}は 現在掲載店舗がありません。 ${prefName}内の 他エリアから 探してみてください。`,
+    },
+  ];
+
   // FAQ JSON-LD — 検索結果の rich snippet 用 (副作用ゼロ、 schema のみ追加)
   // shops が空でも "近隣エリア" 系の質問は意味があるので 表示する
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `${area.name}でパネマジ (パネルマジック) を見破る方法は？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `パネマジ掲示板では ${area.name}エリアの 各店舗・嬢ごとに 実際の利用者の「パネル写真と実物の一致度 (パネマジ度)」を集計しています。 店舗ページでパネマジ度 (リアル度) を確認してから 予約することで パネマジ被害を回避できます。`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `${area.name}の風俗店の口コミはどこで見られる？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `${area.name}の デリヘル・ソープ・メンエス・ヘルス各店舗の 口コミは パネマジ掲示板の各店舗ページで 閲覧できます。 ユーザー投稿のみで構成され、 パネル写真と実物の 一致度、 接客評価、 リピートしたいかなど 実利用者目線の 評価が 集まっています。`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `${area.name}で 在籍数が多い店舗は？`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: shops.length > 0
-            ? `${area.name}には現在 ${shops.length} 店舗を 掲載しています。 在籍嬢数が 多い順・パネマジ度 (リアル度) 高い順に 並び替えてご確認いただけます。`
-            : `${area.name}は 現在掲載店舗がありません。 ${prefName}内の 他エリアから 探してみてください。`,
-        },
-      },
-    ],
+    mainEntity: faqItems.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
   };
 
   // Place schema — エリアそのものの 地理情報
@@ -307,6 +302,22 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
       )}
 
       <RelatedGuides areaSlug={params.slug} prefSlug={prefSlug} />
+
+      {/* よくある質問 (SEO: FAQ schema と一致する visible 表示 — Google の rich snippet 採用率 up) */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-5">
+        <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">{area.name}に関する よくある質問</h2>
+        <div className="space-y-2">
+          {faqItems.map(({ q, a }, i) => (
+            <details key={i} className="group border-b border-gray-100 last:border-b-0 pb-2 last:pb-0">
+              <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors py-1.5 list-none flex items-start gap-1.5">
+                <span className="text-blue-500 text-xs mt-0.5 group-open:rotate-90 transition-transform inline-block">▶</span>
+                <span className="flex-1">{q}</span>
+              </summary>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mt-2 ml-4 pl-2 border-l-2 border-gray-100">{a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
 
       {/* 近隣エリア: 内部リンク + 回遊 (SEO) */}
       <RelatedAreas areas={relatedAreas} prefectureName={prefName} currentCat={catSlug} />
