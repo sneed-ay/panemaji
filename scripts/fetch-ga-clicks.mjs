@@ -114,40 +114,66 @@ async function main() {
   const days = Object.keys(byDay).sort().reverse();
   const types = [...adTypes].sort();
 
-  // クリックのみ表示
-  console.log('📅 日次 banner_click × ad_type\n');
-  const header = ['日付', ...types, '合計'];
-  console.log('  ' + header.map((h, i) => i === 0 ? h.padEnd(12) : h.padStart(8)).join(' '));
-  console.log('  ' + '─'.repeat(12 + (types.length + 1) * 9));
+  // ── 共通ヘルパー: 1 metric を 日別表示 ─────────────────────
+  function renderDailyTable(metric, label) {
+    console.log(`\n📅 日次 banner_${metric} × ad_type\n`);
+    const header = ['日付', ...types, '合計'];
+    console.log('  ' + header.map((h, i) => i === 0 ? h.padEnd(12) : h.padStart(8)).join(' '));
+    console.log('  ' + '─'.repeat(12 + (types.length + 1) * 9));
 
-  const totals = Object.fromEntries(types.map(t => [t, 0]));
-  let grand = 0;
-  for (const day of days) {
-    const counts = types.map(t => byDay[day][`click_${t}`] || 0);
-    const dayTotal = counts.reduce((a, b) => a + b, 0);
-    if (dayTotal === 0) continue; // skip 0-click days
-    counts.forEach((c, i) => totals[types[i]] += c);
-    grand += dayTotal;
+    const totals = Object.fromEntries(types.map(t => [t, 0]));
+    let grand = 0;
+    const daysWithData = [];
+    for (const day of days) {
+      const counts = types.map(t => byDay[day][`${metric}_${t}`] || 0);
+      const dayTotal = counts.reduce((a, b) => a + b, 0);
+      if (dayTotal === 0) continue;
+      counts.forEach((c, i) => totals[types[i]] += c);
+      grand += dayTotal;
+      daysWithData.push(day);
+      console.log(
+        '  ' + [day.padEnd(12), ...counts.map(c => String(c).padStart(8)), String(dayTotal).padStart(8)].join(' ')
+      );
+    }
+    console.log('  ' + '─'.repeat(12 + (types.length + 1) * 9));
     console.log(
-      '  ' + [day.padEnd(12), ...counts.map(c => String(c).padStart(8)), String(dayTotal).padStart(8)].join(' ')
+      '  ' + ['合計'.padEnd(12), ...types.map(t => String(totals[t]).padStart(8)), String(grand).padStart(8)].join(' ')
     );
+    // 平均 (データある日数で割る)
+    const nDays = daysWithData.length || 1;
+    const avgs = types.map(t => (totals[t] / nDays).toFixed(1));
+    const avgTotal = (grand / nDays).toFixed(1);
+    console.log(
+      '  ' + [`平均/日`.padEnd(12), ...avgs.map(a => a.padStart(8)), avgTotal.padStart(8)].join(' ')
+    );
+    console.log(`  (${nDays} 日分の平均)`);
+    return { totals, grand, nDays };
   }
-  console.log('  ' + '─'.repeat(12 + (types.length + 1) * 9));
-  console.log(
-    '  ' + ['合計'.padEnd(12), ...types.map(t => String(totals[t]).padStart(8)), String(grand).padStart(8)].join(' ')
-  );
 
-  // CTR (click / view) も併記
-  console.log('\n📈 CTR (click / view)\n');
+  // ── impression / view / click を 3 表 出力 ────────────────
+  const impStats = renderDailyTable('impression', 'インプレッション');
+  const viewStats = renderDailyTable('view', 'ビュー');
+  const clickStats = renderDailyTable('click', 'クリック');
+
+  // ── CTR (click / view) と CTR (click / impression) ───────
+  console.log('\n📈 ad_type 別 集計\n');
+  console.log('  ' + ['ad_type'.padEnd(10), 'imp'.padStart(8), 'view'.padStart(8), 'click'.padStart(8), 'CTR(c/v)'.padStart(10), 'CTR(c/i)'.padStart(10)].join(' '));
+  console.log('  ' + '─'.repeat(58));
   for (const t of types) {
-    let totalClicks = 0, totalViews = 0;
+    let totalClicks = 0, totalViews = 0, totalImps = 0;
     for (const day of days) {
       totalClicks += byDay[day][`click_${t}`] || 0;
       totalViews += byDay[day][`view_${t}`] || 0;
+      totalImps += byDay[day][`impression_${t}`] || 0;
     }
-    const ctr = totalViews > 0 ? (totalClicks / totalViews * 100).toFixed(2) : '0.00';
-    console.log(`  ${t.padEnd(10)}: clicks=${String(totalClicks).padStart(5)} / views=${String(totalViews).padStart(6)} = ${ctr}%`);
+    const ctrView = totalViews > 0 ? (totalClicks / totalViews * 100).toFixed(2) + '%' : '—';
+    const ctrImp = totalImps > 0 ? (totalClicks / totalImps * 100).toFixed(2) + '%' : '—';
+    console.log(
+      '  ' + [t.padEnd(10), String(totalImps).padStart(8), String(totalViews).padStart(8), String(totalClicks).padStart(8), ctrView.padStart(10), ctrImp.padStart(10)].join(' ')
+    );
   }
+  console.log(`\n  ※ view = AdBanner 表示 (banner_view) / impression = 実際にユーザーの画面に出た時 (banner_impression)`);
+  console.log(`  ※ CTR(c/v) は配信ベース、 CTR(c/i) は表示ベース (より厳しい)`);
 }
 
 main().catch(e => {

@@ -30,6 +30,28 @@ LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/daily-$(date +%Y%m%d-%H%M).log"
 
+# ----------------------------------------------------------------------
+# 重複起動防止 (CLAUDE.md 絶対不可侵ルール #2 への対応)
+#   - 既に daily-maintenance.sh が走っている場合は 何もせず exit
+#   - 走ってない場合は LOCK_FILE に自分の PID を書く
+#   - 終了時に LOCK_FILE を消す
+#   - 過去事例: 手動 + 04:06 scheduled-task の二重起動で puppeteer 競合 +
+#     DB lock + areas 膨張 (5/10 朝に発生)
+# ----------------------------------------------------------------------
+LOCK_FILE="$PROJECT_ROOT/.daily-maintenance.lock"
+if [ -f "$LOCK_FILE" ]; then
+  OTHER_PID=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
+  if [ -n "$OTHER_PID" ] && /bin/kill -0 "$OTHER_PID" 2>/dev/null; then
+    echo "[lock] daily-maintenance.sh は既に PID $OTHER_PID で走行中 — 重複起動を回避して exit 0"
+    exit 0
+  else
+    echo "[lock] stale lock file (PID $OTHER_PID is gone) — 削除して続行"
+    rm -f "$LOCK_FILE"
+  fi
+fi
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
+
 # macOS には GNU timeout がないので gtimeout（coreutils）にフォールバック。
 # 両方とも無い場合は警告して素通し実行（タイムアウト無し）。
 if command -v timeout &>/dev/null; then
