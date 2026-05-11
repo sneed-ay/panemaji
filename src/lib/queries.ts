@@ -399,31 +399,66 @@ export function updateGirlTwitter(girlId: number, twitterUrl: string) {
 }
 
 // Stats (only active) - single query instead of 3
+// プロセス起動時 1 回だけ計算して memo (DB 内容は deploy 単位で 固定なので 安全)
+let _statsMemo: { shopCount: number; girlCount: number; reviewCount: number } | null = null;
 export function getStats() {
-  return db.prepare(`
+  if (_statsMemo !== null) return _statsMemo;
+  _statsMemo = db.prepare(`
     SELECT
       (SELECT COUNT(*) FROM shops WHERE is_active = 1) as shopCount,
       (SELECT COUNT(*) FROM girls WHERE is_active = 1) as girlCount,
       (SELECT COUNT(*) FROM reviews) as reviewCount
   `).get() as { shopCount: number; girlCount: number; reviewCount: number };
+  return _statsMemo;
 }
 
-export function getStatsByPrefecture(prefectureSlug: string, catSlug?: string) {
+// 47 prefecture x stats を 1 度の集計クエリで 全部取り、 Map に memo。
+// 各 prefecture ページの 個別 COUNT (83ms × 多数) を 一括化 + キャッシュ。
+type StatsRow = { shopCount: number; girlCount: number; reviewCount: number };
+let _statsByPrefMemo: Map<string, StatsRow> | null = null;
+const EMPTY_STATS: StatsRow = { shopCount: 0, girlCount: 0, reviewCount: 0 };
+
+function populateStatsByPref(): Map<string, StatsRow> {
+  const m = new Map<string, StatsRow>();
+  const rows = db.prepare(`
+    SELECT a.prefecture,
+      COUNT(DISTINCT CASE WHEN s.is_active=1 THEN s.id END) as shopCount,
+      COUNT(DISTINCT CASE WHEN g.is_active=1 THEN g.id END) as girlCount,
+      COUNT(DISTINCT r.id) as reviewCount
+    FROM areas a
+    LEFT JOIN shops s ON s.area_id = a.id
+    LEFT JOIN girls g ON g.shop_id = s.id
+    LEFT JOIN reviews r ON r.girl_id = g.id
+    GROUP BY a.prefecture
+  `).all() as Array<{ prefecture: string } & StatsRow>;
+  for (const r of rows) {
+    m.set(r.prefecture, { shopCount: r.shopCount, girlCount: r.girlCount, reviewCount: r.reviewCount });
+  }
+  return m;
+}
+
+export function getStatsByPrefecture(prefectureSlug: string, catSlug?: string): StatsRow {
+  // cat 指定なしの場合は memo を使う (47 prefecture × ~ Q&A 表示で 毎ページ呼ばれる)
+  if (!catSlug) {
+    if (_statsByPrefMemo === null) {
+      _statsByPrefMemo = populateStatsByPref();
+    }
+    return _statsByPrefMemo.get(prefectureSlug) ?? EMPTY_STATS;
+  }
+  // cat 指定ありは レア (カテゴリ別 prefecture) なので 都度 query
   const catValue = categoryToDbValue(catSlug);
-  if (catValue) {
-    return db.prepare(`
-      SELECT
-        (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ? AND s.category = ?) as shopCount,
-        (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ? AND s.category = ?) as girlCount,
-        (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ? AND s.category = ?) as reviewCount
-    `).get(prefectureSlug, catValue, prefectureSlug, catValue, prefectureSlug, catValue) as { shopCount: number; girlCount: number; reviewCount: number };
+  if (!catValue) {
+    if (_statsByPrefMemo === null) {
+      _statsByPrefMemo = populateStatsByPref();
+    }
+    return _statsByPrefMemo.get(prefectureSlug) ?? EMPTY_STATS;
   }
   return db.prepare(`
     SELECT
-      (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ?) as shopCount,
-      (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ?) as girlCount,
-      (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ?) as reviewCount
-  `).get(prefectureSlug, prefectureSlug, prefectureSlug) as { shopCount: number; girlCount: number; reviewCount: number };
+      (SELECT COUNT(*) FROM shops s JOIN areas a ON s.area_id = a.id WHERE s.is_active = 1 AND a.prefecture = ? AND s.category = ?) as shopCount,
+      (SELECT COUNT(*) FROM girls g JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE g.is_active = 1 AND a.prefecture = ? AND s.category = ?) as girlCount,
+      (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id = g.id JOIN shops s ON g.shop_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.prefecture = ? AND s.category = ?) as reviewCount
+  `).get(prefectureSlug, catValue, prefectureSlug, catValue, prefectureSlug, catValue) as StatsRow;
 }
 
 // Sitemap helpers
