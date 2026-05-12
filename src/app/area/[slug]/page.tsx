@@ -266,41 +266,74 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
           </a>
         </div>
       ) : (
-        <div className="space-y-3">
-          {shops.map((shop) => {
-            const catColor = CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700';
-            return (
-              <a
-                key={shop.id}
-                href={`/shop/${shop.id}`}
-                className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow p-3 sm:p-4 no-underline"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">{shop.name}</h3>
-                    <div className="flex items-center gap-2 sm:gap-3 mt-1">
-                      <span className={`inline-block text-xs px-2 py-0.5 rounded shrink-0 ${catColor}`}>
-                        {shop.category}
-                      </span>
-                      <span className="text-gray-500 text-xs sm:text-sm">{area.name}</span>
+        <>
+          {/* TOP 50 ハイランク店: フルカード (HTML 軽量化のため 残りは コンパクト表示) */}
+          <div className="space-y-3">
+            {shops.slice(0, 50).map((shop) => {
+              const catColor = CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700';
+              return (
+                <a
+                  key={shop.id}
+                  href={`/shop/${shop.id}`}
+                  className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow p-3 sm:p-4 no-underline"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-800 break-words">{shop.name}</h3>
+                      <div className="flex items-center gap-2 sm:gap-3 mt-1">
+                        <span className={`inline-block text-xs px-2 py-0.5 rounded shrink-0 ${catColor}`}>
+                          {shop.category}
+                        </span>
+                        <span className="text-gray-500 text-xs sm:text-sm">{area.name}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                      <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} />
+                      <div className="text-right">
+                        <p className="text-xs sm:text-sm text-gray-500">
+                          在籍 <span className="text-blue-600 font-bold">{shop.girl_count}</span> 人
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-500">
+                          口コミ <span className="text-blue-600 font-bold">{shop.review_count}</span> 件
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                    <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} />
-                    <div className="text-right">
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        在籍 <span className="text-blue-600 font-bold">{shop.girl_count}</span> 人
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        口コミ <span className="text-blue-600 font-bold">{shop.review_count}</span> 件
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            );
-          })}
-        </div>
+                </a>
+              );
+            })}
+          </div>
+          {/* 51件以降: コンパクト1行表示 (SEO 内部リンク 維持・ HTML サイズ 1/5 に削減) */}
+          {shops.length > 50 && (
+            <div className="mt-4 bg-white rounded-lg shadow p-3 sm:p-4">
+              <h2 className="text-xs sm:text-sm font-bold text-gray-700 mb-2">
+                {area.name}の その他の店舗 ({shops.length - 50}件)
+              </h2>
+              <ul className="divide-y divide-gray-100">
+                {shops.slice(50).map((shop) => {
+                  const catColor = CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700';
+                  return (
+                    <li key={shop.id} className="py-1.5">
+                      <a
+                        href={`/shop/${shop.id}`}
+                        className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 no-underline"
+                      >
+                        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded shrink-0 ${catColor}`}>{shop.category}</span>
+                        <span className="flex-1 truncate">{shop.name}</span>
+                        {(shop.review_count ?? 0) > 0 && (shop.real_pct ?? -1) >= 0 && (
+                          <span className={`text-xs shrink-0 ${(shop.real_pct ?? 0) >= 70 ? 'text-green-600' : (shop.real_pct ?? 0) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {shop.real_pct}%
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400 shrink-0">{shop.girl_count}人</span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </>
       )}
 
       {/* 閉店した可能性が高い店舗 (折りたたみ + 閉店バッジ付き) */}
