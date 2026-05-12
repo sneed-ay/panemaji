@@ -1,4 +1,4 @@
-import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture, getRelatedAreas } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture, getRelatedAreas, getRecentlyClosedShopsByArea } from '@/lib/queries';
 import { getAreaDescription } from '@/lib/area-descriptions';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
@@ -35,7 +35,9 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
 
   const catSlug = searchParams.cat && isValidCategory(searchParams.cat) ? searchParams.cat : undefined;
   const shops = getShopsByArea(area.id, catSlug);
-  const popularGirls = getPopularGirlsInAreaTop(area.id, 5);
+  // 閉店候補店舗 (is_active=0 / または 7日以上嬢ゼロ) を 別 リスト で 下に 表示
+  const closedShops = getRecentlyClosedShopsByArea(area.id, catSlug, 30);
+  const popularGirls = getPopularGirlsInAreaTop(area.id, 10);
   const prefSlug = area.prefecture;
   const prefName = prefectureSlugToName(prefSlug);
   // SEO: 同 pref 内の他エリア (アクティブ店舗数の多い順 8件) — 内部リンク強化
@@ -186,11 +188,11 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
         </div>
       )}
 
-      {/* Popular Girls TOP5 */}
+      {/* Popular Girls TOP10 */}
       {popularGirls.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4 sm:p-5">
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">
-            {area.name} 人気の嬢 TOP5
+            {area.name} 人気の嬢 TOP10
           </h2>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
             {popularGirls.map((girl, i) => {
@@ -299,6 +301,50 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
             );
           })}
         </div>
+      )}
+
+      {/* 閉店した可能性が高い店舗 (折りたたみ + 閉店バッジ付き) */}
+      {closedShops.length > 0 && (
+        <details className="bg-gray-50 rounded-lg p-4 sm:p-5">
+          <summary className="cursor-pointer text-sm sm:text-base font-bold text-gray-600 hover:text-gray-800 transition-colors list-none flex items-center gap-2">
+            <span className="inline-block bg-gray-300 text-gray-700 text-xs px-2 py-0.5 rounded">閉店</span>
+            <span>閉店した可能性のある店舗 ({closedShops.length})</span>
+            <span className="text-xs text-gray-400 ml-auto">クリックで展開</span>
+          </summary>
+          <p className="text-[10px] sm:text-xs text-gray-500 mt-2 mb-3">
+            30 日以上 在籍嬢が確認できない or 自動巡回で 検知できなくなった店舗です。 過去の口コミ・パネマジ度の 参考にどうぞ。
+          </p>
+          <div className="space-y-2 mt-3">
+            {closedShops.map((shop) => {
+              const catColor = CATEGORY_COLORS[shop.category] || 'bg-gray-100 text-gray-700';
+              return (
+                <a
+                  key={shop.id}
+                  href={`/shop/${shop.id}`}
+                  className="block bg-white rounded shadow-sm hover:shadow transition-shadow p-2 sm:p-3 no-underline opacity-75 hover:opacity-100"
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-block bg-gray-300 text-gray-700 text-[10px] px-1.5 py-0.5 rounded shrink-0 font-medium">閉店</span>
+                        <h3 className="text-sm font-bold text-gray-700 break-words">{shop.name}</h3>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded shrink-0 ${catColor} opacity-70`}>{shop.category}</span>
+                        {(shop.review_count ?? 0) > 0 && (
+                          <span className="text-xs text-gray-500">口コミ {shop.review_count}件 (過去)</span>
+                        )}
+                        {shop.last_seen_at && (
+                          <span className="text-[10px] text-gray-400">最終確認: {new Date(shop.last_seen_at).toLocaleDateString('ja-JP')}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </details>
       )}
 
       <RelatedGuides areaSlug={params.slug} prefSlug={prefSlug} />

@@ -50,18 +50,20 @@ async function fetchPage(url, retries = 3) {
 }
 
 // fuzoku girllist HTML → girlId → image_url の Map
+// 2026-05-12: fuzoku.jp が href を single-quote に変更したのを反映 (`href='/SLUG/girl/ID/'`)。
+//   data-original 属性 (lazy-load) で 大きい画像 URL も取得。
 function parseImages(html, slug) {
   const out = new Map();
-  // パターン1: href="/SLUG/girl/ID/" → 直後の cloudfront URL
-  const re1 = new RegExp(`href="/${slug}/girl/(\\d+)/?"[\\s\\S]{0,2000}?(?:src|data-src)="(https?://d1ywb8dvwodsnl\\.cloudfront\\.net/[^"?]+\\.(?:jpg|jpeg|png|webp))`, 'g');
+  // パターン1: href='/SLUG/girl/ID/' (single quote) → 後続の data-original or src の cloudfront URL
+  const re1 = new RegExp(`href=['"]/${slug}/girl/(\\d+)/?['"][\\s\\S]{0,2500}?(?:data-original|data-src|src)=['"](https?://d1ywb8dvwodsnl\\.cloudfront\\.net/[^?'"]+\\.(?:jpg|jpeg|png|webp))`, 'g');
   let m;
   while ((m = re1.exec(html))) {
     if (!out.has(m[1])) out.set(m[1], m[2]);
   }
-  // パターン2: 逆順 (cloudfront → href)
-  const re2 = new RegExp(`(?:src|data-src)="(https?://d1ywb8dvwodsnl\\.cloudfront\\.net/[^"?]+\\.(?:jpg|jpeg|png|webp))[^"]*"[\\s\\S]{0,500}?href="/${slug}/girl/(\\d+)/?"`, 'g');
+  // パターン2: affiliation:"{ID}" の dataLayer push (ID が確実に取れる) → 直近の data-original
+  const re2 = new RegExp(`affiliation:["'](\\d+)["'][\\s\\S]{0,1500}?(?:data-original|data-src|src)=['"](https?://d1ywb8dvwodsnl\\.cloudfront\\.net/[^?'"]+\\.(?:jpg|jpeg|png|webp))`, 'g');
   while ((m = re2.exec(html))) {
-    if (!out.has(m[2])) out.set(m[2], m[1]);
+    if (!out.has(m[1])) out.set(m[1], m[2]);
   }
   return out;
 }

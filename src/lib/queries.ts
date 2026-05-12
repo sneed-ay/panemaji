@@ -224,6 +224,35 @@ export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
   `).all(...params) as Shop[];
 }
 
+/**
+ * エリアの「閉店した可能性が高い店舗」を 取得。
+ * 判定: is_active=0 (maintenance Phase 2-6 で 30 日以上ゼロ人なら deactivate される)
+ *      または 在籍 0 で last_seen_at が 7 日以上前。
+ * 直近 6 か月以内に 観測された店舗のみ (それ以前は サイト初期からの残存と思われ 表示しない)
+ *
+ * Note: 評価データがある shop は 閉店していても 価値が残るので 上位に出す。
+ */
+export function getRecentlyClosedShopsByArea(areaId: number, catSlug?: string, limit: number = 30): Shop[] {
+  const catValue = categoryToDbValue(catSlug);
+  const catFilter = catValue ? ' AND s.category = ?' : '';
+  const baseParams: (number | string)[] = [areaId];
+  if (catValue) baseParams.push(catValue);
+  baseParams.push(limit);
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    WHERE s.area_id = ?${catFilter}
+      AND (
+        (s.is_active = 0 AND s.last_seen_at >= date('now', '-180 days'))
+        OR (s.is_active = 1 AND COALESCE(gc.girl_count, 0) = 0 AND s.last_seen_at < date('now', '-7 days'))
+      )
+    ORDER BY COALESCE(rc.review_count, 0) DESC, s.last_seen_at DESC, s.name
+    LIMIT ?
+  `).all(...baseParams) as Shop[];
+}
+
 export function getShopById(id: number): Shop | undefined {
   return db.prepare(`
     SELECT s.*, a.name as area_name, a.slug as area_slug, a.prefecture as area_prefecture, ${SHOP_STATS_COLS}
@@ -687,16 +716,21 @@ export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
 }
 
 // Popular girls in area for area page (no exclusion)
-// 画像あり優先 (UX: area ページ TOP5 表示の見栄え向上)
-export function getPopularGirlsInAreaTop(areaId: number, limit: number = 5): Girl[] {
+// 2026-05-12: TOP5 → TOP10 + ソート変更:
+//   「評価が高い且つ口コミが多い」 を満たすよう 複合スコア (review_count × real_pct) で 並び替え
+//   画像有無は ソートから外す (画像なしでも 評価高い嬢は 上位に出す)
+export function getPopularGirlsInAreaTop(areaId: number, limit: number = 10): Girl[] {
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
-    WHERE s.area_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) > 0
-    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, rs.review_count DESC, real_pct DESC
+    WHERE s.area_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) >= 1
+    ORDER BY
+      (COALESCE(rs.review_count, 0) * COALESCE(real_pct, 0)) DESC,  -- 複合スコア (高評価×多口コミ)
+      rs.review_count DESC,                                          -- 同点は 口コミ多い順
+      real_pct DESC                                                  -- 次に 評価高い順
     LIMIT ?
   `).all(areaId, limit) as Girl[];
 }

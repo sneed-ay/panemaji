@@ -1,7 +1,5 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-
+// 2026-05-12: 内部 prefecture 切替を 削除 (上部 PrefectureSelector の選択に統一)。
+// 表示は server-side で 渡された initialShops そのまま、 client-side fetch 不要。
 type TopShop = {
   id: number;
   name: string;
@@ -11,85 +9,6 @@ type TopShop = {
   review_count: number;
   real_pct: number;
 };
-
-const PREFECTURES = ['全国', '東京', '神奈川', '埼玉', '千葉', '大阪', '愛知', '北海道', '福岡'] as const;
-
-type Props = {
-  initialShops: TopShop[];
-  initialPrefecture: string;
-};
-
-export default function PrefectureTop5({ initialShops, initialPrefecture }: Props) {
-  const [selected, setSelected] = useState(initialPrefecture);
-  const [shops, setShops] = useState<TopShop[]>(initialShops);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (selected === initialPrefecture) {
-      setShops(initialShops);
-      return;
-    }
-
-    setLoading(true);
-    fetch(`/api/top-shops?prefecture=${encodeURIComponent(selected)}`)
-      .then((res) => res.json())
-      .then((data: TopShop[]) => {
-        setShops(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setShops([]);
-        setLoading(false);
-      });
-  }, [selected, initialPrefecture, initialShops]);
-
-  return (
-    <div className="bg-white rounded-lg shadow p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm sm:text-base font-bold text-gray-800">
-          パネル通り率 TOP5
-        </h2>
-        <a
-          href={`/ranking?pref=${selected === '全国' ? 'tokyo' : PREF_SLUG_MAP[selected] || 'tokyo'}`}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-        >
-          もっと見る
-        </a>
-      </div>
-
-      {/* Prefecture Tabs */}
-      <div className="flex flex-wrap gap-1 mb-3">
-        {PREFECTURES.map((pref) => (
-          <button
-            key={pref}
-            onClick={() => setSelected(pref)}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-              selected === pref
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {pref}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-6">
-          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : shops.length > 0 ? (
-        <div className="space-y-2">
-          {shops.map((shop, i) => (
-            <CompactShopRankingCard key={shop.id} shop={shop} rank={i} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-sm">口コミが増えたら表示されます</p>
-      )}
-    </div>
-  );
-}
 
 const PREF_SLUG_MAP: Record<string, string> = {
   '東京': 'tokyo',
@@ -101,6 +20,40 @@ const PREF_SLUG_MAP: Record<string, string> = {
   '北海道': 'hokkaido',
   '福岡': 'fukuoka',
 };
+
+type Props = {
+  initialShops: TopShop[];
+  initialPrefecture: string;
+};
+
+export default function PrefectureTop5({ initialShops, initialPrefecture }: Props) {
+  const slug = PREF_SLUG_MAP[initialPrefecture] || 'tokyo';
+  return (
+    <div className="bg-white rounded-lg shadow p-4 sm:p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm sm:text-base font-bold text-gray-800">
+          {initialPrefecture}の パネル通り率 TOP5
+        </h2>
+        <a
+          href={`/ranking?pref=${slug}`}
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+        >
+          もっと見る
+        </a>
+      </div>
+
+      {initialShops.length > 0 ? (
+        <div className="space-y-2">
+          {initialShops.map((shop, i) => (
+            <CompactShopRankingCard key={shop.id} shop={shop} rank={i} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500 text-sm">{initialPrefecture}の口コミが 5 件以上になると 表示されます</p>
+      )}
+    </div>
+  );
+}
 
 function CompactShopRankingCard({ shop, rank }: { shop: TopShop; rank: number }) {
   const realPct = shop.real_pct ?? 0;
