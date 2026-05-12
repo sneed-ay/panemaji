@@ -178,10 +178,13 @@ export function getRelatedAreas(
 }
 
 // Shop stats via LEFT JOIN aggregation (replaces multiple correlated subqueries)
+// 2026-05-13: girl_count は 「画像 ありの girls」 のみで 算定。
+//   これにより 「在籍 N 人」 表示と shop 一覧表示が UI 上で 画像配置率 100% を 担保。
+//   画像 ない girls は ユーザーに 見せず, shop 統計にも 含めない。
 const SHOP_STATS_JOIN = `
   LEFT JOIN (
     SELECT shop_id, COUNT(*) as girl_count
-    FROM girls WHERE is_active = 1
+    FROM girls WHERE is_active = 1 AND image_url IS NOT NULL AND image_url <> ''
     GROUP BY shop_id
   ) gc ON gc.shop_id = s.id
   LEFT JOIN (
@@ -304,9 +307,10 @@ const GIRL_STATS_COLS = `
 // 並び順: 画像あり優先 → real_pct → review_count → name
 //   (UX 改善: 画像なし girl が混在で見栄え悪い問題への対応)
 export function getGirlsByShop(shopId: number, search?: string): Girl[] {
+  // 2026-05-13: 画像なし girls は 表示しない (placeholder 撲滅・「公開画像配置率 100%」 担保)
   const where = search
-    ? 'WHERE g.shop_id = ? AND g.is_active = 1 AND g.name LIKE ?'
-    : 'WHERE g.shop_id = ? AND g.is_active = 1';
+    ? 'WHERE g.shop_id = ? AND g.is_active = 1 AND g.image_url IS NOT NULL AND g.image_url <> \'\' AND g.name LIKE ?'
+    : 'WHERE g.shop_id = ? AND g.is_active = 1 AND g.image_url IS NOT NULL AND g.image_url <> \'\'';
   const params = search ? [shopId, `%${search}%`] : [shopId];
   return db.prepare(`
     SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
@@ -314,7 +318,7 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
     JOIN shops s ON g.shop_id = s.id
     ${GIRL_STATS_JOIN}
     ${where}
-    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, real_pct DESC, review_count DESC, g.name
+    ORDER BY real_pct DESC, review_count DESC, g.name
   `).all(...params) as Girl[];
 }
 
@@ -375,7 +379,8 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
       JOIN shops s ON g.shop_id = s.id
       JOIN areas a ON s.area_id = a.id
       WHERE a.prefecture = ?
-      ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, r.created_at DESC
+      AND g.image_url IS NOT NULL AND g.image_url <> ''
+      ORDER BY r.created_at DESC
       LIMIT ?
     `).all(prefectureSlug, limit) as Review[];
   }
@@ -384,7 +389,8 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id
-    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, r.created_at DESC
+    WHERE g.image_url IS NOT NULL AND g.image_url <> ''
+    ORDER BY r.created_at DESC
     LIMIT ?
   `).all(limit) as Review[];
 }
@@ -655,6 +661,7 @@ export function isValidPrefecture(slug: string): boolean {
 }
 
 // Get popular girls in the same area (by review count), for girl detail page
+// 2026-05-13: 画像あり優先 — girl 詳細ページの 「近隣 popular 嬢」widget で placeholder 撲滅
 export function getPopularGirlsInArea(areaId: number, excludeGirlId: number, limit: number = 4): Girl[] {
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
@@ -663,13 +670,14 @@ export function getPopularGirlsInArea(areaId: number, excludeGirlId: number, lim
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
     WHERE s.area_id = ? AND g.id != ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) > 0
+      AND g.image_url IS NOT NULL AND g.image_url <> ''
     ORDER BY rs.review_count DESC, real_pct DESC
     LIMIT ?
   `).all(areaId, excludeGirlId, limit) as Girl[];
 }
 
 // Get other girls in same shop for girl detail page (more results, review-few-first)
-// 画像あり優先 (UX: girl 詳細ページの「他の在籍」セクション向上)
+// 2026-05-13: 画像必須 (公開画像配置率 100% 担保 / placeholder 撲滅)
 export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: number, limit: number = 6): Girl[] {
   return db.prepare(`
     SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
@@ -677,7 +685,8 @@ export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: numbe
     JOIN shops s ON g.shop_id = s.id
     ${GIRL_STATS_JOIN}
     WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
-    ORDER BY (g.image_url IS NOT NULL AND g.image_url != '') DESC, COALESCE(rs.review_count, 0) ASC, g.name
+      AND g.image_url IS NOT NULL AND g.image_url <> ''
+    ORDER BY COALESCE(rs.review_count, 0) ASC, g.name
     LIMIT ?
   `).all(shopId, excludeGirlId, limit) as Girl[];
 }
@@ -720,6 +729,8 @@ export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
 //   「評価が高い且つ口コミが多い」 を満たすよう 複合スコア (review_count × real_pct) で 並び替え
 //   画像有無は ソートから外す (画像なしでも 評価高い嬢は 上位に出す)
 export function getPopularGirlsInAreaTop(areaId: number, limit: number = 10): Girl[] {
+  // 2026-05-13: 画像あり優先 — TOP10 popular girls カルーセルで placeholder が 出ないよう
+  //   image_url IS NOT NULL を 条件に。 視覚的に 100% 画像配置で 表示できる。
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
     FROM girls g
@@ -727,6 +738,7 @@ export function getPopularGirlsInAreaTop(areaId: number, limit: number = 10): Gi
     JOIN areas a ON s.area_id = a.id
     ${GIRL_STATS_JOIN}
     WHERE s.area_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) >= 1
+      AND g.image_url IS NOT NULL AND g.image_url <> ''
     ORDER BY
       (COALESCE(rs.review_count, 0) * COALESCE(real_pct, 0)) DESC,  -- 複合スコア (高評価×多口コミ)
       rs.review_count DESC,                                          -- 同点は 口コミ多い順
