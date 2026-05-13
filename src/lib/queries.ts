@@ -241,6 +241,10 @@ export function getRecentlyClosedShopsByArea(areaId: number, catSlug?: string, l
   const baseParams: (number | string)[] = [areaId];
   if (catValue) baseParams.push(catValue);
   baseParams.push(limit);
+  // 2026-05-13: gc.girl_count は 「画像あり girls」 のみで 算定するよう SHOP_STATS_JOIN 変更済。
+  //   結果 girl_count=0 の shop は ① 本物の 0 girl shop or ② 全 girls 画像なし の どちらか。
+  //   どちらも area の メインリストには 不適切 (前者=閉店, 後者=データ未整備)。
+  //   ここでは 7日 縛り を 緩めて active=1 で gc=0 の shop も 「閉店候補」 として 拾う。
   return db.prepare(`
     SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
@@ -249,7 +253,7 @@ export function getRecentlyClosedShopsByArea(areaId: number, catSlug?: string, l
     WHERE s.area_id = ?${catFilter}
       AND (
         (s.is_active = 0 AND s.last_seen_at >= date('now', '-180 days'))
-        OR (s.is_active = 1 AND COALESCE(gc.girl_count, 0) = 0 AND s.last_seen_at < date('now', '-7 days'))
+        OR (s.is_active = 1 AND COALESCE(gc.girl_count, 0) = 0)
       )
     ORDER BY COALESCE(rc.review_count, 0) DESC, s.last_seen_at DESC, s.name
     LIMIT ?
