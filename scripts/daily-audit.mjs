@@ -223,6 +223,22 @@ async function main() {
     report.warnings.push(`GitHub Release 確認 failed: ${e.message}`);
   }
 
+  // ─── 5b. GSC ADC auth 期限切れ チェック (2026-05-17 追加) ─────────────
+  //   過去事例: 5/11-16 で ADC token expire → 5日 GSC data ロス。 早期検知 必要。
+  try {
+    const { execSync } = await import('child_process');
+    const result = execSync('gcloud auth application-default print-access-token 2>&1', { encoding: 'utf8', timeout: 15000 });
+    if (result.includes('Reauthentication failed') || result.includes('expired') || result.includes('ERROR')) {
+      report.alerts.push(`GSC ADC 認証 期限切れ — gcloud auth application-default login --scopes=https://www.googleapis.com/auth/webmasters.readonly,https://www.googleapis.com/auth/cloud-platform 再実行 必要`);
+    }
+  } catch (e) {
+    if (e.message.includes('Reauthentication failed') || e.stdout?.includes('Reauthentication')) {
+      report.alerts.push(`GSC ADC 認証 期限切れ — gcloud auth application-default login --scopes=https://www.googleapis.com/auth/webmasters.readonly,https://www.googleapis.com/auth/cloud-platform 再実行 必要`);
+    } else if (!e.message.includes('command not found')) {
+      report.warnings.push(`GSC auth 確認 failed: ${e.message.slice(0, 80)}`);
+    }
+  }
+
   // ─── 6. サマリ ────────────────────────────────────
   report.summary = {
     alerts: report.alerts.length,

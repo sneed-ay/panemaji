@@ -124,6 +124,8 @@ run_with_stall_watchdog() {
   shift 3
   local pre_lines
   pre_lines=$(/usr/bin/wc -l < "$LOG_FILE" 2>/dev/null || /bin/echo 0)
+  local start_epoch
+  start_epoch=$(/bin/date +%s)
 
   # 子プロセスを background 起動
   ( $TIMEOUT "$hard_timeout" "$@" >> "$LOG_FILE" 2>&1 ) &
@@ -131,18 +133,22 @@ run_with_stall_watchdog() {
 
   local last_lines=$pre_lines
   local stall_count=0
+  local cumulative_browser_errors=0
+  local consecutive_shop_failures=0
   while /bin/kill -0 $pid 2>/dev/null; do
     /bin/sleep 15
     local cur
     cur=$(/usr/bin/wc -l < "$LOG_FILE" 2>/dev/null || /bin/echo 0)
     if [ "$cur" -gt "$last_lines" ]; then
-      # (2) browser-death detection: 直近 15s で追加された行に
-      #     detached Frame / Target closed / Protocol error が 20 回以上ならbrowser死
       local lines_added=$((cur - last_lines))
+      local recent_log
+      recent_log=$(/usr/bin/tail -n "$lines_added" "$LOG_FILE" 2>/dev/null)
+
+      # (2) browser-death detection v2: 15s 以内に 10件+ で 即 kill (旧 20→10 に 感度UP)
       local err_count
-      err_count=$(/usr/bin/tail -n "$lines_added" "$LOG_FILE" 2>/dev/null | /usr/bin/grep -cE 'detached Frame|Target closed|Session closed|Protocol error|Connection closed' 2>/dev/null || /bin/echo 0)
-      if [ "$err_count" -ge 20 ]; then
-        log "  [browser-dead-watchdog] $label で browser-death エラー ${err_count}件/15s → 即 kill"
+      err_count=$(/bin/echo "$recent_log" | /usr/bin/grep -cE 'detached Frame|Target closed|Session closed|Protocol error|Connection closed' 2>/dev/null || /bin/echo 0)
+      if [ "$err_count" -ge 10 ]; then
+        log "  [browser-dead-watchdog v2] $label で browser-death エラー ${err_count}件/15s → 即 kill"
         /usr/bin/pkill -P $pid 2>/dev/null
         /bin/kill $pid 2>/dev/null
         /bin/sleep 2
@@ -150,18 +156,46 @@ run_with_stall_watchdog() {
         /usr/bin/pkill -f "puppeteer|chrome.*--user-data" 2>/dev/null
         return 125
       fi
+      # (3) cumulative browser-death (slow drip): 1 run 累計 60件 で kill (今日10時間 stuck 対策)
+      cumulative_browser_errors=$((cumulative_browser_errors + err_count))
+      if [ "$cumulative_browser_errors" -ge 60 ]; then
+        log "  [browser-dead-cumulative] $label 累計 browser-death ${cumulative_browser_errors}件 → kill"
+        /usr/bin/pkill -P $pid 2>/dev/null
+        /bin/kill $pid 2>/dev/null
+        /bin/sleep 2
+        /bin/kill -9 $pid 2>/dev/null
+        /usr/bin/pkill -f "puppeteer|chrome.*--user-data" 2>/dev/null
+        return 126
+      fi
+      # (4) 連続 shop 失敗 検出 (各 shop の "error:" 行 を 数えて 10連続 で kill)
+      local recent_errors
+      recent_errors=$(/bin/echo "$recent_log" | /usr/bin/grep -cE '^error: |error: Attempted' 2>/dev/null || /bin/echo 0)
+      local recent_success
+      recent_success=$(/bin/echo "$recent_log" | /usr/bin/grep -cE 'girls=\[|active=[1-9]|inserted [0-9]|updated [0-9]' 2>/dev/null || /bin/echo 0)
+      if [ "$recent_errors" -gt 0 ] && [ "$recent_success" -eq 0 ]; then
+        consecutive_shop_failures=$((consecutive_shop_failures + recent_errors))
+        if [ "$consecutive_shop_failures" -ge 10 ]; then
+          log "  [consecutive-fail-watchdog] $label 直近 ${consecutive_shop_failures} shop 連続失敗 (新成功 0) → kill"
+          /usr/bin/pkill -P $pid 2>/dev/null
+          /bin/kill $pid 2>/dev/null
+          /bin/sleep 2
+          /bin/kill -9 $pid 2>/dev/null
+          /usr/bin/pkill -f "puppeteer|chrome.*--user-data" 2>/dev/null
+          return 127
+        fi
+      else
+        consecutive_shop_failures=0  # success が 1件でも出たら reset
+      fi
       last_lines=$cur
       stall_count=0
     else
       stall_count=$((stall_count + 15))
       if [ "$stall_count" -ge "$stall_secs" ]; then
         log "  [stall-watchdog] $label が ${stall_secs}s 進捗無し → kill"
-        # 子プロセスツリーごと kill (puppeteer の chrome 含む)
         /usr/bin/pkill -P $pid 2>/dev/null
         /bin/kill $pid 2>/dev/null
         /bin/sleep 2
         /bin/kill -9 $pid 2>/dev/null
-        # 念のため孤立 chrome / chromium プロセスも kill
         /usr/bin/pkill -f "puppeteer|chrome.*--user-data" 2>/dev/null
         return 124
       fi
@@ -178,9 +212,17 @@ $TIMEOUT 14400 node scripts/update-all.mjs $FORCE_FLAG >> "$LOG_FILE" 2>&1 || lo
 
 # 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）— puppeteer 系
 # stall watchdog 経由で hang 自動回避
+# 2026-05-17: Phase 1-2 全体 hard cap 追加 (1時間 = 14 pref に 平均 4分強)
+#   過去事故: 1 pref 30min × 14 = 7h 連続失敗 → 全体 cap で 強制 abort
 if [ "$QUICK_MODE" = false ]; then
   log "  [1-2] カテゴリ別スクレイプ（ソープ/ヘルス/ホテヘル/エステ）..."
+  phase12_start=$(/bin/date +%s)
   for pref in tokyo osaka kanagawa aichi hokkaido fukuoka miyagi saitama chiba hyogo kyoto hiroshima shizuoka niigata; do
+    elapsed=$(($(/bin/date +%s) - phase12_start))
+    if [ "$elapsed" -gt 3600 ]; then
+      log "  [phase12-cap] 1-2 全体 1h 超過 (${elapsed}s) → 残 pref スキップ"
+      break
+    fi
     run_with_stall_watchdog "scrape-category $pref" 90 1800 node scripts/scrape-category.mjs "$pref" all || true
   done
 fi
