@@ -1,7 +1,7 @@
 import HomeContent from '@/components/HomeContent';
 import { isValidPrefecture, isValidCategory, prefectureSlugToName, getStats, getPrefectures } from '@/lib/queries';
 
-export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
+export const revalidate = 3600; // 2026-05-17: 30min → 60min (ISR rebuild storm 防止 / 体感速度 ↑)
 
 export default function Home({ searchParams }: { searchParams: { pref?: string; cat?: string } }) {
   const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';

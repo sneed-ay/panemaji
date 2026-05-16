@@ -8,7 +8,7 @@ import RelatedGuides from '@/components/RelatedGuides';
 import RelatedAreas from '@/components/RelatedAreas';
 import type { Metadata } from 'next';
 
-export const revalidate = 1800; // 5min → 30min (memory-aware ISR / Render Starter 512MB)
+export const revalidate = 7200; // 2026-05-17: 30min → 2h (ISR rebuild storm 防止 / Render Starter 0.5CPU 救済)
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const area = getAreaBySlug(params.slug);
