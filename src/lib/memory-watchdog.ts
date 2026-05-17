@@ -21,8 +21,8 @@
  */
 
 const RSS_LIMIT_MB = 512; // Render Starter
-const WARN_PCT = 88; // この%超で warn ログ
-const CRITICAL_PCT = 92; // この%超で process.exit(1)
+const WARN_PCT = 75; // この%超で warn ログ
+const CRITICAL_PCT = 80; // 2026-05-17: 92→80% に 引き下げ (74%で GC pause / 12s timeout 観測)
 const CHECK_INTERVAL_MS = 60_000; // 毎分チェック
 
 let started = false;
