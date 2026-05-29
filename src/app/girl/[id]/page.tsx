@@ -93,6 +93,29 @@ export default function GirlPage({ params }: { params: { id: string } }) {
   const jiraiCount = girl.jirai_count || 0;
   const totalVotes = matchCount + diffCount + jiraiCount;
 
+  // === 独自テキスト (SEO: 量産型 page 脱却・girl ごとに 異なる 地の文) ===
+  // 2026-05-24: girl page の 96% が「画像+スペックのみ・地の文ゼロ」で index率 11% に低迷。
+  //   スペック/エリア/店舗/評価 から 自然文を 動的生成して 各 page を 独自コンテンツ化する。
+  const category = shop?.category || '風俗';
+  const realPctVal = girl.real_pct != null && girl.real_pct >= 0 ? girl.real_pct : null;
+  const specParts: string[] = [];
+  if (girl.age) specParts.push(`${girl.age}歳`);
+  if (girl.height) specParts.push(`身長${girl.height}cm`);
+  if (girl.bust && girl.cup) specParts.push(`バスト${girl.bust}cm（${girl.cup}カップ）`);
+  if (girl.waist) specParts.push(`ウエスト${girl.waist}cm`);
+  if (girl.hip) specParts.push(`ヒップ${girl.hip}cm`);
+  const specSentence = specParts.length > 0 ? `プロフィールは${specParts.join('・')}。` : '';
+  // 評価文 — realPct の 高低で 文面を 変えて 量産感 を 減らす
+  let evalSentence: string;
+  if (realPctVal !== null && totalVotes > 0) {
+    const tier = realPctVal >= 70 ? '高く、パネル写真に近いという声が多い'
+      : realPctVal >= 40 ? 'まずまずで、評価が分かれる'
+      : '低めで、パネルとの差に注意したいという声がある';
+    evalSentence = `利用者による パネル通り率（パネマジ度）は ${realPctVal}% と${tier}傾向です。${totalVotes}件の口コミ評価をもとに、予約前にパネルと実物の一致度を確認できます。`;
+  } else {
+    evalSentence = `${girl.name}さんの口コミ評価はまだ投稿されていません。実際に利用された方のパネル評価（パネル通り／多少違う／詐欺レベル）をお待ちしています。`;
+  }
+
   // JSON-LD structured data for reviews
   const ratingMap: Record<string, number> = { panel_match: 5, panel_diff: 3, jirai: 1 };
   const jsonLdReviews = reviews.map((r) => ({
@@ -253,6 +276,21 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                 <span className="ml-2 font-medium text-gray-800">{girl.hip}cm</span>
               </div>
             )}
+          </div>
+
+          {/* 独自紹介文 (SEO: girl ごとに 異なる 地の文 + 内部リンク) */}
+          <div className="mt-5 text-sm text-gray-600 leading-relaxed">
+            <p>
+              {girl.name}さんは、
+              {girl.area_slug ? (
+                <a href={`/area/${girl.area_slug}`} className="text-blue-600 hover:underline">{girl.area_name}</a>
+              ) : (
+                <span>{girl.area_name}</span>
+              )}
+              エリアの{category}「
+              <a href={`/shop/${girl.shop_id}`} className="text-blue-600 hover:underline">{girl.shop_name}</a>
+              」に在籍する女性です。{specSentence}{evalSentence}
+            </p>
           </div>
 
           {/* Vote Breakdown with Progress Bars */}
