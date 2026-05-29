@@ -31,6 +31,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
 
 const SITE_URL = process.env.GSC_SITE_URL || 'https://panemaji.com/';
+// ADC で GSC API を叩くには quota project ヘッダ必須 (無いと永久 hang)。 2026-05-29 修正。
+const QUOTA_PROJECT = process.env.GSC_QUOTA_PROJECT || 'panemaji-gsc-3693';
 const SEARCH_CONSOLE_UI_URL = `https://search.google.com/search-console/performance/search-analytics?resource_id=${encodeURIComponent(SITE_URL)}`;
 
 // ─── CLI 引数パース ─────────────────────────────────
@@ -68,6 +70,7 @@ async function fetchSearchAnalytics(auth, days, rowLimit) {
     headers: {
       'Authorization': `Bearer ${auth.accessToken}`,
       'Content-Type': 'application/json',
+      'x-goog-user-project': QUOTA_PROJECT,
     },
     body: JSON.stringify(body),
   });
@@ -104,6 +107,7 @@ async function fetchPageAnalytics(auth, days, rowLimit) {
     headers: {
       'Authorization': `Bearer ${auth.accessToken}`,
       'Content-Type': 'application/json',
+      'x-goog-user-project': QUOTA_PROJECT,
     },
     body: JSON.stringify(body),
   });
@@ -141,7 +145,16 @@ async function getAuth() {
     }
   }
 
-  // 方法2: ローカルの credentials.json (OAuth2)
+  // 方法2: ADC (gcloud auth application-default) — 本環境の標準
+  try {
+    const { execSync } = await import('node:child_process');
+    const token = execSync('gcloud auth application-default print-access-token', { encoding: 'utf8' }).trim();
+    if (token) return { accessToken: token };
+  } catch (e) {
+    console.error(`  ADC 認証エラー: ${e.message}`);
+  }
+
+  // 方法3: ローカルの credentials.json (OAuth2)
   const localCred = path.join(PROJECT_ROOT, 'credentials.json');
   if (fs.existsSync(localCred)) {
     console.log('  credentials.json を検出しましたが、OAuth2 フローは未実装です。');

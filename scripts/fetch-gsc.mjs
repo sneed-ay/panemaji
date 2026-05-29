@@ -19,11 +19,11 @@
  *   GSC_SITE=https://panemaji.com/  (デフォルト)
  *   GSC_DAYS=28                     (比較期間の長さ)
  */
-import { google } from 'googleapis';
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -31,6 +31,11 @@ const ROOT = path.resolve(__dirname, '..');
 const SITE_URL = process.env.GSC_SITE || 'https://panemaji.com/';
 const KEY_FILE = process.env.GSC_SA_KEY;
 const DAYS = Number(process.env.GSC_DAYS || 28);
+// ADC モードで GSC API を叩くには quota project の明示が必須。
+// googleapis ライブラリは x-goog-user-project を送らず "永久 hang" するため、
+// REST 直叩き + 明示ヘッダに切替えた (2026-05-29 恒久修正)。
+const QUOTA_PROJECT = process.env.GSC_QUOTA_PROJECT || 'panemaji-gsc-3693';
+const GSC_ENDPOINT = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(SITE_URL)}/searchAnalytics/query`;
 
 // ブランド指名（部分一致・大小無視・空白無視で判定）
 const BRAND_PATTERNS = [
@@ -83,19 +88,35 @@ function ymd(d) {
   return d.toISOString().slice(0, 10);
 }
 
-async function fetchQueries(searchconsole, startDate, endDate) {
-  // GSC API: 1リクエスト max 25000 rows。クエリだけ欲しいので十分
-  const res = await searchconsole.searchanalytics.query({
-    siteUrl: SITE_URL,
-    requestBody: {
-      startDate,
-      endDate,
-      dimensions: ['query'],
-      rowLimit: 25000,
-      dataState: 'all',
-    },
+// 認証トークン取得: ADC は gcloud が refresh token から都度発行 (cron でも安定)。
+// SA キー指定時のみ google-auth-library で JWT 発行。
+async function getAuth() {
+  if (KEY_FILE) {
+    const { google } = await import('googleapis');
+    const a = new google.auth.GoogleAuth({
+      keyFile: KEY_FILE.replace(/^~/, process.env.HOME),
+      scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+    });
+    const client = await a.getClient();
+    const t = await client.getAccessToken();
+    return { token: typeof t === 'string' ? t : t.token, quota: null, mode: `SA key (${KEY_FILE})` };
+  }
+  const token = execSync('gcloud auth application-default print-access-token', { encoding: 'utf8' }).trim();
+  return { token, quota: QUOTA_PROJECT, mode: `ADC (quota=${QUOTA_PROJECT})` };
+}
+
+async function fetchQueries(auth, startDate, endDate) {
+  // REST 直叩き (googleapis は quota header を送らず hang するため)。max 25000 rows。
+  const headers = { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' };
+  if (auth.quota) headers['x-goog-user-project'] = auth.quota;
+  const res = await fetch(GSC_ENDPOINT, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ startDate, endDate, dimensions: ['query'], rowLimit: 25000, dataState: 'all' }),
   });
-  return res.data.rows || [];
+  if (!res.ok) throw new Error(`GSC API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  return data.rows || [];
 }
 
 function bucketize(rows, shopTerms, areaTerms) {
@@ -217,17 +238,8 @@ function printMovers(label, movers) {
 async function main() {
   console.log(`🔍 GSC データ取得: ${SITE_URL}  (${DAYS}日 vs 前${DAYS}日)\n`);
 
-  const authOpts = {
-    scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
-  };
-  if (KEY_FILE) {
-    authOpts.keyFile = KEY_FILE.replace(/^~/, process.env.HOME);
-    console.log(`  auth: SA key (${authOpts.keyFile})`);
-  } else {
-    console.log('  auth: Application Default Credentials');
-  }
-  const auth = new google.auth.GoogleAuth(authOpts);
-  const searchconsole = google.searchconsole({ version: 'v1', auth });
+  const auth = await getAuth();
+  console.log(`  auth: ${auth.mode}`);
 
   const now = new Date();
   now.setDate(now.getDate() - 3); // GSC データは約2-3日遅延
@@ -250,8 +262,8 @@ async function main() {
   console.log(`  DB: shops=${shops.length}, areas=${areas.length}\n`);
 
   const [curRows, prevRows] = await Promise.all([
-    fetchQueries(searchconsole, curStart, curEnd),
-    fetchQueries(searchconsole, prevStart, prevEnd),
+    fetchQueries(auth, curStart, curEnd),
+    fetchQueries(auth, prevStart, prevEnd),
   ]);
   console.log(`  取得: 当期 ${curRows.length} queries, 前期 ${prevRows.length} queries`);
 

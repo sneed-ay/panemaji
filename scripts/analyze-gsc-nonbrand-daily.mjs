@@ -15,30 +15,44 @@
  * 使い方:
  *   node scripts/analyze-gsc-nonbrand-daily.mjs
  */
-import { google } from 'googleapis';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const SITE = 'https://panemaji.com/';
 const DAYS = 28;
+// REST 直叩き必須 (googleapis は ADC quota header を送らず hang する。 2026-05-29 恒久修正)
+const QUOTA_PROJECT = process.env.GSC_QUOTA_PROJECT || 'panemaji-gsc-3693';
+const GSC_ENDPOINT = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(SITE)}/searchAnalytics/query`;
 
 // fetch-gsc.mjs の isBrand と同じパターン
 const BRAND_REGEX = '(?i)(panemaji|パネマジ|パネまじ|ぱねまじ|パネマ時|バネマジ)';
 
 function ymd(d) { return d.toISOString().slice(0, 10); }
 
-async function fetchAll(sc, body) {
+function getToken() {
+  return execSync('gcloud auth application-default print-access-token', { encoding: 'utf8' }).trim();
+}
+
+async function fetchAll(token, body) {
   const all = [];
   let startRow = 0;
   while (true) {
-    const r = await sc.searchanalytics.query({
-      siteUrl: SITE,
-      requestBody: { ...body, startRow, rowLimit: 25000 },
+    const res = await fetch(GSC_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'x-goog-user-project': QUOTA_PROJECT,
+      },
+      body: JSON.stringify({ ...body, startRow, rowLimit: 25000 }),
     });
-    const rows = r.data.rows || [];
+    if (!res.ok) throw new Error(`GSC API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const data = await res.json();
+    const rows = data.rows || [];
     all.push(...rows);
     if (rows.length < 25000) break;
     startRow += 25000;
@@ -47,10 +61,7 @@ async function fetchAll(sc, body) {
 }
 
 async function main() {
-  const auth = new google.auth.GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
-  });
-  const sc = google.searchconsole({ version: 'v1', auth });
+  const token = getToken();
 
   const end = new Date(); end.setDate(end.getDate() - 3);
   const start = new Date(end); start.setDate(start.getDate() - (DAYS - 1));
@@ -58,19 +69,19 @@ async function main() {
   console.log(`📅 期間: ${startD} → ${endD} (${DAYS}日, GSC遅延3日込み)\n`);
 
   // 1) 日次全体
-  const totalRows = await fetchAll(sc, {
+  const totalRows = await fetchAll(token, {
     startDate: startD, endDate: endD,
     dimensions: ['date'], dataState: 'all',
   });
   // 2) 日次ブランドのみ
-  const brandRows = await fetchAll(sc, {
+  const brandRows = await fetchAll(token, {
     startDate: startD, endDate: endD,
     dimensions: ['date'], dataState: 'all',
     dimensionFilterGroups: [{ filters: [{ dimension: 'query', operator: 'includingRegex', expression: BRAND_REGEX }] }],
   });
   // 3) 全体 by query (W3 vs W4 の新規クエリ抽出用) - 直近14日
   const w3w4Start = new Date(end); w3w4Start.setDate(w3w4Start.getDate() - 13);
-  const queryRows = await fetchAll(sc, {
+  const queryRows = await fetchAll(token, {
     startDate: ymd(w3w4Start), endDate: endD,
     dimensions: ['date', 'query'], dataState: 'all',
   });
