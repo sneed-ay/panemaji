@@ -43,23 +43,23 @@ const CANDIDATE_SQL = `
     )
 `;
 
-// JS で更に厳密に判定: panemaji 言及 + 掲示板 言及 のどちらかを持つ
+// シンプル & 包括的な bot 判定
 function isBotComment(comment: string): boolean {
-  // 「パネマジ」相当: 任意の1文字置換も含む幅広パターン
-  const panemajiRegex = /パネマジ|パネマ./u  // パネマ + 任意1文字
-    ;
-  // 「掲示板」相当 (任意1文字置換も含む幅広パターン)
-  const bbsRegex = /掲示板|掲示.|掲.板|.示板|掲示/u;
+  // includes() で直接マッチ (regex の罠を避ける)
+  if (comment.includes('パネマジ')) return true;
+  if (comment.includes('掲示板')) return true;
 
-  // panemaji + bbs どちらかでも検出 → bot 認定 (掲示板単体は誤検出のリスクあるので panemaji 言及を優先)
-  if (panemajiRegex.test(comment)) return true;
-  // panemaji 部分の更に広い置換 (パ + ? + マ + ? + ジ 系)
-  if (/パ.{0,2}マ.{0,2}ジ|ネマジ|パネマ/u.test(comment) && bbsRegex.test(comment)) return true;
-  // 「掲」+「板」が近くにあって、間に「示」「ASCII」「記号」が入ってる
-  if (/掲[^一-鿿]{0,2}板|.{0,2}示板|掲示[^一-鿿]/u.test(comment)) {
-    // 短いコメント (50文字以下) で「掲」「板」が出る = ほぼ確実に bot
-    if (comment.length <= 60) return true;
-  }
+  // 文字伏せ系の partial: パネマ + 何か + 板/示
+  const hasPanemaji = comment.includes('パネマ') || comment.includes('ネマジ') || comment.includes('パネマジ');
+  const hasBbs = comment.includes('掲') && comment.includes('板');
+  if (hasPanemaji && hasBbs) return true;
+
+  // パ◯マジ / パネ◯ジ / パネマ◯ のような中1文字置換も
+  if (/パ.マジ|パネ.ジ|パネマ.|.ネマジ/u.test(comment) && (comment.includes('板') || comment.includes('示'))) return true;
+
+  // 60文字以下で「掲」「板」両方ある場合は bot 寄り (ただし誤検出リスクあり)
+  if (comment.length <= 60 && comment.includes('掲') && comment.includes('板')) return true;
+
   return false;
 }
 
