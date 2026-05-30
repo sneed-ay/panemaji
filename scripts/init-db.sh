@@ -181,6 +181,9 @@ else
   " 2>/dev/null
 fi
 
+# マイページ機能のテーブル/列を idempotent に追加 (起動毎に実行、本番でも安全)
+node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] users-tables migration failed"
+
 # メモリ抑制 (Render Starter 512MB):
 # - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap (OS+SQLite+native で 100MB 確保)
 # - --expose-gc               ... global.gc() を有効化 → memory-watchdog が定期 GC 強制

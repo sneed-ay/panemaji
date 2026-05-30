@@ -399,15 +399,19 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
   `).all(limit) as Review[];
 }
 
-export function addReview(girlId: number, panelRating: string, comment: string | null, browserId: string) {
-  const existing = db.prepare('SELECT id FROM reviews WHERE girl_id = ? AND browser_id = ?').get(girlId, browserId);
-  if (existing) {
-    throw new Error('ALREADY_REVIEWED');
+export function addReview(girlId: number, panelRating: string, comment: string | null, browserId: string, userId: number | null = null) {
+  // 会員投稿の場合: user_id + girl_id でユニーク (1人1嬢1口コミ)
+  if (userId) {
+    const existingByUser = db.prepare('SELECT id FROM reviews WHERE girl_id = ? AND user_id = ?').get(girlId, userId);
+    if (existingByUser) throw new Error('ALREADY_REVIEWED');
+  } else {
+    const existing = db.prepare('SELECT id FROM reviews WHERE girl_id = ? AND browser_id = ?').get(girlId, browserId);
+    if (existing) throw new Error('ALREADY_REVIEWED');
   }
   const now = new Date().toISOString().split('T')[0];
   return db.prepare(
-    'INSERT INTO reviews (girl_id, visit_date, panel_rating, comment, browser_id) VALUES (?, ?, ?, ?, ?)'
-  ).run(girlId, now, panelRating, comment, browserId);
+    'INSERT INTO reviews (girl_id, visit_date, panel_rating, comment, browser_id, user_id) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(girlId, now, panelRating, comment, browserId, userId);
 }
 
 // Update review comment (add comment after voting)

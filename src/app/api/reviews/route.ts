@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { addReview, getLatestReviews, getGirlById } from '@/lib/queries';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
   const reviews = getLatestReviews(20);
