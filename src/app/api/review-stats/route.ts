@@ -28,11 +28,14 @@ export async function GET() {
     FROM reviews GROUP BY type ORDER BY cnt DESC
   `).all();
   
-  // ユーザー投稿の日別（user typeのみ）
+  // ユーザー投稿の日別（user typeのみ）+ ユニーク browser_id 数
+  // ユニーク数が極端に少ない日は Bot / 自動投稿の疑い (1 browser_id が多数投稿 = 異常)
   const daily = db.prepare(`
-    SELECT substr(created_at,1,10) as date, COUNT(*) as cnt 
-    FROM reviews 
-    WHERE browser_id NOT LIKE 'ext-%' 
+    SELECT substr(created_at,1,10) as date,
+           COUNT(*) as cnt,
+           COUNT(DISTINCT browser_id) as uniq_browsers
+    FROM reviews
+    WHERE browser_id NOT LIKE 'ext-%'
       AND browser_id NOT LIKE 'x-import-%'
       AND browser_id NOT LIKE 'test-%'
       AND browser_id NOT LIKE 'clean-%'
@@ -40,6 +43,24 @@ export async function GET() {
       AND browser_id NOT LIKE 'url-param-%'
       AND browser_id NOT LIKE 'urlparam-%'
     GROUP BY date ORDER BY date DESC LIMIT 60
+  `).all();
+
+  // 直近7日で最も投稿数が多い browser_id Top10 (= Bot 疑いの絞り込み)
+  const heavyPosters = db.prepare(`
+    SELECT browser_id, COUNT(*) as cnt,
+           MIN(created_at) as first_at, MAX(created_at) as last_at
+    FROM reviews
+    WHERE browser_id NOT LIKE 'ext-%'
+      AND browser_id NOT LIKE 'x-import-%'
+      AND browser_id NOT LIKE 'test-%'
+      AND browser_id NOT LIKE 'clean-%'
+      AND browser_id NOT LIKE 'final-%'
+      AND browser_id NOT LIKE 'url-param-%'
+      AND browser_id NOT LIKE 'urlparam-%'
+      AND created_at >= date('now','-7 days')
+    GROUP BY browser_id
+    ORDER BY cnt DESC
+    LIMIT 10
   `).all();
 
   // 最新のユーザー口コミ10件
@@ -54,5 +75,5 @@ export async function GET() {
     ORDER BY r.created_at DESC LIMIT 10
   `).all();
   
-  return NextResponse.json({ total, ext, ximport, user, patterns, daily, latest });
+  return NextResponse.json({ total, ext, ximport, user, patterns, daily, heavyPosters, latest });
 }
