@@ -63,6 +63,72 @@ export async function GET() {
     LIMIT 10
   `).all();
 
+  // Bot 判定: 直近14日のうち、ある1日に10件以上投稿した browser_id
+  // → その browser_id の投稿は全部 Bot 扱い
+  const BOT_CTE = `
+    WITH bot_bid AS (
+      SELECT DISTINCT browser_id FROM (
+        SELECT browser_id, substr(created_at,1,10) AS day, COUNT(*) AS cnt
+        FROM reviews
+        WHERE created_at >= date('now','-14 days')
+          AND browser_id NOT LIKE 'ext-%' AND browser_id NOT LIKE 'x-import-%'
+          AND browser_id NOT LIKE 'test-%' AND browser_id NOT LIKE 'clean-%'
+          AND browser_id NOT LIKE 'final-%' AND browser_id NOT LIKE 'url-param-%'
+          AND browser_id NOT LIKE 'urlparam-%'
+        GROUP BY browser_id, day
+        HAVING cnt >= 10
+      )
+    )
+  `;
+
+  // Bot 影響を受けた shop Top20 (Bot review が多い順)
+  const botAffectedShops = db.prepare(`
+    ${BOT_CTE}
+    SELECT s.id AS shop_id, s.name AS shop_name,
+           COUNT(*) AS bot_review_count,
+           COUNT(DISTINCT g.id) AS bot_girls_affected,
+           COUNT(DISTINCT r.browser_id) AS bot_browser_count
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    JOIN shops s ON g.shop_id = s.id
+    WHERE r.browser_id IN (SELECT browser_id FROM bot_bid)
+      AND r.created_at >= date('now','-14 days')
+    GROUP BY s.id
+    ORDER BY bot_review_count DESC
+    LIMIT 20
+  `).all();
+
+  // Bot 影響を受けた girl Top20
+  const botAffectedGirls = db.prepare(`
+    ${BOT_CTE}
+    SELECT g.id AS girl_id, g.name AS girl_name,
+           s.id AS shop_id, s.name AS shop_name,
+           COUNT(*) AS bot_review_count,
+           COUNT(DISTINCT r.browser_id) AS bot_browser_count
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    JOIN shops s ON g.shop_id = s.id
+    WHERE r.browser_id IN (SELECT browser_id FROM bot_bid)
+      AND r.created_at >= date('now','-14 days')
+    GROUP BY g.id
+    ORDER BY bot_review_count DESC
+    LIMIT 20
+  `).all();
+
+  // Bot 総数サマリ
+  const botSummary = db.prepare(`
+    ${BOT_CTE}
+    SELECT
+      (SELECT COUNT(*) FROM bot_bid) AS bot_browser_count,
+      COUNT(*) AS bot_review_count,
+      COUNT(DISTINCT r.girl_id) AS bot_girls_affected,
+      COUNT(DISTINCT g.shop_id) AS bot_shops_affected
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    WHERE r.browser_id IN (SELECT browser_id FROM bot_bid)
+      AND r.created_at >= date('now','-14 days')
+  `).get();
+
   // 最新のユーザー口コミ10件
   const latest = db.prepare(`
     SELECT r.created_at, r.browser_id, r.panel_rating, g.name as girl_name, s.name as shop_name
@@ -75,5 +141,5 @@ export async function GET() {
     ORDER BY r.created_at DESC LIMIT 10
   `).all();
   
-  return NextResponse.json({ total, ext, ximport, user, patterns, daily, heavyPosters, latest });
+  return NextResponse.json({ total, ext, ximport, user, patterns, daily, heavyPosters, botSummary, botAffectedShops, botAffectedGirls, latest });
 }
