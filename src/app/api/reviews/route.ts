@@ -7,15 +7,24 @@ export async function GET() {
   return NextResponse.json(reviews);
 }
 
-// === Bot 防御 (2026-05-30 追加) ===
-// 1. origin/referer チェック: panemaji.com 以外からの POST を拒否
-// 2. rate limit: IP ごと 1時間 5件まで, browser_id ごと 1時間 3件まで
-//    (in-memory なので process 再起動でリセット。Render の単インスタンス想定)
-const ipBucket = new Map<string, number[]>();      // ip -> timestamps[]
-const browserBucket = new Map<string, number[]>(); // browser_id -> timestamps[]
-const IP_LIMIT = 5;
-const BROWSER_LIMIT = 3;
-const WINDOW_MS = 60 * 60 * 1000; // 1 hour
+// === Bot 防御 (2026-05-30 強化版) ===
+// 1. origin/referer チェック (偽装可能なので必須条件にしない、警告レベル)
+// 2. rate limit を超厳しく:
+//    - IP: 1時間 1件
+//    - browser_id: 1時間 1件
+//    - 同一 girl_id への全投稿: 1時間 3件 (人気嬢への集中攻撃防止)
+//    - global: 1分間に全 IP 合計で 20件まで (バースト遮断)
+// in-memory なので process 再起動でリセットされるが、Render は通常単インスタンス
+const ipBucket = new Map<string, number[]>();
+const browserBucket = new Map<string, number[]>();
+const girlBucket = new Map<number, number[]>();
+const globalBurst: number[] = [];
+const IP_LIMIT = 1;
+const BROWSER_LIMIT = 1;
+const GIRL_LIMIT = 3;
+const GLOBAL_BURST_LIMIT = 20;
+const GLOBAL_BURST_WINDOW_MS = 60 * 1000;
+const WINDOW_MS = 60 * 60 * 1000;
 
 function checkLimit(map: Map<string, number[]>, key: string, limit: number): boolean {
   const now = Date.now();
@@ -63,7 +72,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '不正な評価値です' }, { status: 400 });
     }
 
-    // Rate limit (IP + browser_id 両方)
+    // Global burst (全 IP 合計を 1分20件で頭打ち)
+    const now = Date.now();
+    while (globalBurst.length > 0 && now - globalBurst[0] > GLOBAL_BURST_WINDOW_MS) globalBurst.shift();
+    if (globalBurst.length >= GLOBAL_BURST_LIMIT) {
+      return NextResponse.json({ error: 'global_burst' }, { status: 429 });
+    }
+    globalBurst.push(now);
+
+    // Rate limit (IP / browser_id / girl_id)
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
             || request.headers.get('x-real-ip')
             || 'unknown';
@@ -72,6 +89,9 @@ export async function POST(request: NextRequest) {
     }
     if (!checkLimit(browserBucket, String(browser_id), BROWSER_LIMIT)) {
       return NextResponse.json({ error: 'rate_limit_browser' }, { status: 429 });
+    }
+    if (!checkLimit(girlBucket as unknown as Map<string, number[]>, String(girl_id), GIRL_LIMIT)) {
+      return NextResponse.json({ error: 'rate_limit_girl' }, { status: 429 });
     }
 
     addReview(girl_id, panel_rating, comment || null, browser_id);
