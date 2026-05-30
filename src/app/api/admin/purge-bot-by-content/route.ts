@@ -43,20 +43,22 @@ const CANDIDATE_SQL = `
     )
 `;
 
-// JS で更に厳密に判定: panemaji 言及 + 掲示板 言及 の両方を持つ
+// JS で更に厳密に判定: panemaji 言及 + 掲示板 言及 のどちらかを持つ
 function isBotComment(comment: string): boolean {
-  // 「パネマジ」相当: パネマジ / パネマ + 任意1 / パネ + 任意1 + ジ / パ + 任意1 + マジ / 任意1 + ネマジ
-  const panemajiRegex = /パネマジ|パネマ[^\s]|パネ[^\s]ジ|パ[^\s]マジ|[^\s]ネマジ|パネマ[　-ヿ　]|パネ[　-ヿ]ジ/u;
-  // 「掲示板」相当
-  const bbsRegex = /掲示板|掲示[^\s]板|掲[^\s]示板|[^\s]示板|掲示[　-ヿ]板|掲示[^\s]/u;
-  // 両方マッチ = bot 確実
-  if (panemajiRegex.test(comment) && bbsRegex.test(comment)) return true;
-  // 「パネマジ」+「示板」or「掲示」も bot
-  if (panemajiRegex.test(comment) && /示板|掲示|示_板/.test(comment)) return true;
-  // 単独「示板」「掲_板」「掲示_」等の特殊文字混入も bot
-  if (/掲[^\s]板|[^\s]示板|掲示[^\s]/.test(comment)) {
-    // ASCII 記号 or 特殊な記号がmidに入ってる = obfuscation
-    if (/掲[●○◎◐⬤◇◆◯★☆▽△♡♥×＿_□■△▲！＊\*\+\-]板|[●○◎◐⬤◇◆◯★☆▽△♡♥×＿_□■△▲！＊\*\+\-]示板|掲示[●○◎◐⬤◇◆◯★☆▽△♡♥×＿_□■△▲！＊\*\+\-]/.test(comment)) return true;
+  // 「パネマジ」相当: 任意の1文字置換も含む幅広パターン
+  const panemajiRegex = /パネマジ|パネマ./u  // パネマ + 任意1文字
+    ;
+  // 「掲示板」相当 (任意1文字置換も含む幅広パターン)
+  const bbsRegex = /掲示板|掲示.|掲.板|.示板|掲示/u;
+
+  // panemaji + bbs どちらかでも検出 → bot 認定 (掲示板単体は誤検出のリスクあるので panemaji 言及を優先)
+  if (panemajiRegex.test(comment)) return true;
+  // panemaji 部分の更に広い置換 (パ + ? + マ + ? + ジ 系)
+  if (/パ.{0,2}マ.{0,2}ジ|ネマジ|パネマ/u.test(comment) && bbsRegex.test(comment)) return true;
+  // 「掲」+「板」が近くにあって、間に「示」「ASCII」「記号」が入ってる
+  if (/掲[^一-鿿]{0,2}板|.{0,2}示板|掲示[^一-鿿]/u.test(comment)) {
+    // 短いコメント (50文字以下) で「掲」「板」が出る = ほぼ確実に bot
+    if (comment.length <= 60) return true;
   }
   return false;
 }
