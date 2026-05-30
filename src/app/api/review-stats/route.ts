@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 
+// SSG にすると build 時 DB の値で固まり、本番 DB の UUID 投稿が反映されない。
+// このエンドポイントは「いま現在の口コミDB状態」を返すのが目的なので必ず動的。
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   const total = (db.prepare('SELECT COUNT(*) as c FROM reviews').get() as {c:number}).c;
   const ext = (db.prepare("SELECT COUNT(*) as c FROM reviews WHERE browser_id LIKE 'ext-%'").get() as {c:number}).c;
@@ -34,7 +39,7 @@ export async function GET() {
       AND browser_id NOT LIKE 'final-%'
       AND browser_id NOT LIKE 'url-param-%'
       AND browser_id NOT LIKE 'urlparam-%'
-    GROUP BY date ORDER BY date DESC LIMIT 30
+    GROUP BY date ORDER BY date DESC LIMIT 60
   `).all();
 
   // 最新のユーザー口コミ10件
