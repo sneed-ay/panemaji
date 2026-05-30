@@ -95,7 +95,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'rate_limit_girl' }, { status: 429 });
     }
 
-    addReview(girl_id, panel_rating, comment || null, browser_id);
+    // 会員ログイン中なら user_id を引き当て (会員投稿は user_id 付与 = 優遇対象)
+    const currentUser = await getCurrentUser();
+    addReview(girl_id, panel_rating, comment || null, browser_id, currentUser?.id ?? null);
 
     // Save twitter URL if provided
     if (twitter_url) {
