@@ -182,10 +182,16 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
   const [unlocked, setUnlocked] = useState(true);
   const [countdown, setCountdown] = useState(-1);
   const [showButton, setShowButton] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [memberCheckDone, setMemberCheckDone] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setUnlocked(isUnlocked());
+    // 会員チェック: ログイン中なら広告ゲートをスキップ
+    fetch('/api/me').then(r => r.json()).then(d => {
+      if (d.user) { setIsMember(true); setUnlocked(true); }
+    }).catch(() => {}).finally(() => setMemberCheckDone(true));
   }, []);
 
   useEffect(() => {
@@ -212,9 +218,15 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
     } catch {}
   }, []);
 
-  if (reviewCount === 0 || unlocked) {
+  if (reviewCount === 0 || unlocked || isMember) {
     return <>{children}</>;
   }
+  // 会員判定がまだ終わってなければ何も出さない (チラ見え防止)
+  if (!memberCheckDone) {
+    return <div className="py-4 text-center text-xs text-gray-400">読み込み中…</div>;
+  }
+
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   return (
     <div className="relative">
@@ -235,6 +247,23 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
           <p className="text-xs text-gray-500 mb-4">
             短い広告を見ると24時間すべての口コミが閲覧できます
           </p>
+
+          {/* 会員登録 訴求 (5秒広告のスキップが最大のメリット) */}
+          <a
+            href={`/signup?next=${encodeURIComponent(currentPath)}`}
+            className="block w-full mb-3 py-3 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg transition-colors no-underline"
+          >
+            ✨ 無料会員登録で広告スキップ
+          </a>
+          <p className="text-[10px] text-gray-400 mb-3">
+            メアド + パスワードだけ・30秒・メアド認証なし
+          </p>
+
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 border-t border-gray-200"></div>
+            <span className="text-[10px] text-gray-400">または</span>
+            <div className="flex-1 border-t border-gray-200"></div>
+          </div>
 
           {countdown === -1 ? (
             <button

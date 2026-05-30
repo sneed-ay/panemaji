@@ -25,16 +25,48 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
 
   useEffect(() => {
     const reviewed = localStorage.getItem(`reviewed_${girlId}`);
     if (reviewed) setAlreadyReviewed(true);
+    fetch('/api/me').then(r => r.json()).then(d => setIsMember(!!d.user)).catch(() => {});
   }, [girlId]);
 
   if (alreadyReviewed) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-500">
         この女性への口コミは投稿済みです
+      </div>
+    );
+  }
+
+  // 投稿成功後の登録訴求 (未会員のみ)
+  if (showSignupPrompt) {
+    return (
+      <div className="bg-gradient-to-br from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-5 text-center space-y-3">
+        <div className="text-2xl">✅</div>
+        <h3 className="text-base font-bold text-gray-800">口コミ投稿ありがとうございます!</h3>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          会員登録すると<br />
+          🎯 <strong>5秒広告がスキップ</strong>されて口コミ即時閲覧<br />
+          ⭐ <strong>「気になる」嬢を保存</strong>できる<br />
+          📝 投稿口コミがマイページで管理できる<br />
+          🏆 会員口コミは検索/評価で<strong>優遇</strong>
+        </p>
+        <a
+          href={`/signup?next=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/')}`}
+          className="block w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg no-underline transition-colors"
+        >
+          無料で会員登録する (30秒)
+        </a>
+        <button
+          onClick={() => { setShowSignupPrompt(false); onSuccess(); }}
+          className="text-[11px] text-gray-400 hover:text-gray-600 underline"
+        >
+          あとで (このまま続ける)
+        </button>
       </div>
     );
   }
@@ -75,7 +107,9 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
       setPanelRating('');
       setComment('');
       setTwitterUrl('');
-      onSuccess();
+      // 未会員なら登録訴求を出す、会員ならそのまま onSuccess
+      if (!isMember) setShowSignupPrompt(true);
+      else onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : '投稿に失敗しました');
     } finally {

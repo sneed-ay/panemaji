@@ -355,7 +355,7 @@ export function getReviewsByGirl(girlId: number): Review[] {
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id
     WHERE r.girl_id = ?
-    ORDER BY r.created_at DESC
+    ORDER BY (r.user_id IS NOT NULL) DESC, r.created_at DESC
   `).all(girlId) as Review[];
 }
 
@@ -366,7 +366,7 @@ export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id
     WHERE g.shop_id = ?
-    ORDER BY r.created_at DESC
+    ORDER BY (r.user_id IS NOT NULL) DESC, r.created_at DESC
     LIMIT ?
   `).all(shopId, limit) as Review[];
 }
@@ -384,7 +384,7 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
       JOIN areas a ON s.area_id = a.id
       WHERE a.prefecture = ?
       AND g.image_url IS NOT NULL AND g.image_url <> ''
-      ORDER BY r.created_at DESC
+      ORDER BY (r.user_id IS NOT NULL) DESC, r.created_at DESC
       LIMIT ?
     `).all(prefectureSlug, limit) as Review[];
   }
@@ -394,7 +394,7 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id
     WHERE g.image_url IS NOT NULL AND g.image_url <> ''
-    ORDER BY r.created_at DESC
+    ORDER BY (r.user_id IS NOT NULL) DESC, r.created_at DESC
     LIMIT ?
   `).all(limit) as Review[];
 }

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
 import ShareButtons from '@/components/ShareButtons';
+import FavoriteButton from '@/components/FavoriteButton';
 import GirlPageClient from './GirlPageClient';
 import AdBanner from '@/components/AdBanner';
 import { generateGirlAlternateNames } from '@/lib/altNames';
@@ -198,7 +199,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
       </nav>
 
       <div className="flex items-center justify-between gap-2">
-        <div />
+        <FavoriteButton girlId={girl.id} />
         <ShareButtons
           url={`/girl/${girl.id}`}
           text={`${girl.name}（${girl.shop_name}）のリアル度をチェック！ #パネマジ掲示板`}
