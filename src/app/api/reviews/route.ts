@@ -21,9 +21,11 @@ const ipBucket = new Map<string, number[]>();
 const browserBucket = new Map<string, number[]>();
 const girlBucket = new Map<number, number[]>();
 const globalBurst: number[] = [];
-const IP_LIMIT = 1;
-const BROWSER_LIMIT = 1;
-const GIRL_LIMIT = 3;
+// 会員制移行に伴い緩和: 共有IP(キャリアNAT)の複数会員を弾かないための soft guard。
+// 実質の spam 防御は「ログイン必須 + 会員1人1嬢1口コミ(dedup)」が担う。
+const IP_LIMIT = 20;
+const BROWSER_LIMIT = 20;
+const GIRL_LIMIT = 10;
 const GLOBAL_BURST_LIMIT = 20;
 const GLOBAL_BURST_WINDOW_MS = 60 * 1000;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -61,6 +63,16 @@ export async function POST(request: NextRequest) {
     // Origin/Referer チェック
     if (!isAllowedOrigin(request)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+
+    // 🔒 口コミ投稿は会員(ログイン済み)限定。匿名(browser_id のみ)投稿は廃止。
+    //    bot はセッションを持てないため、これが spam 流入の根本遮断になる。
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'login_required', message: '口コミ投稿には会員ログインが必要です' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
@@ -106,9 +118,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'rate_limit_girl' }, { status: 429 });
     }
 
-    // 会員ログイン中なら user_id を引き当て (会員投稿は user_id 付与 = 優遇対象)
-    const currentUser = await getCurrentUser();
-    addReview(girl_id, panel_rating, comment || null, browser_id, currentUser?.id ?? null);
+    // 会員投稿として記録 (user_id 付与)
+    addReview(girl_id, panel_rating, comment || null, browser_id, currentUser.id);
 
     // Save twitter URL if provided
     if (twitter_url) {

@@ -25,13 +25,12 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [alreadyReviewed, setAlreadyReviewed] = useState(false);
-  const [isMember, setIsMember] = useState(false);
-  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+  const [isMember, setIsMember] = useState<boolean | null>(null);
 
   useEffect(() => {
     const reviewed = localStorage.getItem(`reviewed_${girlId}`);
     if (reviewed) setAlreadyReviewed(true);
-    fetch('/api/me').then(r => r.json()).then(d => setIsMember(!!d.user)).catch(() => {});
+    fetch('/api/me').then(r => r.json()).then(d => setIsMember(!!d.user)).catch(() => setIsMember(false));
   }, [girlId]);
 
   if (alreadyReviewed) {
@@ -42,31 +41,35 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
     );
   }
 
-  // 投稿成功後の登録訴求 (未会員のみ)
-  if (showSignupPrompt) {
+  // 会員判定中
+  if (isMember === null) {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-400 text-sm">
+        読み込み中…
+      </div>
+    );
+  }
+
+  // 🔒 口コミ投稿は会員限定 (匿名投稿は廃止)
+  if (!isMember) {
+    const next = encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/');
     return (
       <div className="bg-gradient-to-br from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-5 text-center space-y-3">
-        <div className="text-2xl">✅</div>
-        <h3 className="text-base font-bold text-gray-800">口コミ投稿ありがとうございます!</h3>
+        <div className="text-2xl">📝</div>
+        <h3 className="text-base font-bold text-gray-800">口コミ投稿は会員限定です</h3>
         <p className="text-xs text-gray-600 leading-relaxed">
-          会員登録すると<br />
-          🎯 <strong>5秒広告がスキップ</strong>されて口コミ即時閲覧<br />
-          ⭐ <strong>「気になる」嬢を保存</strong>できる<br />
-          📝 投稿口コミがマイページで管理できる<br />
-          🏆 会員口コミは検索/評価で<strong>優遇</strong>
+          無料会員登録（メアドだけ・30秒）で口コミを投稿できます。<br />
+          ⭐「気になる」嬢の保存・🎯 5秒広告スキップ・🏆 会員口コミは優遇。
         </p>
         <a
-          href={`/signup?next=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/')}`}
+          href={`/signup?next=${next}`}
           className="block w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg no-underline transition-colors"
         >
-          無料で会員登録する (30秒)
+          無料で会員登録して投稿 (30秒)
         </a>
-        <button
-          onClick={() => { setShowSignupPrompt(false); onSuccess(); }}
-          className="text-[11px] text-gray-400 hover:text-gray-600 underline"
-        >
-          あとで (このまま続ける)
-        </button>
+        <a href={`/login?next=${next}`} className="block text-xs text-pink-600 hover:underline">
+          既に会員の方はログイン
+        </a>
       </div>
     );
   }
@@ -107,9 +110,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
       setPanelRating('');
       setComment('');
       setTwitterUrl('');
-      // 未会員なら登録訴求を出す、会員ならそのまま onSuccess
-      if (!isMember) setShowSignupPrompt(true);
-      else onSuccess();
+      onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : '投稿に失敗しました');
     } finally {

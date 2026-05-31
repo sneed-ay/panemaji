@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import db from '@/lib/db';
 import { isBakusaiSpam } from '@/lib/bakusai-spam';
+import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,8 @@ export const dynamic = 'force-dynamic';
 const ipBucket = new Map<string, number[]>();
 const browserBucket = new Map<string, number[]>();
 const WINDOW_MS = 60 * 60 * 1000;
-const IP_LIMIT = 3;
-const BROWSER_LIMIT = 3;
+const IP_LIMIT = 20;
+const BROWSER_LIMIT = 20;
 
 function isAllowedOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin') || '';
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
   try {
     if (!isAllowedOrigin(request)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+
+    // 🔒 口コミ(コメント)投稿は会員(ログイン済み)限定。匿名投稿は廃止。
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'login_required', message: '投稿には会員ログインが必要です' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();

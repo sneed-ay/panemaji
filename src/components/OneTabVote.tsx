@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 type Props = {
   girlId: number;
@@ -36,6 +36,12 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentSent, setCommentSent] = useState(false);
   const [commentError, setCommentError] = useState('');
+
+  // 🔒 投票・コメントは会員限定 (匿名投稿は廃止 — bot 流入の根本遮断)
+  const [isMember, setIsMember] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch('/api/me').then((r) => r.json()).then((d) => setIsMember(!!d.user)).catch(() => setIsMember(false));
+  }, []);
 
   const handleVote = useCallback(async (rating: string) => {
     if (submitting) return;
@@ -97,6 +103,31 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
       setCommentSubmitting(false);
     }
   }, [girlId, comment, commentSubmitting]);
+
+  if (isMember === null) {
+    return <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-400 text-sm">読み込み中…</div>;
+  }
+  if (!isMember) {
+    const next = encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/');
+    return (
+      <div className="bg-gradient-to-br from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-5 text-center space-y-3">
+        <div className="text-2xl">📝</div>
+        <h3 className="text-base font-bold text-gray-800">投票・口コミは会員限定です</h3>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          無料会員登録（メアドだけ・30秒）で投票・コメントできます。
+        </p>
+        <a
+          href={`/signup?next=${next}`}
+          className="block w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg no-underline transition-colors"
+        >
+          無料で会員登録 (30秒)
+        </a>
+        <a href={`/login?next=${next}`} className="block text-xs text-pink-600 hover:underline">
+          既に会員の方はログイン
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
