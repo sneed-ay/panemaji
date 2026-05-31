@@ -12,7 +12,7 @@ interface Favorite {
   shop_id: number; shop_name: string; area_name: string;
   favorited_at: string;
 }
-interface User { id: number; email: string; created_at: string; }
+interface User { id: number; email: string; created_at: string; is_admin?: boolean; }
 
 export default function MyPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -69,6 +69,9 @@ export default function MyPage() {
             <span>口コミ: {reviews?.length ?? 0}</span>
             <span>気になる: {favorites?.length ?? 0}</span>
           </div>
+          {user?.is_admin && (
+            <a href="/admin" className="block mt-3 text-xs text-pink-600 font-bold hover:underline">🛠 管理画面を開く</a>
+          )}
           <button onClick={handleLogout} className="mt-3 text-xs text-gray-500 hover:text-pink-600 underline">
             ログアウト
           </button>

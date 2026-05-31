@@ -13,11 +13,18 @@ import { cookies } from 'next/headers';
 export const SESSION_COOKIE = 'panemaji_session';
 export const SESSION_TTL_DAYS = 30;
 
+// 管理者は email allowlist で判定 (DB列・migration 不要で、列欠落による認証破壊リスクが無い)
+export const ADMIN_EMAILS = ['info@sneed.jp'];
+export function isAdminEmail(email: string | null | undefined): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
 export interface User {
   id: number;
   email: string;
   created_at: string;
   last_login_at: string | null;
+  is_admin: boolean;
 }
 
 export async function hashPassword(plain: string): Promise<string> {
@@ -56,7 +63,7 @@ export function getUserByToken(token: string | undefined): User | null {
     db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
     return null;
   }
-  return { id: row.id, email: row.email, created_at: row.created_at, last_login_at: row.last_login_at };
+  return { id: row.id, email: row.email, created_at: row.created_at, last_login_at: row.last_login_at, is_admin: isAdminEmail(row.email) };
 }
 
 /** App Router の cookies() からカレントユーザー取得 */
