@@ -18,11 +18,13 @@ import db from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const ADMIN_TOKEN = process.env.ADMIN_STATS_TOKEN || 'panemaji-admin-stats-default-change-me';
+// 既定token廃止 (fail-closed): public リポジトリのため env 未設定なら全拒否し、会員メール漏洩を防ぐ。
+// 本番 Render に環境変数 ADMIN_STATS_TOKEN を必ず設定すること (未設定だと 401 になる)。
+const ADMIN_TOKEN = process.env.ADMIN_STATS_TOKEN;
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token');
-  if (token !== ADMIN_TOKEN) {
+  if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
