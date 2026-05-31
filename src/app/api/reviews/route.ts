@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { addReview, getLatestReviews, getGirlById } from '@/lib/queries';
 import { getCurrentUser } from '@/lib/auth';
+import { isBakusaiSpam } from '@/lib/bakusai-spam';
 
 export async function GET() {
   const reviews = getLatestReviews(20);
@@ -71,6 +72,16 @@ export async function POST(request: NextRequest) {
 
     if (!['panel_match', 'panel_diff', 'jirai'].includes(panel_rating)) {
       return NextResponse.json({ error: '不正な評価値です' }, { status: 400 });
+    }
+
+    // === 爆サイ自己言及スパムの ingestion ブロック (誤爆/replay の恒久対策) ===
+    // 'パネマジ掲示板' 系の宣伝テキストを口コミとして投げてくる投稿を DB に保存しない。
+    // shadow-drop: 投稿元には成功(201)に見せかける。
+    //  - bot に "拒否" シグナルを与えず、別IPリトライ(master-v6 は MAX_RETRIES=14)を誘発しない
+    //  - rate-limit bucket / globalBurst を消費する前に弾くので正規ユーザーに無影響
+    // 一般の嬢レビューが自サイト名(パネマジ/掲示板)を書くことはまず無く誤検出は限りなく低い。
+    if (isBakusaiSpam(comment)) {
+      return NextResponse.json({ success: true }, { status: 201 });
     }
 
     // Global burst (全 IP 合計を 1分20件で頭打ち)
