@@ -11,12 +11,15 @@ import { getCurrentUser } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// 個人化レスポンスは絶対にキャッシュさせない (ログイン状態のキャッシュ汚染防止)
+const NO_STORE = { 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' };
+
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ user: null, stats: null });
+  if (!user) return NextResponse.json({ user: null, stats: null }, { headers: NO_STORE });
   const stats = {
     reviews_count: (db.prepare('SELECT COUNT(*) as c FROM reviews WHERE user_id = ?').get(user.id) as { c: number }).c,
     favorites_count: (db.prepare('SELECT COUNT(*) as c FROM favorites WHERE user_id = ?').get(user.id) as { c: number }).c,
   };
-  return NextResponse.json({ user, stats });
+  return NextResponse.json({ user, stats }, { headers: NO_STORE });
 }

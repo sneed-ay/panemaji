@@ -153,7 +153,11 @@ const nextConfig = {
     },
     {
       // HTML pages - short cache with stale-while-revalidate
-      source: '/:path*',
+      // 🚨 /api/* は必ず除外する。除外しないと /api/me 等の個人化/認証レスポンスが
+      //    public キャッシュされ (Vary: Cookie も無いため) ログアウト状態の
+      //    {user:null} がブラウザ/CDN にキャッシュ汚染され、会員ログインが
+      //    永久に成立しなくなる (login → /mypage → /api/me=cached null → /login ループ)。
+      source: '/((?!api/).*)',
       headers: [
         { key: 'Cache-Control', value: 'public, max-age=60, stale-while-revalidate=3600' },
       ],

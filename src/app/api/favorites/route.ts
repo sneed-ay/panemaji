@@ -12,6 +12,9 @@ import db from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// 個人化レスポンス (ログイン状態依存) は絶対にキャッシュさせない
+const NO_STORE = { 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' };
+
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'login_required' }, { status: 401 });
@@ -44,11 +47,11 @@ export async function DELETE(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ is_favorite: false, user: null });
+  if (!user) return NextResponse.json({ is_favorite: false, user: null }, { headers: NO_STORE });
   const girlId = Number(req.nextUrl.searchParams.get('girl_id'));
   if (!Number.isInteger(girlId) || girlId <= 0) {
-    return NextResponse.json({ error: 'invalid_girl_id' }, { status: 400 });
+    return NextResponse.json({ error: 'invalid_girl_id' }, { status: 400, headers: NO_STORE });
   }
   const row = db.prepare('SELECT 1 FROM favorites WHERE user_id = ? AND girl_id = ?').get(user.id, girlId);
-  return NextResponse.json({ is_favorite: !!row });
+  return NextResponse.json({ is_favorite: !!row }, { headers: NO_STORE });
 }

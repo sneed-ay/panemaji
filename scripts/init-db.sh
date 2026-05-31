@@ -60,6 +60,24 @@ if [ "$DB_EXISTS" = true ]; then
   db.close();
   " 2>/dev/null || true
 
+  # 🚨 会員データ (users/sessions/favorites) も reviews と同様に永続保存する。
+  #    これをやらないと、フレッシュ DB ダウンロードで会員テーブルが毎デプロイ全消去され、
+  #    登録済み会員が消える / ログインできなくなる (過去に info@sneed.jp が消失)。
+  node -e "
+  const Database = require('better-sqlite3');
+  const fs = require('fs');
+  try {
+    const db = new Database('$DB_PATH');
+    const dump = (t) => { try { return db.prepare('SELECT * FROM ' + t).all(); } catch(e) { return []; } };
+    const users = dump('users'), sessions = dump('sessions'), favorites = dump('favorites');
+    fs.writeFileSync('/tmp/all_users.json', JSON.stringify(users));
+    fs.writeFileSync('/tmp/all_sessions.json', JSON.stringify(sessions));
+    fs.writeFileSync('/tmp/all_favorites.json', JSON.stringify(favorites));
+    console.log('Exported members: users', users.length, '| sessions', sessions.length, '| favorites', favorites.length);
+    db.close();
+  } catch(e) { console.error('Member export error:', e.message); }
+  " 2>/dev/null || true
+
   # Download fresh DB from releases
   node -e "
   const https = require('https');
@@ -183,6 +201,35 @@ fi
 
 # マイページ機能のテーブル/列を idempotent に追加 (起動毎に実行、本番でも安全)
 node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] users-tables migration failed"
+
+# 🚨 会員データ (users/sessions/favorites) を復元。
+#    migrate-users-tables.mjs で空テーブルが作られた後に INSERT OR IGNORE で戻す。
+#    users → sessions/favorites の順 (FK 整合性)。id を保持するので reviews.user_id 等の紐付けも維持。
+#    sessions も復元するため、既存ログイン Cookie がデプロイをまたいで有効なまま。
+node -e "
+const Database = require('better-sqlite3');
+const fs = require('fs');
+function restore(db, table, file) {
+  if (!fs.existsSync(file)) return 0;
+  let rows;
+  try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return 0; }
+  if (!rows || rows.length === 0) return 0;
+  const cols = Object.keys(rows[0]);
+  const sql = 'INSERT OR IGNORE INTO ' + table + ' (' + cols.join(',') + ') VALUES (' + cols.map(() => '?').join(',') + ')';
+  const stmt = db.prepare(sql);
+  const tx = db.transaction((rs) => { let n = 0; for (const r of rs) n += stmt.run(...cols.map(c => r[c])).changes; return n; });
+  return tx(rows);
+}
+try {
+  const db = new Database('$DB_PATH');
+  const u = restore(db, 'users', '/tmp/all_users.json');
+  const s = restore(db, 'sessions', '/tmp/all_sessions.json');
+  const f = restore(db, 'favorites', '/tmp/all_favorites.json');
+  const total = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+  console.log('Restored members: +users', u, '| +sessions', s, '| +favorites', f, '(total users now:', total + ')');
+  db.close();
+} catch(e) { console.error('Member restore error:', e.message); }
+" 2>&1 || echo "[warn] member data restore failed"
 
 # メモリ抑制 (Render Starter 512MB):
 # - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap (OS+SQLite+native で 100MB 確保)

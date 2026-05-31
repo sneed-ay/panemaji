@@ -8,9 +8,11 @@ import db from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const NO_STORE = { 'Cache-Control': 'private, no-store, max-age=0, must-revalidate' };
+
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'login_required' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'login_required' }, { status: 401, headers: NO_STORE });
   const rows = db.prepare(`
     SELECT g.id AS girl_id, g.name AS girl_name, g.image_url AS girl_image_url,
            s.id AS shop_id, s.name AS shop_name,
@@ -23,5 +25,5 @@ export async function GET() {
     WHERE f.user_id = ?
     ORDER BY f.created_at DESC
   `).all(user.id);
-  return NextResponse.json({ favorites: rows });
+  return NextResponse.json({ favorites: rows }, { headers: NO_STORE });
 }
