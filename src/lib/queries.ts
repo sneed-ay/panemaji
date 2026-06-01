@@ -326,6 +326,22 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
   `).all(...params) as Girl[];
 }
 
+// 退店した可能性のある嬢 (is_active=0・直近180日内に確認・画像あり)。
+// 一覧の最下部に「退店」タグ付きで表示する用。
+export function getDepartedGirlsByShop(shopId: number): Girl[] {
+  return db.prepare(`
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    FROM girls g
+    JOIN shops s ON g.shop_id = s.id
+    ${GIRL_STATS_JOIN}
+    WHERE g.shop_id = ? AND g.is_active = 0
+      AND g.image_url IS NOT NULL AND g.image_url <> ''
+      AND g.last_seen_at >= date('now', '-180 days')
+    ORDER BY review_count DESC, g.last_seen_at DESC, g.name
+    LIMIT 60
+  `).all(shopId) as Girl[];
+}
+
 export function getGirlById(id: number): Girl | undefined {
   return db.prepare(`
     SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug

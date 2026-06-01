@@ -100,6 +100,23 @@ function getDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_shop_comments_shop ON shop_comments(shop_id);
 
+    -- 会員からの情報修正報告 (閉店/退店/存在しない 等)。管理画面で確認する。
+    CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL CHECK(target_type IN ('shop','girl')),
+      shop_id INTEGER,
+      girl_id INTEGER,
+      reason TEXT NOT NULL CHECK(reason IN ('closed','departed','not_exist','wrong_info','other')),
+      detail TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
+    CREATE INDEX IF NOT EXISTS idx_feedback_shop ON feedback(shop_id);
+    CREATE INDEX IF NOT EXISTS idx_feedback_girl ON feedback(girl_id);
+
     -- Server-side ad click log (真のクリック数を DB に残す)
     -- 広告ブロッカー / beacon 未配信などで GA が取りこぼしたクリックも記録される
     CREATE TABLE IF NOT EXISTS ad_clicks (

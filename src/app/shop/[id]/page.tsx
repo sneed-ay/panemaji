@@ -1,8 +1,10 @@
-import { getShopById, getGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getDepartedGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
 import GirlSortFilter from '@/components/GirlSortFilter';
+import GirlImage from '@/components/GirlImage';
+import FeedbackButton from '@/components/FeedbackButton';
 import AdBanner from '@/components/AdBanner';
 import RelatedGuides from '@/components/RelatedGuides';
 import RelatedAreas from '@/components/RelatedAreas';
@@ -78,6 +80,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
   const query = searchParams.q || '';
   const girls = getGirlsByShop(shopId, query || undefined);
+  const departedGirls = getDepartedGirlsByShop(shopId);
   const latestReviews = getReviewsByShop(shopId, 5);
   const nearbyShops = getNearbyShops(shop.area_id, shopId, shop.category, 5);
   // SEO: 同 prefecture の他エリア (現在の area を除外) — internal linking 強化
@@ -255,6 +258,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
                 予約サイトを見る
               </a>
             )}
+            <FeedbackButton targetType="shop" targetId={shop.id} />
           </div>
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <RealScore pct={shop.real_pct ?? -1} reviewCount={shop.review_count || 0} size="lg" />
@@ -342,6 +346,29 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
       {/* Girls List with Sort/Filter */}
       <GirlSortFilter girls={girlsData} query={query} />
+
+      {/* 退店した可能性のある女性 (最下部・「退店」タグ付き) */}
+      {departedGirls.length > 0 && (
+        <details className="bg-gray-50 rounded-lg p-4">
+          <summary className="cursor-pointer text-sm font-bold text-gray-600 flex items-center gap-2">
+            <span className="inline-block bg-gray-300 text-gray-700 text-xs px-2 py-0.5 rounded">退店</span>
+            退店した可能性のある女性 ({departedGirls.length})
+          </summary>
+          <p className="text-xs text-gray-500 mt-2">自動巡回で在籍が確認できなくなった女性です（過去の口コミは参考用に残しています）。</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+            {departedGirls.map((g) => (
+              <a key={g.id} href={`/girl/${g.id}`} className="block bg-white rounded-lg border border-gray-200 p-2 opacity-75 hover:opacity-100 no-underline">
+                <div className="relative inline-block">
+                  <GirlImage src={g.image_url} alt={g.name} size={120} />
+                  <span className="absolute top-1 left-1 bg-gray-700 text-white text-[10px] px-1.5 py-0.5 rounded">退店</span>
+                </div>
+                <p className="text-sm font-bold text-gray-700 truncate mt-1">{g.name}</p>
+                <p className="text-[10px] text-gray-400">口コミ {g.review_count ?? 0}件</p>
+              </a>
+            ))}
+          </div>
+        </details>
+      )}
 
       {/* Nearby Shops */}
       {nearbyShops.length > 0 && (

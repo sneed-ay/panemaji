@@ -4,6 +4,7 @@ import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
 import ShareButtons from '@/components/ShareButtons';
 import FavoriteButton from '@/components/FavoriteButton';
+import FeedbackButton from '@/components/FeedbackButton';
 import GirlPageClient from './GirlPageClient';
 import AdBanner from '@/components/AdBanner';
 import { generateGirlAlternateNames } from '@/lib/altNames';
@@ -206,6 +207,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
           variant="compact"
         />
       </div>
+      <FeedbackButton targetType="girl" targetId={girl.id} />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-4 sm:p-6">
