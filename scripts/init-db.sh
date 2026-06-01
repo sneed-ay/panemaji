@@ -125,7 +125,10 @@ if [ "$DB_EXISTS" = true ]; then
     const reviews = JSON.parse(fs.readFileSync('/tmp/all_reviews.json', 'utf8'));
     if (reviews.length === 0) { console.log('No reviews to restore'); process.exit(0); }
     const db = new Database('$DB_PATH');
-    const cols = Object.keys(reviews[0]);
+    // 🚨 id 列を除外して再採番させる。id を含めると db-latest の既存 id と衝突し、
+    //    INSERT OR IGNORE がスナップショット以降の新規口コミ(会員投稿等)を取りこぼす
+    //    = 毎デプロイで新規口コミが消えていた真因。重複は girl_id+browser_id / user_id+girl_id の UNIQUE index で防ぐ。
+    const cols = Object.keys(reviews[0]).filter((c) => c !== 'id');
     const placeholders = cols.map(() => '?').join(',');
     const insertSql = 'INSERT OR IGNORE INTO reviews (' + cols.join(',') + ') VALUES (' + placeholders + ')';
     const insert = db.prepare(insertSql);
