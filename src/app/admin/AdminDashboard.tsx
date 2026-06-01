@@ -153,14 +153,13 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {members.map((m, i) => (
-                  <tr
-                    key={m.id}
-                    onClick={() => { window.location.href = `/admin/member/${m.id}`; }}
-                    className="border-t border-gray-100 cursor-pointer hover:bg-pink-50"
-                    title="クリックでこの会員のマイページを表示"
-                  >
+                  <tr key={m.id} className="border-t border-gray-100 hover:bg-pink-50">
                     <td className="p-2 text-gray-400">{i + 1}</td>
-                    <td className="p-2 text-pink-700 underline break-all">{m.email}</td>
+                    <td className="p-2 break-all">
+                      <a href={`/admin/member/${m.id}`} className="text-pink-700 underline hover:text-pink-900" title="この会員のマイページを表示">
+                        {m.email}
+                      </a>
+                    </td>
                     <td className="p-2 text-gray-500 whitespace-nowrap">{jst(m.created_at)}</td>
                     <td className="p-2 text-gray-500 whitespace-nowrap">{jst(m.last_login_at)}</td>
                     <td className="p-2 text-right">{m.review_count}</td>
