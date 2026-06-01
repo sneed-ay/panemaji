@@ -13,6 +13,7 @@ interface Member {
 interface Totals {
   users: number;
   sessions_active: number;
+  total_reviews: number;
   member_reviews: number;
   favorites: number;
 }
@@ -88,9 +89,10 @@ export default function AdminDashboard() {
   const stats: { label: string; value: number }[] = totals
     ? [
         { label: '会員数', value: totals.users },
-        { label: 'アクティブsession', value: totals.sessions_active },
+        { label: '累計口コミ', value: totals.total_reviews },
         { label: '会員口コミ', value: totals.member_reviews },
         { label: '気になる', value: totals.favorites },
+        { label: 'アクティブsession', value: totals.sessions_active },
       ]
     : [];
 

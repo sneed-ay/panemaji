@@ -30,6 +30,7 @@ export async function GET() {
   const totals = {
     users: (db.prepare('SELECT COUNT(*) c FROM users').get() as { c: number }).c,
     sessions_active: (db.prepare("SELECT COUNT(*) c FROM sessions WHERE expires_at > datetime('now')").get() as { c: number }).c,
+    total_reviews: (db.prepare('SELECT COUNT(*) c FROM reviews').get() as { c: number }).c,
     member_reviews: (db.prepare('SELECT COUNT(*) c FROM reviews WHERE user_id IS NOT NULL').get() as { c: number }).c,
     favorites: (db.prepare('SELECT COUNT(*) c FROM favorites').get() as { c: number }).c,
   };
