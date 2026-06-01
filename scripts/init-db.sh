@@ -117,6 +117,12 @@ if [ "$DB_EXISTS" = true ]; then
   });
   " 2>/dev/null
 
+  # 🚨 再取込の前に reviews.user_id 列を必ず追加しておく。
+  #    ダウンロードした db-latest の reviews には user_id 列が無く、本番 export 行には user_id があるため、
+  #    マイグレーションを後回しにすると INSERT が「no such column: user_id」で失敗し (|| true で握り潰され)、
+  #    本番固有の新規口コミ(会員投稿等)を毎デプロイ丸ごと取りこぼす (= 5/21以降ほぼ増えなかった真因)。
+  node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] pre-reimport migration failed"
+
   # Re-import ALL reviews (merge: INSERT OR IGNORE preserves new DB reviews, adds back any missing)
   node -e "
   const Database = require('better-sqlite3');
@@ -128,7 +134,9 @@ if [ "$DB_EXISTS" = true ]; then
     // 🚨 id 列を除外して再採番させる。id を含めると db-latest の既存 id と衝突し、
     //    INSERT OR IGNORE がスナップショット以降の新規口コミ(会員投稿等)を取りこぼす
     //    = 毎デプロイで新規口コミが消えていた真因。重複は girl_id+browser_id / user_id+girl_id の UNIQUE index で防ぐ。
-    const cols = Object.keys(reviews[0]).filter((c) => c !== 'id');
+    // id は除外して再採番。さらに取込先 reviews テーブルに実在する列のみに絞る (schema 不整合での全滅を防ぐ防御)
+    const existingCols = new Set(db.prepare('PRAGMA table_info(reviews)').all().map((r) => r.name));
+    const cols = Object.keys(reviews[0]).filter((c) => c !== 'id' && existingCols.has(c));
     const placeholders = cols.map(() => '?').join(',');
     const insertSql = 'INSERT OR IGNORE INTO reviews (' + cols.join(',') + ') VALUES (' + placeholders + ')';
     const insert = db.prepare(insertSql);

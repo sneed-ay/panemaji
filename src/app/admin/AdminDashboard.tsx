@@ -39,6 +39,16 @@ const REASON_LABEL: Record<string, string> = {
   closed: '閉店', departed: '退店', not_exist: '存在しない', wrong_info: '情報誤り', other: 'その他',
 };
 
+/** SQLite の UTC 文字列 ("YYYY-MM-DD HH:MM:SS") を日本時間で表示 */
+function jst(s: string | null | undefined): string {
+  if (!s) return '—';
+  const d = new Date(s.replace(' ', 'T') + 'Z');
+  if (isNaN(d.getTime())) return (s || '').slice(0, 16);
+  return d.toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+}
+
 export default function AdminDashboard() {
   const [state, setState] = useState<'loading' | 'forbidden' | 'ok'>('loading');
   const [tab, setTab] = useState<'members' | 'feedback'>('members');
@@ -135,19 +145,24 @@ export default function AdminDashboard() {
                 <tr>
                   <th className="text-left p-2">#</th>
                   <th className="text-left p-2">メール</th>
-                  <th className="text-left p-2">登録日時</th>
-                  <th className="text-left p-2">最終ログイン</th>
+                  <th className="text-left p-2">登録日時(JST)</th>
+                  <th className="text-left p-2">最終ログイン(JST)</th>
                   <th className="text-right p-2">口コミ</th>
                   <th className="text-right p-2">気になる</th>
                 </tr>
               </thead>
               <tbody>
                 {members.map((m, i) => (
-                  <tr key={m.id} className="border-t border-gray-100">
+                  <tr
+                    key={m.id}
+                    onClick={() => { window.location.href = `/admin/member/${m.id}`; }}
+                    className="border-t border-gray-100 cursor-pointer hover:bg-pink-50"
+                    title="クリックでこの会員のマイページを表示"
+                  >
                     <td className="p-2 text-gray-400">{i + 1}</td>
-                    <td className="p-2 text-gray-800 break-all">{m.email}</td>
-                    <td className="p-2 text-gray-500 whitespace-nowrap">{(m.created_at || '').slice(0, 16)}</td>
-                    <td className="p-2 text-gray-500 whitespace-nowrap">{m.last_login_at ? m.last_login_at.slice(0, 16) : '—'}</td>
+                    <td className="p-2 text-pink-700 underline break-all">{m.email}</td>
+                    <td className="p-2 text-gray-500 whitespace-nowrap">{jst(m.created_at)}</td>
+                    <td className="p-2 text-gray-500 whitespace-nowrap">{jst(m.last_login_at)}</td>
                     <td className="p-2 text-right">{m.review_count}</td>
                     <td className="p-2 text-right">{m.favorite_count}</td>
                   </tr>
@@ -176,7 +191,7 @@ export default function AdminDashboard() {
                   const t = targetLink(f);
                   return (
                     <tr key={f.id} className={`border-t border-gray-100 ${f.status === 'resolved' ? 'opacity-50' : ''}`}>
-                      <td className="p-2 text-gray-500 whitespace-nowrap">{(f.created_at || '').slice(0, 16)}</td>
+                      <td className="p-2 text-gray-500 whitespace-nowrap">{jst(f.created_at)}</td>
                       <td className="p-2"><span className="inline-block bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded">{REASON_LABEL[f.reason] || f.reason}</span></td>
                       <td className="p-2"><a href={t.href} className="text-blue-600 hover:underline break-all">{f.target_type === 'shop' ? '🏬' : '👤'} {t.label}</a></td>
                       <td className="p-2 text-gray-700 break-all">{f.detail || '—'}</td>
