@@ -85,19 +85,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'rate_limit_browser' }, { status: 429 });
     }
 
-    // Try to update existing review first
+    // 会員の既存口コミ(評価)があればそのコメントを更新 = user_id で名寄せ (1人1嬢1口コミ)。
+    // 無ければ user_id 付きで新規作成 → 会員口コミとして保存され、優先表示(user_id DESC)の対象になる。
     const existing = db.prepare(
-      'SELECT id FROM reviews WHERE girl_id = ? AND browser_id = ?'
-    ).get(girl_id, browser_id) as { id: number } | undefined;
+      'SELECT id FROM reviews WHERE girl_id = ? AND user_id = ?'
+    ).get(girl_id, currentUser.id) as { id: number } | undefined;
 
     if (existing) {
       db.prepare('UPDATE reviews SET comment = ? WHERE id = ?').run(comment, existing.id);
     } else {
-      // Create new review with comment only (no rating - use panel_diff as neutral default)
+      // コメントのみの新規 (評価は中立の panel_diff デフォルト)。会員投稿なので user_id を必ず付与。
       const now = new Date().toISOString().split('T')[0];
       db.prepare(
-        'INSERT OR IGNORE INTO reviews (girl_id, visit_date, panel_rating, comment, browser_id) VALUES (?, ?, ?, ?, ?)'
-      ).run(girl_id, now, 'panel_diff', comment, browser_id);
+        'INSERT OR IGNORE INTO reviews (girl_id, visit_date, panel_rating, comment, browser_id, user_id) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(girl_id, now, 'panel_diff', comment, browser_id, currentUser.id);
     }
 
     revalidatePath(`/girl/${girl_id}`);
