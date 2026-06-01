@@ -21,5 +21,8 @@ export async function GET() {
     reviews_count: (db.prepare('SELECT COUNT(*) as c FROM reviews WHERE user_id = ?').get(user.id) as { c: number }).c,
     favorites_count: (db.prepare('SELECT COUNT(*) as c FROM favorites WHERE user_id = ?').get(user.id) as { c: number }).c,
   };
-  return NextResponse.json({ user, stats }, { headers: NO_STORE });
+  // 「毎月1件でも投稿していれば見放題」仕様: 直近30日に会員投稿があるか
+  const recent = (db.prepare("SELECT COUNT(*) as c FROM reviews WHERE user_id = ? AND created_at >= datetime('now','-30 days')").get(user.id) as { c: number }).c;
+  const reviewed_recently = recent > 0;
+  return NextResponse.json({ user, stats, reviewed_recently }, { headers: NO_STORE });
 }
