@@ -123,6 +123,12 @@ if [ "$DB_EXISTS" = true ]; then
   #    本番固有の新規口コミ(会員投稿等)を毎デプロイ丸ごと取りこぼす (= 5/21以降ほぼ増えなかった真因)。
   node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] pre-reimport migration failed"
 
+  # 🚨 会員データ(users/sessions/favorites)を「口コミ再取込より前」に復元する。
+  #    会員口コミ(reviews.user_id)が参照する users 行が先に存在することで FK 整合が保証され、
+  #    再取込時に会員口コミが落ちない (= 今日 会員口コミが全消えした真因の恒久対策)。
+  #    restore-members.mjs は idempotent (この後段の復元呼び出しと二重でも安全)。
+  node scripts/restore-members.mjs 2>&1 || echo "[warn] pre-reimport member restore failed"
+
   # Re-import ALL reviews (merge: INSERT OR IGNORE preserves new DB reviews, adds back any missing)
   node -e "
   const Database = require('better-sqlite3');
@@ -131,6 +137,7 @@ if [ "$DB_EXISTS" = true ]; then
     const reviews = JSON.parse(fs.readFileSync('/tmp/all_reviews.json', 'utf8'));
     if (reviews.length === 0) { console.log('No reviews to restore'); process.exit(0); }
     const db = new Database('$DB_PATH');
+    db.pragma('foreign_keys = OFF'); // 二重保険: 会員復元が先行するが、万一 users 未復元でも会員口コミ(user_id)を落とさない
     // 🚨 id 列を除外して再採番させる。id を含めると db-latest の既存 id と衝突し、
     //    INSERT OR IGNORE がスナップショット以降の新規口コミ(会員投稿等)を取りこぼす
     //    = 毎デプロイで新規口コミが消えていた真因。重複は girl_id+browser_id / user_id+girl_id の UNIQUE index で防ぐ。
@@ -213,34 +220,10 @@ fi
 # マイページ機能のテーブル/列を idempotent に追加 (起動毎に実行、本番でも安全)
 node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] users-tables migration failed"
 
-# 🚨 会員データ (users/sessions/favorites) を復元。
-#    migrate-users-tables.mjs で空テーブルが作られた後に INSERT OR IGNORE で戻す。
-#    users → sessions/favorites の順 (FK 整合性)。id を保持するので reviews.user_id 等の紐付けも維持。
-#    sessions も復元するため、既存ログイン Cookie がデプロイをまたいで有効なまま。
-node -e "
-const Database = require('better-sqlite3');
-const fs = require('fs');
-function restore(db, table, file) {
-  if (!fs.existsSync(file)) return 0;
-  let rows;
-  try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return 0; }
-  if (!rows || rows.length === 0) return 0;
-  const cols = Object.keys(rows[0]);
-  const sql = 'INSERT OR IGNORE INTO ' + table + ' (' + cols.join(',') + ') VALUES (' + cols.map(() => '?').join(',') + ')';
-  const stmt = db.prepare(sql);
-  const tx = db.transaction((rs) => { let n = 0; for (const r of rs) n += stmt.run(...cols.map(c => r[c])).changes; return n; });
-  return tx(rows);
-}
-try {
-  const db = new Database('$DB_PATH');
-  const u = restore(db, 'users', '/tmp/all_users.json');
-  const s = restore(db, 'sessions', '/tmp/all_sessions.json');
-  const f = restore(db, 'favorites', '/tmp/all_favorites.json');
-  const total = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
-  console.log('Restored members: +users', u, '| +sessions', s, '| +favorites', f, '(total users now:', total + ')');
-  db.close();
-} catch(e) { console.error('Member restore error:', e.message); }
-" 2>&1 || echo "[warn] member data restore failed"
+# 🚨 会員データ (users/sessions/favorites) を復元 (restore-members.mjs)。
+#    DB_EXISTS 経路では「口コミ再取込より前」に既に1回実行済 (idempotent なのでここは実質 no-op)。
+#    初回デプロイ経路ではここが唯一の復元ポイント。
+node scripts/restore-members.mjs 2>&1 || echo "[warn] member data restore failed"
 
 # メモリ抑制 (Render Starter 512MB):
 # - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap (OS+SQLite+native で 100MB 確保)
