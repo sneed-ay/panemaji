@@ -156,8 +156,29 @@ if [ "$DB_EXISTS" = true ]; then
       return count;
     });
     const restored = tx(reviews);
+
+    // 🚨 会員紐付け (reviews.user_id) をデプロイ跨ぎで保全する。
+    //    INSERT OR IGNORE は既存行 (db-latest 由来) を更新しないため、db-latest の user_id=NULL が
+    //    本番の会員紐付けを毎デプロイ潰す (= 管理画面で会員別の口コミ数が 0 になる / 会員の口コミが
+    //    「消える」真因。2026-06-03 検出)。本番 (export) に user_id があるものは本番が正 →
+    //    girl_id+browser_id で UPDATE して再適用する。本文取込を壊さぬよう独立 try/catch。
+    if (existingCols.has('user_id')) {
+      try {
+        const relink = db.prepare('UPDATE reviews SET user_id = ? WHERE girl_id = ? AND browser_id = ? AND (user_id IS NULL OR user_id != ?)');
+        let relinked = 0;
+        const rtx = db.transaction((rows) => {
+          for (const row of rows) {
+            if (row.user_id != null) relinked += relink.run(row.user_id, row.girl_id, row.browser_id, row.user_id).changes;
+          }
+        });
+        rtx(reviews);
+        console.log('Re-linked user_id (member reviews):', relinked);
+      } catch (e2) { console.error('user_id re-link error:', e2.message); }
+    }
+
     const total = db.prepare('SELECT COUNT(*) as c FROM reviews').get();
-    console.log('Restored', restored, 'new reviews from backup. Total now:', total.c);
+    const mr = db.prepare('SELECT COUNT(*) as c FROM reviews WHERE user_id IS NOT NULL').get();
+    console.log('Restored', restored, 'new reviews from backup. Total now:', total.c, '| member-linked:', mr.c);
     db.close();
   } catch(e) { console.error('Review restore error:', e.message); }
   " 2>/dev/null || true
