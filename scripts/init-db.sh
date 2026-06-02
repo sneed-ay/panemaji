@@ -1,11 +1,15 @@
 #!/bin/bash
 # Initialize DB on persistent disk
-# CRITICAL: Never overwrite existing DB - user reviews are the most important asset
+# CRITICAL: 既存の本番DBは唯一の source of truth。通常デプロイでは絶対に上書きしない。
 #
-# Strategy:
-# - First deploy (no DB): download from GitHub Releases
-# - Subsequent deploys: NEVER replace. User reviews live on persistent disk.
-# - Master data updates happen via sync APIs or scheduled scripts, NOT by DB replacement.
+# Strategy (恒久対策 2026-06-03):
+# - First deploy (no DB): download db-latest from GitHub Releases as the initial seed.
+# - Subsequent deploys (DB exists): DO NOTHING to the DB. No download, no overwrite, no merge.
+#     旧方式 (毎デプロイ db-latest をDLして本番データをマージし直す) は、そのマージ過程で
+#     user投稿(reviews) や 会員紐付け(reviews.user_id) を繰り返し取りこぼす事故を量産したため
+#     完全に廃止した。本番ディスクのDBが正であり、デプロイはそれに一切触れない。
+# - Master data updates (店舗/嬢/画像等) は「全DB置換」ではなく、対象だけを直接更新する
+#     明示的な同期 (sync API / 専用スクリプト) で行うこと。
 
 DB_PATH="${DB_PATH:-./panemaji.db}"
 DB_DIR=$(dirname "$DB_PATH")
@@ -13,7 +17,7 @@ DB_URL="https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaj
 
 mkdir -p "$DB_DIR"
 
-# Check if DB exists and is valid
+# Check if DB exists and is valid (girls > 1000 = 正常な本番DBとみなす)
 DB_EXISTS=false
 if [ -f "$DB_PATH" ]; then
   GIRL_COUNT=$(node -e "
@@ -32,174 +36,30 @@ if [ -f "$DB_PATH" ]; then
 fi
 
 if [ "$DB_EXISTS" = true ]; then
-  # Merge strategy: download latest release DB, then merge user reviews into it
-  echo "📦 Updating master data while preserving user reviews..."
+  # ✅ 既存の本番DBがある = source of truth。一切上書きしない (DLもマージも再取込もしない)。
+  #    これが「デプロイの度にデータが消える」問題クラスの恒久対策 (2026-06-03)。
+  echo "✅ Existing production DB found ($GIRL_COUNT girls) — preserving AS-IS. No download / no overwrite / no merge."
 
-  # Backup existing DB
-  cp "$DB_PATH" "${DB_PATH}.bak"
+  # 起動直前の本番DBスナップショットをローカル退避 (安全網)
+  cp "$DB_PATH" "${DB_PATH}.bak" 2>/dev/null || true
 
-  # Count ALL reviews before update
-  OLD_REVIEWS=$(node -e "
-  try {
-    const Database = require('better-sqlite3');
-    const db = new Database('$DB_PATH');
-    const r = db.prepare('SELECT COUNT(*) as c FROM reviews').get();
-    console.log(r.c);
-    db.close();
-  } catch(e) { console.log('0'); }
-  " 2>/dev/null || echo "0")
-
-  # Export ALL reviews to temp file (user + ext + import - preserve everything)
-  node -e "
-  const Database = require('better-sqlite3');
-  const fs = require('fs');
-  const db = new Database('$DB_PATH');
-  const reviews = db.prepare('SELECT * FROM reviews').all();
-  fs.writeFileSync('/tmp/all_reviews.json', JSON.stringify(reviews));
-  console.log('Exported', reviews.length, 'reviews (all types)');
-  db.close();
-  " 2>/dev/null || true
-
-  # 🚨 会員データ (users/sessions/favorites) も reviews と同様に永続保存する。
-  #    これをやらないと、フレッシュ DB ダウンロードで会員テーブルが毎デプロイ全消去され、
-  #    登録済み会員が消える / ログインできなくなる (過去に info@sneed.jp が消失)。
-  node -e "
-  const Database = require('better-sqlite3');
-  const fs = require('fs');
-  try {
-    const db = new Database('$DB_PATH');
-    const dump = (t) => { try { return db.prepare('SELECT * FROM ' + t).all(); } catch(e) { return []; } };
-    const users = dump('users'), sessions = dump('sessions'), favorites = dump('favorites');
-    fs.writeFileSync('/tmp/all_users.json', JSON.stringify(users));
-    fs.writeFileSync('/tmp/all_sessions.json', JSON.stringify(sessions));
-    fs.writeFileSync('/tmp/all_favorites.json', JSON.stringify(favorites));
-    console.log('Exported members: users', users.length, '| sessions', sessions.length, '| favorites', favorites.length);
-    db.close();
-  } catch(e) { console.error('Member export error:', e.message); }
-  " 2>/dev/null || true
-
-  # Download fresh DB from releases
-  node -e "
-  const https = require('https');
-  const http = require('http');
-  const fs = require('fs');
-  const zlib = require('zlib');
-
-  function dl(url) {
-    return new Promise((resolve, reject) => {
-      const proto = url.startsWith('https') ? https : http;
-      proto.get(url, {headers:{'User-Agent':'panemaji'}}, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          dl(res.headers.location).then(resolve).catch(reject);
-          return;
-        }
-        if (res.statusCode !== 200) { reject(new Error('HTTP '+res.statusCode)); return; }
-        const gunzip = zlib.createGunzip();
-        const file = fs.createWriteStream('$DB_PATH');
-        res.pipe(gunzip).pipe(file);
-        file.on('finish', () => { file.close(); resolve(); });
-        file.on('error', reject);
-        gunzip.on('error', reject);
-      }).on('error', reject);
-    });
-  }
-
-  dl('$DB_URL').then(() => {
-    const Database = require('better-sqlite3');
-    const db = new Database('$DB_PATH');
-    const s = db.prepare('SELECT COUNT(*) as c FROM shops WHERE is_active=1').get();
-    const g = db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active=1').get();
-    console.log('Downloaded fresh DB: Shops:', s.c, '| Girls:', g.c);
-    db.close();
-  }).catch(e => {
-    console.error('Download failed, restoring backup:', e.message);
-    require('fs').copyFileSync('${DB_PATH}.bak', '$DB_PATH');
-  });
-  " 2>/dev/null
-
-  # 🚨 再取込の前に reviews.user_id 列を必ず追加しておく。
-  #    ダウンロードした db-latest の reviews には user_id 列が無く、本番 export 行には user_id があるため、
-  #    マイグレーションを後回しにすると INSERT が「no such column: user_id」で失敗し (|| true で握り潰され)、
-  #    本番固有の新規口コミ(会員投稿等)を毎デプロイ丸ごと取りこぼす (= 5/21以降ほぼ増えなかった真因)。
-  node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] pre-reimport migration failed"
-
-  # 🚨 会員データ(users/sessions/favorites)を「口コミ再取込より前」に復元する。
-  #    会員口コミ(reviews.user_id)が参照する users 行が先に存在することで FK 整合が保証され、
-  #    再取込時に会員口コミが落ちない (= 今日 会員口コミが全消えした真因の恒久対策)。
-  #    restore-members.mjs は idempotent (この後段の復元呼び出しと二重でも安全)。
-  node scripts/restore-members.mjs 2>&1 || echo "[warn] pre-reimport member restore failed"
-
-  # Re-import ALL reviews (merge: INSERT OR IGNORE preserves new DB reviews, adds back any missing)
-  node -e "
-  const Database = require('better-sqlite3');
-  const fs = require('fs');
-  try {
-    const reviews = JSON.parse(fs.readFileSync('/tmp/all_reviews.json', 'utf8'));
-    if (reviews.length === 0) { console.log('No reviews to restore'); process.exit(0); }
-    const db = new Database('$DB_PATH');
-    db.pragma('foreign_keys = OFF'); // 二重保険: 会員復元が先行するが、万一 users 未復元でも会員口コミ(user_id)を落とさない
-    // 🚨 id 列を除外して再採番させる。id を含めると db-latest の既存 id と衝突し、
-    //    INSERT OR IGNORE がスナップショット以降の新規口コミ(会員投稿等)を取りこぼす
-    //    = 毎デプロイで新規口コミが消えていた真因。重複は girl_id+browser_id / user_id+girl_id の UNIQUE index で防ぐ。
-    // id は除外して再採番。さらに取込先 reviews テーブルに実在する列のみに絞る (schema 不整合での全滅を防ぐ防御)
-    const existingCols = new Set(db.prepare('PRAGMA table_info(reviews)').all().map((r) => r.name));
-    const cols = Object.keys(reviews[0]).filter((c) => c !== 'id' && existingCols.has(c));
-    const placeholders = cols.map(() => '?').join(',');
-    const insertSql = 'INSERT OR IGNORE INTO reviews (' + cols.join(',') + ') VALUES (' + placeholders + ')';
-    const insert = db.prepare(insertSql);
-    const tx = db.transaction((rows) => {
-      let count = 0;
-      for (const row of rows) {
-        const result = insert.run(...cols.map(c => row[c]));
-        count += result.changes;
-      }
-      return count;
-    });
-    const restored = tx(reviews);
-
-    // 🚨 会員紐付け (reviews.user_id) をデプロイ跨ぎで保全する。
-    //    INSERT OR IGNORE は既存行 (db-latest 由来) を更新しないため、db-latest の user_id=NULL が
-    //    本番の会員紐付けを毎デプロイ潰す (= 管理画面で会員別の口コミ数が 0 になる / 会員の口コミが
-    //    「消える」真因。2026-06-03 検出)。本番 (export) に user_id があるものは本番が正 →
-    //    girl_id+browser_id で UPDATE して再適用する。本文取込を壊さぬよう独立 try/catch。
-    if (existingCols.has('user_id')) {
-      try {
-        const relink = db.prepare('UPDATE reviews SET user_id = ? WHERE girl_id = ? AND browser_id = ? AND (user_id IS NULL OR user_id != ?)');
-        let relinked = 0;
-        const rtx = db.transaction((rows) => {
-          for (const row of rows) {
-            if (row.user_id != null) relinked += relink.run(row.user_id, row.girl_id, row.browser_id, row.user_id).changes;
-          }
-        });
-        rtx(reviews);
-        console.log('Re-linked user_id (member reviews):', relinked);
-      } catch (e2) { console.error('user_id re-link error:', e2.message); }
-    }
-
-    const total = db.prepare('SELECT COUNT(*) as c FROM reviews').get();
-    const mr = db.prepare('SELECT COUNT(*) as c FROM reviews WHERE user_id IS NOT NULL').get();
-    console.log('Restored', restored, 'new reviews from backup. Total now:', total.c, '| member-linked:', mr.c);
-    db.close();
-  } catch(e) { console.error('Review restore error:', e.message); }
-  " 2>/dev/null || true
-
-  # Verify
+  # 現状をログ出力 (データが保持されていることの可視化)
   node -e "
   try {
     const Database = require('better-sqlite3');
     const db = new Database('$DB_PATH');
-    const g = db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active=1').get();
-    const s = db.prepare('SELECT COUNT(*) as c FROM shops WHERE is_active=1').get();
     const r = db.prepare('SELECT COUNT(*) as c FROM reviews').get();
     const ur = db.prepare(\"SELECT COUNT(*) as c FROM reviews WHERE browser_id NOT LIKE 'ext-%' AND browser_id NOT LIKE 'x-import-%'\").get();
-    console.log('📊 Shops:', s.c, '| Girls:', g.c, '| Reviews:', r.c, '(user:', ur.c + ')');
+    const mr = db.prepare('SELECT COUNT(*) as c FROM reviews WHERE user_id IS NOT NULL').get();
+    let u = 0; try { u = db.prepare('SELECT COUNT(*) as c FROM users').get().c; } catch(e) {}
+    console.log('📊 Preserved — Reviews:', r.c, '(genuine:', ur.c, '| member-linked:', mr.c + ') | Users:', u);
     db.close();
-  } catch(e) { console.log('❌', e.message); }
+  } catch(e) { console.log('verify skip:', e.message); }
   " 2>/dev/null || true
 
 else
-  # First deploy only - download initial DB
-  echo "📦 First deploy: downloading database..."
+  # 初回デプロイ専用 (DBが無い時だけ db-latest を初期データとして取得)
+  echo "📦 First deploy: downloading initial database from db-latest..."
   node -e "
   const https = require('https');
   const http = require('http');
@@ -238,18 +98,17 @@ else
   " 2>/dev/null
 fi
 
-# マイページ機能のテーブル/列を idempotent に追加 (起動毎に実行、本番でも安全)
+# マイページ機能のテーブル/列を idempotent に追加 (起動毎に実行、本番でも安全 / 既存列は no-op)
 node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] users-tables migration failed"
 
-# 🚨 会員データ (users/sessions/favorites) を復元 (restore-members.mjs)。
-#    DB_EXISTS 経路では「口コミ再取込より前」に既に1回実行済 (idempotent なのでここは実質 no-op)。
-#    初回デプロイ経路ではここが唯一の復元ポイント。
+# 会員データ復元 (restore-members.mjs)。
+# 恒久対策後は通常デプロイで上書きしないため /tmp export が無く実質 no-op。
+# 初回デプロイ等の保険として idempotent に残す (DBには既に会員がいるため二重でも安全)。
 node scripts/restore-members.mjs 2>&1 || echo "[warn] member data restore failed"
 
 # メモリ抑制 (Render Starter 512MB):
-# - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap (OS+SQLite+native で 100MB 確保)
+# - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap
 # - --expose-gc               ... global.gc() を有効化 → memory-watchdog が定期 GC 強制
-#                                (sitemap streaming で出る ArrayBuffer の lazy GC 蓄積を予防)
 # - UV_THREADPOOL_SIZE=2      ... libuv worker pool を縮小 (デフォルト 4 → 2)
 export NODE_OPTIONS="--max-old-space-size=400 --expose-gc"
 export UV_THREADPOOL_SIZE=2
