@@ -17,25 +17,18 @@ export function isBakusaiSpam(comment: string | null | undefined): boolean {
   if (!comment || typeof comment !== 'string') return false;
   const c = comment;
 
-  // 1. ブランド名そのまま (無傷)
-  if (c.includes('パネマジ')) return true;
-  if (c.includes('掲示板')) return true;
+  // 🚨 爆サイbotの正体は「パネマジ掲示板」(掲示板の宣伝) の1字マスク変種。
+  //    「パネマジ」単独はサイトの核心用語(パネル写真と実物の差)で、本物口コミが多用するため
+  //    判定基準にしない。旧実装は「パネマジ」単独で爆サイ判定し、本物口コミを誤ブロック/破棄していた。
+  //    → 「掲示板」(掲示板の宣伝) の文脈でのみ判定する。
+  //    口コミ投稿は会員限定化済みなので、これは defense-in-depth (主防御は member-gating)。
 
-  // 2. minimal-texts.json のブランド変種 (Latin / 半角カナ / 区切り)
-  if (/panemaji/i.test(c)) return true;            // brand_latin
-  if (c.includes('ﾊﾟﾈﾏｼﾞ')) return true;            // brand_kana_half
-  if (/パ.ネ.マ.ジ/u.test(c)) return true;          // brand_punctuated: パ・ネ・マ・ジ / パ.ネ.マ.ジ / パ ネ マ ジ
+  // 1. 「掲示板」そのまま + 1字マスク変種 (掲◯板 / ◯示板 / 掲示◯)
+  if (/掲示板|掲.板|.示板|掲示./u.test(c)) return true;
 
-  // 3. 'パネマジ' 部の文字伏せ + '掲示板'/'示板' (パ◯マジ掲示板 等)
-  const hasPanemajiPartial = c.includes('パネマ') || c.includes('ネマジ');
-  const hasBbs = c.includes('掲') && c.includes('板');
-  if (hasPanemajiPartial && hasBbs) return true;
-
-  // 4. パ◯マジ / パネ◯ジ / パネマ◯ / ◯ネマジ のような中1文字置換 + 掲示板の痕跡
-  if (/パ.マジ|パネ.ジ|パネマ.|.ネマジ/u.test(c) && (c.includes('板') || c.includes('示'))) return true;
-
-  // 5. 短文 (60字以下) で「掲」「板」両方 = bot 寄り (掲示板部マスク '掲◯板' 等を捕捉)
-  if (c.length <= 60 && c.includes('掲') && c.includes('板')) return true;
+  // 2. ブランド変種 (Latin / 半角カナ / 区切り) かつ 掲示板の文脈があるもの
+  const brand = /panemaji/i.test(c) || c.includes('ﾊﾟﾈﾏｼﾞ') || /パ.?ネ.?マ.?ジ/u.test(c);
+  if (brand && /(bbs|board|掲|板|示)/i.test(c)) return true;
 
   return false;
 }
