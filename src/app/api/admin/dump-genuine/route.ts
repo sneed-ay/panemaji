@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403, headers: NO_STORE });
   }
   // 取込先に user_id 列が無い古いスナップショットでも動くよう、存在する列だけ選ぶ
-  const cols = new Set(db.prepare('PRAGMA table_info(reviews)').all().map((r: { name: string }) => r.name));
+  const cols = new Set((db.prepare('PRAGMA table_info(reviews)').all() as { name: string }[]).map((r) => r.name));
   const want = ['girl_id', 'visit_date', 'panel_rating', 'comment', 'browser_id', 'created_at', 'user_id'].filter((c) => cols.has(c));
   const rows = db
     .prepare(
