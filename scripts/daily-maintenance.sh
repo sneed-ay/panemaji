@@ -52,6 +52,19 @@ fi
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
 
+# ----------------------------------------------------------------------
+# 🚨 外部 scraper 検知 (2026-06-03 恒久対策)
+#   既存ロックは「他の daily-maintenance」しか見ないため、手動の ad-hoc scraper
+#   (fill-missing-images-safe / scrape-* / update-all 等) と並行起動して
+#   ローカル DB を破損させる事故が起きた (girls 40.7万→27.2万 の誤非アクティブ化)。
+#   開始時点で外部 scraper が走行中なら衝突回避で exit する。
+# ----------------------------------------------------------------------
+EXT_SCRAPER=$(pgrep -f "fill-missing-images-safe|scrape-images|scrape-rankingdeli|scrape-purelovers|scrape-cityheaven|scrape-fuzoku|scrape-menesu|update-all|refetch-girls" 2>/dev/null | grep -vx "$$" | head -1 || true)
+if [ -n "$EXT_SCRAPER" ]; then
+  echo "[lock] 外部 scraper (PID $EXT_SCRAPER) が走行中 — 衝突回避で exit 0 (trap が LOCK_FILE を掃除)"
+  exit 0
+fi
+
 # macOS には GNU timeout がないので gtimeout（coreutils）にフォールバック。
 # 両方とも無い場合は警告して素通し実行（タイムアウト無し）。
 if command -v timeout &>/dev/null; then
@@ -95,6 +108,11 @@ const dg = db.prepare(\"SELECT COUNT(*) FROM (SELECT shop_id, name, COUNT(*) as 
 console.log('  店舗:', s.c, '| 嬢:', g.c, '| 評価:', r.c, '| 0人店:', z.c, '| 店重複:', Object.values(d)[0], '| 嬢重複:', Object.values(dg)[0]);
 db.close();
 " 2>&1 | tee -a "$LOG_FILE"
+
+# 🚨 サニティガード用 (2026-06-03): 開始時の active girls 数を記録。
+#    Phase 4 で「大量減」を検知したら db-latest 上書きを止め、破損データの伝播を防ぐ。
+BEFORE_GIRLS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
+log "  [guard] 開始時 active girls = $BEFORE_GIRLS"
 
 # ============================================================================
 # Phase 1: データ収集
@@ -398,12 +416,23 @@ console.log('  After: 店舗:', s.c, '| 嬢:', g.c, '| 評価:', r.c);
 db.close();
 " 2>&1 | tee -a "$LOG_FILE"
 
+# 🚨 サニティガード (2026-06-03 恒久対策): scrape 後の active girls が開始時の 80% 未満 =
+#    異常な大量減 (並行衝突 / scrape 失敗 / browser 死 等)。db-latest 上書き & backup を
+#    中止し、破損データが種データ(db-latest)へ伝播するのを防ぐ。
+AFTER_GIRLS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
+MIN_GIRLS=$(( ${BEFORE_GIRLS:-0} * 80 / 100 ))
+DB_OK=true
+if [ "${BEFORE_GIRLS:-0}" -gt 1000 ] && [ "$AFTER_GIRLS" -lt "$MIN_GIRLS" ]; then
+  log "  [GUARD-ABORT] active girls ${BEFORE_GIRLS}→${AFTER_GIRLS} (閾値 ${MIN_GIRLS} 未満) = 異常な大量減。db-latest 上書き/backup を中止しデータ破損の伝播を防止。"
+  DB_OK=false
+fi
+
 # gzip圧縮
 gzip -c "$DB_PATH" > "$DB_PATH.gz"
 log "  DB圧縮: $(ls -lh "$DB_PATH.gz" | awk '{print $5}')"
 
-# GitHub Releasesにアップロード (latest + 日次backup tag)
-if command -v gh &> /dev/null; then
+# GitHub Releasesにアップロード (latest + 日次backup tag) — サニティガード通過時のみ
+if [ "$DB_OK" = true ] && command -v gh &> /dev/null; then
   gh release upload db-latest "$DB_PATH.gz" --repo sneed-ay/panemaji --clobber 2>&1 | tee -a "$LOG_FILE" || log "  [warn] GitHub Release upload failed"
   log "  GitHub Release(db-latest): アップロード完了"
 
