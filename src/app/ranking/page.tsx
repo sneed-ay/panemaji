@@ -7,12 +7,18 @@ import type { Metadata } from 'next';
 export const revalidate = 7200; // 2026-05-17: 30min → 2h (ISR rebuild storm 防止 / Render Starter 0.5CPU 救済)
 
 export function generateMetadata({ searchParams }: { searchParams: { pref?: string } }): Metadata {
-  const prefSlug = searchParams.pref && isValidPrefecture(searchParams.pref) ? searchParams.pref : 'tokyo';
+  const hasValidPref = !!(searchParams.pref && isValidPrefecture(searchParams.pref));
+  const prefSlug = hasValidPref ? searchParams.pref! : 'tokyo';
   const prefName = prefectureSlugToName(prefSlug);
+  // 2026-06-03: /ranking(param無=tokyo) と /ranking?pref=tokyo の重複を bare /ranking に正規化。
+  //             他pref は ?pref=X を自己 canonical に。
+  const canonical = hasValidPref && prefSlug !== 'tokyo'
+    ? `https://panemaji.com/ranking?pref=${prefSlug}`
+    : 'https://panemaji.com/ranking';
   return {
-    title: `${prefName}の風俗ランキング｜パネル通り率・盛りすぎ率TOP`,
-    description: `${prefName}の風俗ランキング。パネル通り率・盛りすぎ率(パネマジ度)で女性・店舗をランキング。デリヘル・ソープ・メンエス・ヘルスの口コミに基づくリアル度TOPを掲載。`,
-    alternates: { canonical: `https://panemaji.com/ranking?pref=${prefSlug}` },
+    title: `${prefName}の風俗ランキング｜パネル通り率・盛りすぎ率TOP20`,
+    description: `${prefName}の風俗パネマジ度ランキング。パネル通り率TOP20と盛りすぎ率ワーストを口コミから集計。デリヘル/ソープ/メンエス/ヘルスの女性・店舗をリアル度順に掲載、口コミで随時更新。`,
+    alternates: { canonical },
   };
 }
 

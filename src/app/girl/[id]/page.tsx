@@ -7,6 +7,7 @@ import FavoriteButton from '@/components/FavoriteButton';
 import FeedbackButton from '@/components/FeedbackButton';
 import GirlPageClient from './GirlPageClient';
 import AdBanner from '@/components/AdBanner';
+import RelatedGuides from '@/components/RelatedGuides';
 import { generateGirlAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 
@@ -400,6 +401,9 @@ export default function GirlPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       )}
+
+      {/* 関連ガイド記事 — 最大トラフィック面(girl)からガイド/エリアへ内部リンク (2026-06-03 SEO監査: girlのガイド導線欠落を解消) */}
+      <RelatedGuides areaSlug={girl.area_slug} />
     </div>
   );
 }

@@ -10,15 +10,18 @@ export const revalidate = 86400;
 
 export async function GET() {
   let girlCount = FALLBACK_GIRL_COUNT;
+  // 2026-06-03: lastmod を today固定 → 最新 last_seen_at(日付) ベースに (CLAUDE.md準拠・クロールバジェット節約)。
+  let lastmod = new Date().toISOString().slice(0, 10);
   try {
     // 質フィルタ後の数で shard 計算 (image OR review がない girls は sitemap 対象外)
-    const { getActiveGirlCountForSitemap } = await import('@/lib/queries');
+    const { getActiveGirlCountForSitemap, getGlobalMaxLastSeen } = await import('@/lib/queries');
     girlCount = getActiveGirlCountForSitemap();
+    const max = getGlobalMaxLastSeen();
+    if (max) lastmod = max.slice(0, 10); // "YYYY-MM-DD" (W3C date format, lastmod として valid)
   } catch {
     // DB 未接続時 (build 時など) は fallback を使う
   }
   const girlSitemapCount = Math.ceil(girlCount / GIRLS_PER_SITEMAP);
-  const lastmod = new Date().toISOString();
 
   const entries: string[] = [];
   // /sitemap/0 = top + guides + prefectures + areas + shops

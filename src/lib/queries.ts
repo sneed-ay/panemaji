@@ -573,6 +573,13 @@ export function getActiveGirlCountForSitemap(): number {
   return (db.prepare(`SELECT COUNT(*) AS c FROM girls WHERE is_active=1 ${GIRL_QUALITY_FILTER}`).get() as { c: number }).c;
 }
 
+// sitemap index の lastmod 用: 全体の最新 last_seen_at。
+// today 固定だと Google が全 shard を毎日再クロールしてバジェット浪費 (CLAUDE.md: lastmod は last_seen_at ベース)。
+export function getGlobalMaxLastSeen(): string | null {
+  const r = db.prepare(`SELECT MAX(last_seen_at) AS m FROM shops WHERE is_active = 1`).get() as { m: string | null };
+  return r?.m ?? null;
+}
+
 // 画像 sitemap 用: 50k 行を iterator で逐次返す
 export function iterateShopsWithImages(limit: number): IterableIterator<{ id: number; name: string; last_seen_at: string | null; img_url: string }> {
   return db.prepare(`

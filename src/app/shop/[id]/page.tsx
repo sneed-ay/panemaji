@@ -20,18 +20,21 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   const girlCount = shop.girl_count || 0;
   const girlCountLabel = girlCount === 100 ? '100+' : String(girlCount);
   const realPct = shop.real_pct != null && shop.real_pct >= 0 ? shop.real_pct : null;
-  // Google SERP は 30字前後で title をカット。 layout.tsx の `%s｜パネマジ掲示板` (8字) と
-  // 合わせると、 page 側 title は 22-24 字以内に収めたい。
-  // shop名の長さで分岐: ≤14字なら area+業態、 15-22字なら "口コミ・パネマジ度" のみ、 23字以上は名前のみ。
+  // Google SERP は 30字前後で title をカット。layout.tsx の `%s｜パネマジ掲示板` (8字) と
+  // 合わせ、page 側 title は 22-24 字目安。
+  // 🎯 2026-06-03 GSC: 「{店名}掲示板」が最大流入クエリ(1,014クエリ/27,818imp/CTR4.49%/中央7位=既に1ページ目)。
+  //    旧 title は先頭が「口コミ・パネマジ度」で "掲示板" はサフィックス末尾(SERPで切れる位置)にしか無く、
+  //    検索語が非露出でCTRを取りこぼしていた → 店名直後に「掲示板・口コミ」を前方寄せする
+  //    (パネマジ度は description / OG / サフィックス「パネマジ掲示板」で担保)。
   const areaName = shop.area_name || '';
   const shopLen = shop.name.length;
   let title: string;
   if (shopLen <= 14 && areaName) {
-    title = `${shop.name} 口コミ・パネマジ度【${areaName}】`;
+    title = `${shop.name}の掲示板・口コミ【${areaName}】`;
   } else if (shopLen <= 22) {
-    title = `${shop.name} 口コミ・パネマジ度`;
+    title = `${shop.name}の掲示板・口コミ`;
   } else {
-    title = shop.name;
+    title = `${shop.name} 掲示板`;
   }
   const description = `${shop.name}${areaName ? `(${areaName})` : ''}の口コミ掲示板。パネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCountLabel}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}。`;
   const ogParams = new URLSearchParams({

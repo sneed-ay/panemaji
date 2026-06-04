@@ -88,6 +88,20 @@ const nextConfig = {
 
     // 神奈川
     { source: '/area/yokohama', destination: '/area/yokohama-station', permanent: true },
+    { source: '/area/sagamihara', destination: '/area/sagamihara-hashimoto', permanent: true },
+    { source: '/area/atsugi', destination: '/area/atsugi-ebina', permanent: true },
+
+    // 追加: ガイドCTAの簡易slug救済 (2026-06-03 内部リンク404解消・全件 unified-areas で実在確認済)
+    // 東京
+    { source: '/area/kamata', destination: '/area/kamata-omori-oimachi', permanent: true },
+    { source: '/area/otsuka', destination: '/area/otsuka-sugamo-akabane', permanent: true },
+    { source: '/area/iidabashi', destination: '/area/iidabashi-ichigaya', permanent: true },
+    // 埼玉
+    { source: '/area/kawaguchi', destination: '/area/kawaguchi-nishikawaguchi', permanent: true },
+    { source: '/area/koshigaya', destination: '/area/kasukabe-koshigaya', permanent: true },
+    // 千葉
+    { source: '/area/kashiwa', destination: '/area/matsudo-kashiwa', permanent: true },
+    { source: '/area/funabashi', destination: '/area/funabashi-ichikawa', permanent: true },
 
     // ──────────────────────────────────────────────────────────────────
     // 旧 area slug (legacy) → 都道府県 top へのフォールバック
