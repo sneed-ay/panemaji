@@ -60,7 +60,11 @@ async function main() {
 
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
-  await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
+  await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+  // 🔑 年齢確認を cookie で突破。cityheaven は ?nenrei=y パラメータだけでは弾くようになり、
+  //    cookie 必須に。update-all.mjs / scrape-cityheaven.mjs と同じ nenrei cookie を設定する。
+  //    (これが無く取込が4/5以降ずっと「0 links」で空振りしていた)
+  await page.setCookie({ name: 'nenrei', value: 'y', domain: '.cityheaven.net' });
 
   let seqNum = 0;
   let totalAdded = 0;

@@ -33,6 +33,7 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
 const DELAY_MIN = 2000;
 const DELAY_JITTER = 1500;
 const MAX_RETRIES = 3;
+const FETCH_TIMEOUT = 15000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const delay = () => sleep(DELAY_MIN + Math.random() * DELAY_JITTER);
@@ -68,11 +69,15 @@ function parseArgs() {
 
 async function fetchPage(url, retries = MAX_RETRIES) {
   for (let i = 0; i < retries; i++) {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), FETCH_TIMEOUT);
     try {
-      const r = await fetch(url, { headers: { 'User-Agent': UA, 'Cookie': 'nenrei=y' } });
+      const r = await fetch(url, { headers: { 'User-Agent': UA, 'Cookie': 'nenrei=y' }, signal: ac.signal });
+      clearTimeout(t);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return await r.text();
     } catch (e) {
+      clearTimeout(t);
       console.error(`  retry ${i + 1}/${retries}: ${url} - ${e.message}`);
       await sleep(3000 * (i + 1));
     }
@@ -113,24 +118,6 @@ function parseShops(html, pref) {
   return shops;
 }
 
-function parseTotalCount(html) {
-  // "1～30 件を表示 ／ 全 119 件" パターン
-  const m = html.match(/全\s*(\d+)\s*件/);
-  return m ? Number(m[1]) : 0;
-}
-
-async function fetchAreaCodes(pref) {
-  // 都道府県トップページから AXXXX 一覧取得
-  const url = `${BASE}/${pref}/?nenrei=y`;
-  const html = await fetchPage(url);
-  if (!html) return [];
-  const codes = new Set();
-  const re = new RegExp(`/${pref}/(A\\d{4})/`, 'g');
-  let m;
-  while ((m = re.exec(html))) codes.add(m[1]);
-  return [...codes].sort();
-}
-
 async function scrapePrefBiz(db, pref, bizCode, opts = {}) {
   const category = BIZ_MAP[bizCode];
   if (!category) {
@@ -138,32 +125,43 @@ async function scrapePrefBiz(db, pref, bizCode, opts = {}) {
     return { fetched: 0, inserted: 0, skipped: 0 };
   }
 
-  // 都道府県のエリアコード一覧取得
-  const areaCodes = await fetchAreaCodes(pref);
-  await delay();
-  console.log(`  📂 ${pref} ${bizCode}(${category}): エリア${areaCodes.length}個`);
-
-  const allShops = [];
+  // pref-level shop-list を取得し、pager_info の ids でページネーション。
+  // cityheaven のページ送りは「同URL + ?ids=<カンマ区切りチャンク>」を GET する方式。
+  // pager_info の value は スペース区切り=ページ群 / カンマ区切り=各ページのid。
   const seen = new Set();
-  for (const areaCode of areaCodes) {
+  const allShops = [];
+
+  const firstUrl = `${BASE}/${pref}/shop-list/${bizCode}/?nenrei=y`;
+  const firstHtml = await fetchPage(firstUrl);
+  if (!firstHtml) {
+    console.log(`  ⚠️ ${pref} ${bizCode}(${category}): 1ページ目取得失敗`);
+    return { fetched: 0, inserted: 0, skipped: 0 };
+  }
+  for (const s of parseShops(firstHtml, pref)) {
+    if (!seen.has(s.slug)) { seen.add(s.slug); allShops.push(s); }
+  }
+
+  const pm = firstHtml.match(/id="pager_info"[^>]*value="([^"]*)"/);
+  const pages = pm ? pm[1].split(' ').filter(Boolean) : [];
+  const totalIds = pm ? pm[1].split(/[ ,]+/).filter(Boolean).length : allShops.length;
+  console.log(`  📂 ${pref} ${bizCode}(${category}): 掲載総数${totalIds} / ${pages.length || 1}ページ`);
+
+  for (let p = 1; p < pages.length; p++) {
     await delay();
-    const url = `${BASE}/${pref}/${areaCode}/shop-list/${bizCode}/?nenrei=y`;
+    const url = `${firstUrl}&ids=${encodeURIComponent(pages[p])}`;
     const html = await fetchPage(url);
     if (!html) continue;
-    const shops = parseShops(html, pref).filter((s) => !seen.has(s.slug));
-    for (const s of shops) seen.add(s.slug);
-    if (shops.length > 0) {
-      allShops.push(...shops);
-      console.log(`     ${areaCode}: +${shops.length} (累計 ${allShops.length})`);
+    let added = 0;
+    for (const s of parseShops(html, pref)) {
+      if (!seen.has(s.slug)) { seen.add(s.slug); allShops.push(s); added++; }
+    }
+    if (p % 5 === 0 || p === pages.length - 1) {
+      console.log(`     page ${p + 1}/${pages.length}: 累計 ${allShops.length}/${totalIds}`);
     }
   }
 
-  // 重複除去（slug単位）
-  const uniq = new Map();
-  for (const s of allShops) if (!uniq.has(s.slug)) uniq.set(s.slug, s);
-  const shops = [...uniq.values()];
-
-  console.log(`     取得: ${shops.length} 件 (uniq)`);
+  const shops = allShops;
+  console.log(`     取得: ${shops.length} 件 (uniq) / 掲載総数 ${totalIds}`);
 
   if (opts.dryRun) {
     console.log(`     [dry-run] ${shops.slice(0, 5).map((s) => s.name).join(', ')}...`);
