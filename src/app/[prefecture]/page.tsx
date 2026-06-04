@@ -1,4 +1,5 @@
 import HomeContent from '@/components/HomeContent';
+import RelatedGuides from '@/components/RelatedGuides';
 import { isValidPrefecture, isValidCategory, prefectureSlugToName, getAreasByPrefecture, getStatsByPrefecture } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -8,9 +9,11 @@ export const revalidate = 7200; // 2026-05-17: 30min → 2h (ISR rebuild storm �
 export function generateMetadata({ params }: { params: { prefecture: string } }): Metadata {
   if (!isValidPrefecture(params.prefecture)) return {};
   const prefName = prefectureSlugToName(params.prefecture);
+  // 2026-06-03 GSC: 都道府県descに掲載数(数字)を入れCTR訴求 (FAQで既に同クエリ使用済=追加コスト軽微)
+  const stats = getStatsByPrefecture(params.prefecture);
   return {
     title: `${prefName}の風俗・ソープ・メンエス 口コミ掲示板・パネマジ度`,
-    description: `${prefName}の風俗店舗の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）をチェック。${prefName}のデリヘル・ソープ・メンエス・ヘルス店のリアルな評判・在籍嬢一覧・ランキングがわかる。`,
+    description: `${prefName}の風俗${stats.shopCount.toLocaleString()}店舗・口コミ${stats.reviewCount.toLocaleString()}件の掲示板。パネル写真と実物の一致度(パネマジ度)をチェック。${prefName}のデリヘル・ソープ・メンエス・ヘルスのリアル評判・在籍嬢一覧・ランキング。`,
     alternates: { canonical: `https://panemaji.com/${params.prefecture}` },
   };
 }
@@ -111,6 +114,10 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
             </details>
           ))}
         </div>
+      </div>
+      {/* 関連ガイド記事 — 都道府県ページ(高権威)から地域ガイドへ内部リンク (2026-06-03 SEO監査: pref↔guide 双方向化) */}
+      <div className="mt-5">
+        <RelatedGuides prefSlug={params.prefecture} max={4} />
       </div>
     </>
   );

@@ -58,7 +58,7 @@ export default function ArticleLayout({
       url: "https://panemaji.com",
       logo: { "@type": "ImageObject", url: "https://panemaji.com/icon-192.png", width: 192, height: 192 },
     },
-    image: ["https://panemaji.com/icon-192.png"],
+    image: ["https://panemaji.com/ogp-banner.png"], // 2026-06-03: 192px→1200x630 (Article画像要件 min696px 充足 / 全ガイド記事に波及)
     datePublished,
     dateModified,
     mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
