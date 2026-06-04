@@ -229,6 +229,22 @@ export default function RootLayout({
         <AdBanner size="footer" />
         <BottomNav />
         <footer className="bg-gray-800 text-gray-400 text-center py-4 sm:py-6 mt-8 sm:mt-12 text-xs sm:text-sm px-3">
+          {/* 主要都道府県 — 全ページ共通の地理内部リンク (2026-06-03 SEO監査: 地方pref/areaのクロール・順位を底上げ) */}
+          <nav className="flex justify-center flex-wrap gap-x-3 gap-y-1 mb-3 pb-3 border-b border-gray-700/60 max-w-3xl mx-auto" aria-label="主要都道府県から探す">
+            <span className="text-gray-500">主要エリア:</span>
+            <a href="/osaka" className="hover:text-white transition-colors">大阪</a>
+            <a href="/kanagawa" className="hover:text-white transition-colors">神奈川</a>
+            <a href="/aichi" className="hover:text-white transition-colors">愛知</a>
+            <a href="/fukuoka" className="hover:text-white transition-colors">福岡</a>
+            <a href="/hokkaido" className="hover:text-white transition-colors">北海道</a>
+            <a href="/hyogo" className="hover:text-white transition-colors">兵庫</a>
+            <a href="/kyoto" className="hover:text-white transition-colors">京都</a>
+            <a href="/saitama" className="hover:text-white transition-colors">埼玉</a>
+            <a href="/chiba" className="hover:text-white transition-colors">千葉</a>
+            <a href="/miyagi" className="hover:text-white transition-colors">宮城</a>
+            <a href="/hiroshima" className="hover:text-white transition-colors">広島</a>
+            <a href="/shizuoka" className="hover:text-white transition-colors">静岡</a>
+          </nav>
           <div className="flex justify-center flex-wrap gap-4 mb-2">
             <a href="/guide/how-to-use" className="hover:text-white transition-colors">使い方</a>
             <a href="/guide/panemaji-checker" className="hover:text-white transition-colors">パネマジ見分け方</a>
