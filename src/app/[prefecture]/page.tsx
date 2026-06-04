@@ -11,9 +11,11 @@ export function generateMetadata({ params }: { params: { prefecture: string } })
   const prefName = prefectureSlugToName(params.prefecture);
   // 2026-06-03 GSC: 都道府県descに掲載数(数字)を入れCTR訴求 (FAQで既に同クエリ使用済=追加コスト軽微)
   const stats = getStatsByPrefecture(params.prefecture);
+  // 口コミ数は閾値以上のみ表示 (鳥取/島根等の小規模県で「口コミ0件」がSERPで薄く見える逆効果を防ぐ)
+  const reviewPart = stats.reviewCount >= 30 ? `・口コミ${stats.reviewCount.toLocaleString()}件` : '';
   return {
     title: `${prefName}の風俗・ソープ・メンエス 口コミ掲示板・パネマジ度`,
-    description: `${prefName}の風俗${stats.shopCount.toLocaleString()}店舗・口コミ${stats.reviewCount.toLocaleString()}件の掲示板。パネル写真と実物の一致度(パネマジ度)をチェック。${prefName}のデリヘル・ソープ・メンエス・ヘルスのリアル評判・在籍嬢一覧・ランキング。`,
+    description: `${prefName}の風俗${stats.shopCount.toLocaleString()}店舗${reviewPart}の掲示板。パネル写真と実物の一致度(パネマジ度)をチェック。${prefName}のデリヘル・ソープ・メンエス・ヘルスのリアル評判・在籍嬢一覧・ランキング。`,
     alternates: { canonical: `https://panemaji.com/${params.prefecture}` },
   };
 }
