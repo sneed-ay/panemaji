@@ -93,6 +93,23 @@ log "  パネマジ日次メンテナンス開始"
 log "  $(date '+%Y-%m-%d %H:%M:%S')"
 log "=========================================="
 
+# 🚨 自己修復 (2026-06-03): ローカル DB が無い/破損していたら db-latest を再取得する。
+#    (手動検証中に Google Drive 書き込みで $DB_PATH を破損させ daily-maintenance が
+#     動けなくなった事故への対策。破損DBのまま走ると後続スクレイプ/メンテが全滅するため、
+#     起動時に必ず検証し、無効なら種データから復旧、それでも無効なら安全に中止する。)
+DB_VALID=$(node -e "try{const db=require('better-sqlite3')('$DB_PATH',{readonly:true});const c=db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;db.close();console.log(c>1000?'ok':'bad');}catch(e){console.log('bad');}" 2>/dev/null || echo bad)
+if [ "$DB_VALID" != "ok" ]; then
+  log "[self-heal] $DB_PATH が無効/破損 → db-latest を再取得"
+  curl -sL "https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaji.db.gz" -o /tmp/_dm_dl.gz 2>/dev/null && gunzip -c /tmp/_dm_dl.gz > "$DB_PATH" 2>/dev/null
+  rm -f /tmp/_dm_dl.gz
+  RECHK=$(node -e "try{const db=require('better-sqlite3')('$DB_PATH',{readonly:true});const c=db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;db.close();console.log(c>1000?'ok':'bad');}catch(e){console.log('bad');}" 2>/dev/null || echo bad)
+  if [ "$RECHK" != "ok" ]; then
+    log "[self-heal] 再取得後も無効 → daily-maintenance を中止 (本番・db-latest は無傷)"
+    exit 1
+  fi
+  log "[self-heal] db-latest 再取得で復旧"
+fi
+
 # Before stats
 log ""
 log "=== Phase 0: Before Stats ==="
