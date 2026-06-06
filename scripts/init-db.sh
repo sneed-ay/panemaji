@@ -106,6 +106,52 @@ node scripts/migrate-users-tables.mjs 2>&1 || echo "[warn] users-tables migratio
 # 初回デプロイ等の保険として idempotent に残す (DBには既に会員がいるため二重でも安全)。
 node scripts/restore-members.mjs 2>&1 || echo "[warn] member data restore failed"
 
+# ── マスターデータ同期 (会員データ非破壊) ────────────────────────────
+# scripts/.master-sync-version が prod 適用済と違う時だけ db-latest を取得し、
+# shops/girls/areas のみ source キーで UPSERT する (reviews/users/favorites は不可侵)。
+# 失敗時は起動時 backup へ即復元。本番DBが在る時(=2回目以降のデプロイ)だけ走る。
+SYNC_VER_FILE="scripts/.master-sync-version"
+APPLIED_FILE="$DB_DIR/.applied-sync-version"
+if [ "$DB_EXISTS" = true ] && [ -f "$SYNC_VER_FILE" ]; then
+  WANT_VER=$(tr -d '[:space:]' < "$SYNC_VER_FILE" 2>/dev/null)
+  HAVE_VER=$(tr -d '[:space:]' < "$APPLIED_FILE" 2>/dev/null || echo "none")
+  if [ -n "$WANT_VER" ] && [ "$WANT_VER" != "$HAVE_VER" ]; then
+    echo "🔄 master-sync v$WANT_VER (適用済: ${HAVE_VER:-none}) — db-latest 取得中..."
+    if curl -sL "$DB_URL" -o /tmp/_sync.gz && gunzip -f /tmp/_sync.gz; then
+      if node scripts/sync-master-to-prod.mjs "$DB_PATH" /tmp/_sync; then
+        echo "$WANT_VER" > "$APPLIED_FILE"
+        echo "✅ master-sync v$WANT_VER 適用完了"
+      else
+        echo "❌ master-sync 失敗 → 起動時 backup へ復元 (本番データ保護)"
+        cp "${DB_PATH}.bak" "$DB_PATH" 2>/dev/null && echo "  復元完了" || echo "  [warn] backup 復元失敗"
+      fi
+      rm -f /tmp/_sync
+    else
+      echo "⚠️ db-latest 取得失敗 → master-sync skip"
+    fi
+  fi
+fi
+
+# ── 会員フィードバック処理 (sync とは独立した gate で発火) ──────────────
+# scripts/.feedback-process-version が prod 適用済と違う時だけ実行。
+# 明確な閉店/退店/不存在 → 非アクティブ化(is_active=0・復元可・★DELETEしない)、
+# 自由記述(wrong_info/other)は内容ログのみ open維持。reviews/会員テーブルは不可侵。
+FB_VER_FILE="scripts/.feedback-process-version"
+FB_APPLIED="$DB_DIR/.applied-feedback-version"
+if [ "$DB_EXISTS" = true ] && [ -f "$FB_VER_FILE" ]; then
+  FB_WANT=$(tr -d '[:space:]' < "$FB_VER_FILE" 2>/dev/null)
+  FB_HAVE=$(tr -d '[:space:]' < "$FB_APPLIED" 2>/dev/null || echo "none")
+  if [ -n "$FB_WANT" ] && [ "$FB_WANT" != "$FB_HAVE" ]; then
+    echo "🔄 feedback処理 v$FB_WANT (適用済: ${FB_HAVE:-none})..."
+    if node scripts/process-feedback.mjs "$DB_PATH"; then
+      echo "$FB_WANT" > "$FB_APPLIED"
+      echo "✅ feedback処理 v$FB_WANT 完了"
+    else
+      echo "[warn] feedback処理 失敗 (本番データは非破壊・削除なし設計)"
+    fi
+  fi
+fi
+
 # メモリ抑制 (Render Starter 512MB):
 # - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap
 # - --expose-gc               ... global.gc() を有効化 → memory-watchdog が定期 GC 強制
