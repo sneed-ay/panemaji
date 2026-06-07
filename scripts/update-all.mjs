@@ -33,8 +33,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
-const DB_PATH = path.join(PROJECT_ROOT, 'panemaji.db');
-const PROGRESS_FILE = path.join(PROJECT_ROOT, 'update-progress.json');
+const DB_PATH = process.env.DB_PATH || path.join(PROJECT_ROOT, 'panemaji.db');
+const PROGRESS_FILE = process.env.PROGRESS_FILE || path.join(PROJECT_ROOT, 'update-progress.json');
 
 const BASE = 'https://www.cityheaven.net';
 const DELAY_MIN = 1500;

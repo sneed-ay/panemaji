@@ -17,7 +17,7 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = resolve(__dirname, '..', 'panemaji.db');
+const DB_PATH = process.env.DB_PATH || resolve(__dirname, '..', 'panemaji.db');
 const DRY_RUN = process.argv.includes('--dry');
 
 const db = new Database(DB_PATH);
