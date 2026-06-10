@@ -23,8 +23,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PROJECT_ROOT="$(pwd)"
-# Render では /data/panemaji.db（env 経由で渡される）、scheduled-task / ローカルでは PROJECT_ROOT/panemaji.db
-DB_PATH="${DB_PATH:-$PROJECT_ROOT/panemaji.db}"
+# Render では /data/panemaji.db（env 経由）。ローカルは Google Drive破損回避のため $HOME 配下(ローカルディスク)に置く。
+DB_PATH="${DB_PATH:-$HOME/panemaji-data/panemaji.db}"
 export DB_PATH
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
@@ -97,12 +97,12 @@ log "=========================================="
 #    (手動検証中に Google Drive 書き込みで $DB_PATH を破損させ daily-maintenance が
 #     動けなくなった事故への対策。破損DBのまま走ると後続スクレイプ/メンテが全滅するため、
 #     起動時に必ず検証し、無効なら種データから復旧、それでも無効なら安全に中止する。)
-DB_VALID=$(node -e "try{const db=require('better-sqlite3')('$DB_PATH',{readonly:true});const c=db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;db.close();console.log(c>1000?'ok':'bad');}catch(e){console.log('bad');}" 2>/dev/null || echo bad)
+DB_VALID=$(node -e "try{const db=require('better-sqlite3')('$DB_PATH',{readonly:true});const c=db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;db.close();console.log(c>300000?'ok':'bad');}catch(e){console.log('bad');}" 2>/dev/null || echo bad)
 if [ "$DB_VALID" != "ok" ]; then
   log "[self-heal] $DB_PATH が無効/破損 → db-latest を再取得"
   curl -sL "https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaji.db.gz" -o /tmp/_dm_dl.gz 2>/dev/null && gunzip -c /tmp/_dm_dl.gz > "$DB_PATH" 2>/dev/null
   rm -f /tmp/_dm_dl.gz
-  RECHK=$(node -e "try{const db=require('better-sqlite3')('$DB_PATH',{readonly:true});const c=db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;db.close();console.log(c>1000?'ok':'bad');}catch(e){console.log('bad');}" 2>/dev/null || echo bad)
+  RECHK=$(node -e "try{const db=require('better-sqlite3')('$DB_PATH',{readonly:true});const c=db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;db.close();console.log(c>300000?'ok':'bad');}catch(e){console.log('bad');}" 2>/dev/null || echo bad)
   if [ "$RECHK" != "ok" ]; then
     log "[self-heal] 再取得後も無効 → daily-maintenance を中止 (本番・db-latest は無傷)"
     exit 1
@@ -181,7 +181,7 @@ run_with_stall_watchdog() {
 
       # (2) browser-death detection v2: 15s 以内に 10件+ で 即 kill (旧 20→10 に 感度UP)
       local err_count
-      err_count=$(/bin/echo "$recent_log" | /usr/bin/grep -cE 'detached Frame|Target closed|Session closed|Protocol error|Connection closed' 2>/dev/null || /bin/echo 0)
+      err_count=$(/bin/echo "$recent_log" | /usr/bin/grep -cE 'detached Frame|Target closed|Session closed|Protocol error|Connection closed' 2>/dev/null || true)
       if [ "$err_count" -ge 10 ]; then
         log "  [browser-dead-watchdog v2] $label で browser-death エラー ${err_count}件/15s → 即 kill"
         /usr/bin/pkill -P $pid 2>/dev/null
@@ -204,9 +204,9 @@ run_with_stall_watchdog() {
       fi
       # (4) 連続 shop 失敗 検出 (各 shop の "error:" 行 を 数えて 10連続 で kill)
       local recent_errors
-      recent_errors=$(/bin/echo "$recent_log" | /usr/bin/grep -cE '^error: |error: Attempted' 2>/dev/null || /bin/echo 0)
+      recent_errors=$(/bin/echo "$recent_log" | /usr/bin/grep -cE '^error: |error: Attempted' 2>/dev/null || true)
       local recent_success
-      recent_success=$(/bin/echo "$recent_log" | /usr/bin/grep -cE 'girls=\[|active=[1-9]|inserted [0-9]|updated [0-9]' 2>/dev/null || /bin/echo 0)
+      recent_success=$(/bin/echo "$recent_log" | /usr/bin/grep -cE 'girls=\[|active=[1-9]|inserted [0-9]|updated [0-9]' 2>/dev/null || true)
       if [ "$recent_errors" -gt 0 ] && [ "$recent_success" -eq 0 ]; then
         consecutive_shop_failures=$((consecutive_shop_failures + recent_errors))
         if [ "$consecutive_shop_failures" -ge 10 ]; then
@@ -249,7 +249,7 @@ $TIMEOUT 14400 node scripts/update-all.mjs $FORCE_FLAG >> "$LOG_FILE" 2>&1 || lo
 # stall watchdog 経由で hang 自動回避
 # 2026-05-17: Phase 1-2 全体 hard cap 追加 (1時間 = 14 pref に 平均 4分強)
 #   過去事故: 1 pref 30min × 14 = 7h 連続失敗 → 全体 cap で 強制 abort
-if [ "$QUICK_MODE" = false ]; then
+if [ "$QUICK_MODE" = false ] && [ "${ENABLE_PUPPETEER:-false}" = true ]; then
   log "  [1-2] カテゴリ別スクレイプ（ソープ/ヘルス/ホテヘル/エステ）..."
   phase12_start=$(/bin/date +%s)
   for pref in tokyo osaka kanagawa aichi hokkaido fukuoka miyagi saitama chiba hyogo kyoto hiroshima shizuoka niigata; do
@@ -262,13 +262,17 @@ if [ "$QUICK_MODE" = false ]; then
   done
 fi
 
-# 1-3: メンエス（aromaesthe + fues）— puppeteer 系
-log "  [1-3] メンエスデータ更新..."
-run_with_stall_watchdog "scrape-menesu" 120 7200 node scripts/scrape-menesu.mjs all || log "  [warn] scrape-menesu stall/timeout"
+# 1-3: メンエス（aromaesthe + fues）— puppeteer 系 (★detached-frame破損源・既定OFF。ENABLE_PUPPETEER=true で有効化)
+if [ "${ENABLE_PUPPETEER:-false}" = true ]; then
+  log "  [1-3] メンエスデータ更新..."
+  run_with_stall_watchdog "scrape-menesu" 120 7200 node scripts/scrape-menesu.mjs all || log "  [warn] scrape-menesu stall/timeout"
+else log "  [1-3] スキップ (puppeteer破損回避)"; fi
 
-# 1-4: men-esthe.jp — puppeteer 系
-log "  [1-4] men-esthe.jp データ更新..."
-run_with_stall_watchdog "scrape-menesthe" 120 3600 node scripts/scrape-menesthe.mjs girls || log "  [warn] scrape-menesthe stall/timeout"
+# 1-4: men-esthe.jp — puppeteer 系 (★detached-frame破損源・既定OFF)
+if [ "${ENABLE_PUPPETEER:-false}" = true ]; then
+  log "  [1-4] men-esthe.jp データ更新..."
+  run_with_stall_watchdog "scrape-menesthe" 120 3600 node scripts/scrape-menesthe.mjs girls || log "  [warn] scrape-menesthe stall/timeout"
+else log "  [1-4] スキップ (puppeteer破損回避)"; fi
 
 # 1-5: 0人店・100人上限店の再取得
 log "  [1-5] 0人/100人上限店の再取得..."
@@ -438,9 +442,13 @@ db.close();
 #    中止し、破損データが種データ(db-latest)へ伝播するのを防ぐ。
 AFTER_GIRLS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
 MIN_GIRLS=$(( ${BEFORE_GIRLS:-0} * 80 / 100 ))
+ABS_FLOOR=300000   # 🚨 絶対下限: 破損した基準値でも 30万未満なら必ず中止。相対閾値(80%)だけだと "破損base→破損" が素通りして db-latest を汚す欠陥(2026-06-10判明)を塞ぐ。
 DB_OK=true
-if [ "${BEFORE_GIRLS:-0}" -gt 1000 ] && [ "$AFTER_GIRLS" -lt "$MIN_GIRLS" ]; then
-  log "  [GUARD-ABORT] active girls ${BEFORE_GIRLS}→${AFTER_GIRLS} (閾値 ${MIN_GIRLS} 未満) = 異常な大量減。db-latest 上書き/backup を中止しデータ破損の伝播を防止。"
+if [ "$AFTER_GIRLS" -lt "$ABS_FLOOR" ]; then
+  log "  [GUARD-ABORT] active girls=${AFTER_GIRLS} が絶対下限 ${ABS_FLOOR} 未満 = 破損とみなし db-latest 上書き/backup を中止。"
+  DB_OK=false
+elif [ "${BEFORE_GIRLS:-0}" -gt 1000 ] && [ "$AFTER_GIRLS" -lt "$MIN_GIRLS" ]; then
+  log "  [GUARD-ABORT] active girls ${BEFORE_GIRLS}→${AFTER_GIRLS} (相対閾値 ${MIN_GIRLS} 未満) = 異常な大量減。db-latest 上書き/backup を中止。"
   DB_OK=false
 fi
 
