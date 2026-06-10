@@ -166,8 +166,12 @@ function getDb(): Database.Database {
   }
 
   // Optimize SQLite for read-heavy workload (memory-aware: Render Starter 512MB)
-  // 20MB → 4MB に縮小 (本番 OOM 対策・read pattern は index hit メインで cache 巨大化不要)
-  _db.pragma('cache_size = -4000'); // 4MB cache
+  // 2026-06-10: 4MB → 48MB に拡大。covering index idx_girls_shop_active_image (~28MB) が
+  //   4MB cache に収まらず、毎リクエスト 遅いネットワークディスクから index を再読込 →
+  //   TTFB が 0.2s ↔ 3.7s と乱高下する thrashing が発生していた。hot index/page を保持できる
+  //   サイズに拡大して安定化。better-sqlite3 の cache は heap 外 (native) なので heap_limit に影響せず、
+  //   mmap_size=0 + temp_store=FILE で他のメモリは抑制済み。rss 216MB/512 で +44MB は安全圏。
+  _db.pragma('cache_size = -48000'); // 48MB cache
   // temp_store: MEMORY → DEFAULT (1 = file) に変更
   // 422k girls の ORDER BY 等で温まる temp が memory に貯まらないよう disk fallback
   _db.pragma('temp_store = FILE');

@@ -407,7 +407,7 @@ export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
 // freshness は維持。
 export function getLatestReviews(limit: number = 20, prefectureSlug?: string): Review[] {
   if (prefectureSlug) {
-    return db.prepare(`
+    return qmemo(`latestRev:${prefectureSlug}:${limit}`, Q_TTL, () => db.prepare(`
       SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
       FROM reviews r
       JOIN girls g ON r.girl_id = g.id
@@ -417,9 +417,9 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
       AND g.image_url IS NOT NULL AND g.image_url <> ''
       ORDER BY r.created_at DESC
       LIMIT ?
-    `).all(prefectureSlug, limit) as Review[];
+    `).all(prefectureSlug, limit) as Review[]);
   }
-  return db.prepare(`
+  return qmemo(`latestRev::${limit}`, Q_TTL, () => db.prepare(`
     SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
@@ -427,7 +427,7 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
     WHERE g.image_url IS NOT NULL AND g.image_url <> ''
     ORDER BY r.created_at DESC
     LIMIT ?
-  `).all(limit) as Review[];
+  `).all(limit) as Review[]);
 }
 
 export function addReview(girlId: number, panelRating: string, comment: string | null, browserId: string, userId: number | null = null) {
