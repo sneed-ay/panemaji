@@ -6,6 +6,21 @@ if (process.env.NEXT_PHASE !== 'phase-production-build') {
   try { seedIfEmpty(); } catch { /* DB not available during build */ }
 }
 
+// 軽量 TTL メモ (本番 Render は永続 Node プロセスなので request 跨ぎで有効)。
+// ホームページ等は searchParams 依存で「動的レンダリング = 毎 request SSR」のため、
+// 重い集計クエリ(SHOP_STATS_JOIN 系)を TTL 間キャッシュして per-request の DB コストを削減する。
+// データ更新は daily-maintenance / 明示同期 経由で稀 + デプロイで自然にクリアされるため stale は許容。
+const _qCache = new Map<string, { at: number; val: unknown }>();
+function qmemo<T>(key: string, ttlMs: number, fn: () => T): T {
+  const hit = _qCache.get(key);
+  const now = Date.now();
+  if (hit && now - hit.at < ttlMs) return hit.val as T;
+  const val = fn();
+  _qCache.set(key, { at: now, val });
+  return val;
+}
+const Q_TTL = 300_000; // 5分
+
 // Prefectures
 export type Prefecture = {
   name: string;
@@ -662,7 +677,7 @@ export function getWorstRealGirls(prefectureSlug: string, limit: number = 20, ca
 
 // Top shops by real_pct - requires minimum reviews
 export function getTopRealShops(prefectureSlug: string, limit: number = 20): Shop[] {
-  return db.prepare(`
+  return qmemo(`topReal:${prefectureSlug}:${limit}`, Q_TTL, () => db.prepare(`
     SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
@@ -670,7 +685,7 @@ export function getTopRealShops(prefectureSlug: string, limit: number = 20): Sho
     WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(rc.review_count, 0) >= 5
     ORDER BY real_pct DESC, rc.review_count DESC
     LIMIT ?
-  `).all(prefectureSlug, limit) as Shop[];
+  `).all(prefectureSlug, limit) as Shop[]);
 }
 
 // Shops with many girls but few reviews (review-seeking shops)
@@ -795,7 +810,7 @@ export function getNearbyShops(areaId: number, shopId: number, category: string,
 // Recently added shops (for home page). Optionally scope to a prefecture.
 export function getRecentlyAddedShops(limit = 6, prefectureSlug?: string): Shop[] {
   if (prefectureSlug) {
-    return db.prepare(`
+    return qmemo(`recentAdded:${prefectureSlug}:${limit}`, Q_TTL, () => db.prepare(`
       SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
       FROM shops s
       JOIN areas a ON s.area_id = a.id
@@ -803,9 +818,9 @@ export function getRecentlyAddedShops(limit = 6, prefectureSlug?: string): Shop[
       WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(gc.girl_count, 0) >= 1
       ORDER BY s.created_at DESC
       LIMIT ?
-    `).all(prefectureSlug, limit) as Shop[];
+    `).all(prefectureSlug, limit) as Shop[]);
   }
-  return db.prepare(`
+  return qmemo(`recentAdded::${limit}`, Q_TTL, () => db.prepare(`
     SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
@@ -813,7 +828,7 @@ export function getRecentlyAddedShops(limit = 6, prefectureSlug?: string): Shop[
     WHERE s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1
     ORDER BY s.created_at DESC
     LIMIT ?
-  `).all(limit) as Shop[];
+  `).all(limit) as Shop[]);
 }
 
 // Top shops by real_pct for any prefecture or nationwide

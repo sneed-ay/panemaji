@@ -73,6 +73,10 @@ function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_girls_shop_id ON girls(shop_id);
     CREATE INDEX IF NOT EXISTS idx_girls_shop_active ON girls(shop_id, is_active);
     CREATE INDEX IF NOT EXISTS idx_girls_is_active ON girls(is_active);
+    -- 2026-06-10 性能: ホームページ/エリアの「画像あり girl_count」集計を covering scan 化。
+    --   これが無いと is_active で絞った後 image_url を行参照 + GROUP BY が TEMP B-TREE に spill し、
+    --   本番(cache 4MB/temp FILE/遅いディスク)で 406k girls の集計が数秒かかり全ページが重くなる。
+    CREATE INDEX IF NOT EXISTS idx_girls_shop_active_image ON girls(shop_id, is_active, image_url);
     CREATE INDEX IF NOT EXISTS idx_reviews_girl_id ON reviews(girl_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_girl_rating ON reviews(girl_id, panel_rating);
     CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
