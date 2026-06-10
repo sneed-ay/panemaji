@@ -483,13 +483,19 @@ if [ "$DB_OK" = true ] && command -v gh &> /dev/null; then
   done
 fi
 
-# git push（コード変更があれば。新規記事やメンテ修正を含む）
-if [ -d .git ]; then
-  git add -A scripts/ src/app/guide/ 2>/dev/null || true
-  git diff --staged --quiet 2>/dev/null || {
-    git commit -m "chore: daily maintenance $(date +%Y-%m-%d)" 2>/dev/null || true
-    git push origin main 2>/dev/null || log "  [warn] git push failed"
-  }
+# git auto-commit (コード変更: scripts/・guide記事)
+#   .git はローカル(separate-git-dir/pointer)化済 → -e で file/dir 両対応 ([ -d ] だと pointer を見落とす)。
+#   Google Drive working tree のスキャンは遅く稀に hang するため: add は timeout で上限を切り、
+#   commit は plumbing (write-tree→commit-tree→update-ref) で working tree 非スキャン化し hang を回避 (2026-06-10)。
+#   日次データ本体は上記 db-latest 経由で別途反映済。
+if [ -e .git ]; then
+  timeout 300 git add -A scripts/ src/app/guide/ 2>/dev/null || log "  [git] add timeout → commitスキップ"
+  if ! git diff --cached --quiet 2>/dev/null; then
+    TREE=$(git write-tree 2>/dev/null) && PARENT=$(git rev-parse HEAD 2>/dev/null) && \
+    CMT=$(printf 'chore: daily maintenance %s' "$(date +%Y-%m-%d)" | git commit-tree "$TREE" -p "$PARENT" 2>/dev/null) && \
+    git update-ref refs/heads/main "$CMT" 2>/dev/null && \
+    { timeout 120 git push origin main 2>/dev/null && log "  [git] commit+push: ${CMT:0:8}" || log "  [warn] git push失敗(commitはlocalに保持)"; }
+  fi
 fi
 
 log ""
