@@ -152,6 +152,27 @@ if [ "$DB_EXISTS" = true ] && [ -f "$FB_VER_FILE" ]; then
   fi
 fi
 
+# ── 爆サイ パネマジ取り込み (独立 gate) ──────────────────────────────────
+# scripts/.bakusai-import-version が prod 適用済と違う時だけ実行。
+# scripts/bakusai-import-data.json から shop_comments/reviews を冪等INSERT。
+# 個人スレ名指しの未在籍嬢は新規作成(source_id=ext-bk-g-)。出所 browser_id=ext-bakusai-* 保持。
+# 会員データ(users/favorites/会員review=user_id付)は不可侵・DELETEなし。import側が会員数減を検知したら異常終了。
+BK_VER_FILE="scripts/.bakusai-import-version"
+BK_APPLIED="$DB_DIR/.applied-bakusai-version"
+if [ "$DB_EXISTS" = true ] && [ -f "$BK_VER_FILE" ]; then
+  BK_WANT=$(tr -d '[:space:]' < "$BK_VER_FILE" 2>/dev/null)
+  BK_HAVE=$(tr -d '[:space:]' < "$BK_APPLIED" 2>/dev/null || echo "none")
+  if [ -n "$BK_WANT" ] && [ "$BK_WANT" != "$BK_HAVE" ]; then
+    echo "🔄 爆サイ取り込み v$BK_WANT (適用済: ${BK_HAVE:-none})..."
+    if DB_PATH="$DB_PATH" node scripts/import-bakusai.mjs; then
+      echo "$BK_WANT" > "$BK_APPLIED"
+      echo "✅ 爆サイ取り込み v$BK_WANT 完了"
+    else
+      echo "[warn] 爆サイ取り込み 失敗 (会員データ保全チェックで中断の可能性・非破壊設計)"
+    fi
+  fi
+fi
+
 # メモリ抑制 (Render Starter 512MB):
 # - --max-old-space-size=400  ... V8 heap を 400MB に強制 cap
 # - --expose-gc               ... global.gc() を有効化 → memory-watchdog が定期 GC 強制
