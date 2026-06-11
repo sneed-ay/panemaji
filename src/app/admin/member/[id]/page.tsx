@@ -98,7 +98,7 @@ export default function AdminMemberPage({ params }: { params: { id: string } }) 
                         r.panel_rating === 'panel_match' ? 'bg-green-100 text-green-800'
                         : r.panel_rating === 'panel_diff' ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-red-100 text-red-800'}`}>
-                        {r.panel_rating === 'panel_match' ? 'パネ通り' : r.panel_rating === 'panel_diff' ? '盛りすぎ' : '地雷'}
+                        {r.panel_rating === 'panel_match' ? 'パネル通り' : r.panel_rating === 'panel_diff' ? '許せる' : '盛りすぎ'}
                       </span>
                       <span className="ml-2 text-gray-400">{jst(r.created_at)}</span>
                     </div>
