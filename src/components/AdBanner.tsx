@@ -72,7 +72,8 @@ function FanzaWidget() {
     trackAdEvent('banner_click', 'fanza', { item_index: index, item_url: url.substring(0, 100) });
   };
 
-  if (loaded && items.length === 0) return <NoteAdImage size="rectangle" />;
+  // 2026-06-12: note(kaito_ura) 撤去 → FANZA0件時のフォールバックは parally に
+  if (loaded && items.length === 0) return <ParallyAdImage size="rectangle" />;
   if (!loaded) return <div className="flex justify-center min-h-[50px]" />;
 
   const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -135,7 +136,7 @@ function ParallyAdImage({ size }: { size: AdSize }) {
 
 export default function AdBanner({ size, className = '' }: AdBannerProps) {
   const [visible, setVisible] = useState(false);
-  const [adType, setAdType] = useState<AdType>('note');
+  const [adType, setAdType] = useState<AdType>('fanza');
 
   useEffect(() => {
     if (!AD_CONFIG.enabled) return;
