@@ -2,21 +2,18 @@ import { AD_CONFIG } from '@/lib/ad-config';
 
 // 2026-05-09: adstir 撤去 (CPM ¥2.71)
 // 2026-05-10: parally 追加 → fanza:note:parally = 1:1:1
-export type AdType = 'note' | 'fanza' | 'parally';
+// 2026-06-12: note(kaito_ura) 完全撤去 → fanza:parally = 1:1 のみ
+export type AdType = 'fanza' | 'parally';
 
 /**
- * 配信比率 (AD_CONFIG.{fanza,note,parally}Ratio) に基づいて広告タイプを1つ抽選。
- * メインの AdBanner と ContentLocker で共有する。
+ * 配信比率 (AD_CONFIG.{fanza,parally}Ratio) に基づいて広告タイプを1つ抽選。
+ * メインの AdBanner で使用。note は撤去済 (fanza/parally のみ)。
  */
 export function pickAdType(): AdType {
   const candidates: { type: AdType; weight: number }[] = [];
 
   if (AD_CONFIG.fanza.enabled) {
     candidates.push({ type: 'fanza', weight: AD_CONFIG.fanzaRatio });
-  }
-  // 2026-06-12: note(kaito_ura) 撤去。noteRatio > 0 の時だけ抽選候補に入れる
-  if (AD_CONFIG.noteRatio > 0) {
-    candidates.push({ type: 'note', weight: AD_CONFIG.noteRatio });
   }
   if (AD_CONFIG.parallyAd.images.length > 0 && AD_CONFIG.parallyRatio > 0) {
     candidates.push({ type: 'parally', weight: AD_CONFIG.parallyRatio });

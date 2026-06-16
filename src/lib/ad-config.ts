@@ -1,27 +1,11 @@
 /**
- * Ad configuration: FANZA(コンテキスト連動) / note (kaito_ura) / parally (sneed)
+ * Ad configuration: FANZA(コンテキスト連動) / parally (sneed)。note(kaito_ura)は2026-06-12撤去
  * adstir は 2026-05-09 撤去
  */
 export const AD_CONFIG = {
   enabled: true,
 
-  // 自社広告 #1: kaito_ura note 記事誘導
-  // 2026-05-06: 旧 n5a879e870165 → 新 n7a45cd2a0008 / バナー素材 7枚
-  noteAd: {
-    link: 'https://note.com/kaito_ura/n/n7a45cd2a0008',
-    images: [
-      '/ad/note-1.jpg', // 無料SEX (木枠ポスター)
-      '/ad/note-2.jpg', // 無料SEX (グラデーション)
-      '/ad/note-3.jpg', // ナンバーワン (夜景)
-      '/ad/note-4.jpg', // パパ活 (ワインレッド)
-      '/ad/note-5.jpg', // 無料SEX (白BG)
-      '/ad/note-6.jpg', // ナンバーワン (白BG)
-      '/ad/note-7.jpg', // パパ活 (白BG)
-    ],
-    utm: { source: 'panemaji', medium: 'banner', campaign: 'note_ad' },
-  },
-
-  // 自社広告 #2: parally note 記事誘導 (2026-05-10 追加)
+  // 自社広告: parally note 記事誘導 (2026-05-10 追加 / note(kaito_ura)は撤去)
   // 2次元エロ・1億円稼げる系のバナー (3 メッセージ × 2 デザイン variant = 6 枚)
   parallyAd: {
     link: 'https://note.com/sneed/n/n81d0caefa93f',
@@ -95,27 +79,14 @@ export const AD_CONFIG = {
   // 2026-05-10: parally 追加 → fanza:note:parally = 1:1:1 (三分割均等)
   // 2026-05-11: kaito_ura note を一旦 OFF → fanza:parally = 1:1 (parally 効果検証 A/B)
   // 2026-05-12: note 復活 + parally の 配分微調整 → fanza:note:parally = 4:4:2 (40% / 40% / 20%)
-  // 2026-06-12: note(kaito_ura) 撤去 → fanza:parally = 1:1 (50% / 50%)
+  // 2026-06-12: note(kaito_ura) 完全撤去 → fanza:parally = 1:1 (50% / 50%)
   fanzaRatio: 1,
-  noteRatio: 0,
   parallyRatio: 1,
   adstirRatio: 0,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,
 };
-
-/** Build the full ad link with UTM parameters (kaito_ura note ad) */
-export function getAdLink(content: string): string {
-  const { noteAd } = AD_CONFIG;
-  const params = new URLSearchParams({
-    utm_source: noteAd.utm.source,
-    utm_medium: noteAd.utm.medium,
-    utm_campaign: noteAd.utm.campaign,
-    utm_content: content,
-  });
-  return `${noteAd.link}?${params.toString()}`;
-}
 
 /** Build the full ad link with UTM parameters (parally note ad) */
 export function getParallyAdLink(content: string): string {

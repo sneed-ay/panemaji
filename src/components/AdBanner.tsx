@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AD_CONFIG, getAdLink, getParallyAdLink, wrapClickUrl } from '@/lib/ad-config';
+import { AD_CONFIG, getParallyAdLink, wrapClickUrl } from '@/lib/ad-config';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
 import { pickFreshFanza } from '@/lib/fanzaPool';
 // adstir は 2026-05-09 撤去
@@ -92,27 +92,6 @@ function FanzaWidget() {
   );
 }
 
-/** Note自社広告バナー (kaito_ura) */
-function NoteAdImage({ size }: { size: AdSize }) {
-  const [adSrc] = useState(() => getRandomImage(AD_CONFIG.noteAd.images));
-  const [imgError, setImgError] = useState(false);
-  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
-  const link = wrapClickUrl(getAdLink(size), { adType: 'note', adSize: size, adPage: pagePath });
-
-  const handleClick = () => {
-    trackAdEvent('banner_click', 'note', { ad_size: size });
-  };
-
-  if (imgError) return null;
-
-  return (
-    <a href={link} target="_blank" rel="noopener noreferrer sponsored"
-      className="inline-block w-full max-w-lg" onClick={handleClick}>
-      <img src={adSrc} alt="PR" className="w-full h-auto rounded-lg" onError={() => setImgError(true)} />
-    </a>
-  );
-}
-
 /** Parally 自社広告バナー (sneed) */
 function ParallyAdImage({ size }: { size: AdSize }) {
   const [adSrc] = useState(() => getRandomImage(AD_CONFIG.parallyAd.images));
@@ -163,7 +142,6 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="px-2">
         {adType === 'fanza' && <FanzaWidget />}
-        {adType === 'note' && <NoteAdImage size={size} />}
         {adType === 'parally' && <ParallyAdImage size={size} />}
       </div>
     </div>
