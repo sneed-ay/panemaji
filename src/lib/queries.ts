@@ -178,18 +178,28 @@ export function getRelatedAreas(
   excludeAreaId: number,
   limit = 8,
 ): (Area & { shop_count: number })[] {
-  return db.prepare(`
+  // 2026-06-12 SEO監査: shop_count DESC だけだと大エリアばかりがリンクを受け、店舗はあるのに
+  // 順位の低い小エリアに内部リンクが回らない。上位(店舗多い)を limit-2 件、残り2枠は
+  // 「店舗はあるが低カバレッジ」エリアを混ぜ、薄いエリアにもリンクジュースを流して底上げする。
+  const stat = `LEFT JOIN (SELECT area_id, COUNT(*) as shop_count FROM shops WHERE is_active = 1 GROUP BY area_id) sc ON sc.area_id = a.id`;
+  const topN = Math.max(1, limit - 2);
+  const top = db.prepare(`
     SELECT a.*, COALESCE(sc.shop_count, 0) as shop_count
-    FROM areas a
-    LEFT JOIN (
-      SELECT area_id, COUNT(*) as shop_count
-      FROM shops WHERE is_active = 1
-      GROUP BY area_id
-    ) sc ON sc.area_id = a.id
+    FROM areas a ${stat}
     WHERE a.prefecture = ? AND a.id != ?
     ORDER BY shop_count DESC, a.display_order, a.id
     LIMIT ?
+  `).all(prefectureSlug, excludeAreaId, topN) as (Area & { shop_count: number })[];
+  const topIds = new Set(top.map((a) => a.id));
+  const low = db.prepare(`
+    SELECT a.*, COALESCE(sc.shop_count, 0) as shop_count
+    FROM areas a ${stat}
+    WHERE a.prefecture = ? AND a.id != ? AND COALESCE(sc.shop_count, 0) > 0
+    ORDER BY sc.shop_count ASC, a.display_order, a.id
+    LIMIT ?
   `).all(prefectureSlug, excludeAreaId, limit) as (Area & { shop_count: number })[];
+  const fill = low.filter((a) => !topIds.has(a.id)).slice(0, Math.max(0, limit - top.length));
+  return [...top, ...fill];
 }
 
 // Shop stats via LEFT JOIN aggregation (replaces multiple correlated subqueries)
@@ -900,6 +910,28 @@ export function getShopGenuineReviewStats(shopId: number): { reviewCount: number
   `).get(shopId) as { c: number; m: number; d: number };
   const c = row.c || 0;
   return { reviewCount: c, realPct: c === 0 ? -1 : Math.round((row.m * 100 + row.d * 50) / c) };
+}
+
+// エリア/県内で「掲示板の声(ext-bakusai)」が多い店。パネマジ言及が多い順 → SEO/回遊用。
+// opts.areaId か opts.prefectureSlug のどちらかを指定。
+export function getShopsByBakusaiComments(opts: { areaId?: number; prefectureSlug?: string }, limit: number = 8): (Shop & { bakusai_count: number })[] {
+  const where = opts.areaId != null ? 's.area_id = ?' : 'a.prefecture = ?';
+  const arg: number | string = opts.areaId != null ? opts.areaId : (opts.prefectureSlug as string);
+  return db.prepare(`
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS},
+      bc.bakusai_count
+    FROM shops s
+    JOIN areas a ON s.area_id = a.id
+    ${SHOP_STATS_JOIN}
+    JOIN (
+      SELECT shop_id, COUNT(*) as bakusai_count
+      FROM shop_comments WHERE browser_id LIKE 'ext-bakusai%'
+      GROUP BY shop_id
+    ) bc ON bc.shop_id = s.id
+    WHERE ${where} AND s.is_active = 1
+    ORDER BY bc.bakusai_count DESC, real_pct DESC
+    LIMIT ?
+  `).all(arg, limit) as (Shop & { bakusai_count: number })[];
 }
 
 export function getLastShopCommentTime(shopId: number, browserId: string): string | null {

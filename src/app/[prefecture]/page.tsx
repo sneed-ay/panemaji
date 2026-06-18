@@ -1,6 +1,6 @@
 import HomeContent from '@/components/HomeContent';
 import RelatedGuides from '@/components/RelatedGuides';
-import { isValidPrefecture, isValidCategory, prefectureSlugToName, getAreasByPrefecture, getStatsByPrefecture } from '@/lib/queries';
+import { isValidPrefecture, isValidCategory, prefectureSlugToName, getAreasByPrefecture, getStatsByPrefecture, getShopsByBakusaiComments } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -31,6 +31,8 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
   const areas = getAreasByPrefecture(params.prefecture);
   const stats = getStatsByPrefecture(params.prefecture);
   const url = `https://panemaji.com/${params.prefecture}`;
+  // 掲示板の声(ext-bakusai)が多い店 — 県全体でパネマジ言及の多い店を回遊導線に(表示のみ・schema非掲載)
+  const bbsShops = getShopsByBakusaiComments({ prefectureSlug: params.prefecture }, 10);
 
   // CollectionPage + ItemList (areas) — 副作用ゼロ、 構造化データ追加のみ
   const collectionJsonLd = {
@@ -102,6 +104,25 @@ export default function PrefecturePage({ params, searchParams }: { params: { pre
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <HomeContent prefSlug={params.prefecture} catSlug={catSlug} />
+      {/* {県} 掲示板で話題の店(ext-bakusai言及が多い順) — 回遊・内部リンク強化(schema非掲載) */}
+      {bbsShops.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-5 mt-5">
+          <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">{prefName} 掲示板で話題の店</h2>
+          <div className="space-y-2">
+            {bbsShops.map((shop) => (
+              <a key={shop.id} href={`/shop/${shop.id}`} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 hover:bg-pink-50 transition-colors no-underline">
+                <span className="inline-flex items-center justify-center shrink-0 bg-pink-100 text-pink-700 text-[10px] font-bold rounded-full px-2 h-6">掲示板{shop.bakusai_count}</span>
+                <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{shop.name}</span>
+                <span className="text-[10px] text-gray-400 shrink-0 hidden sm:inline">{shop.area_name}</span>
+                {(shop.real_pct ?? -1) >= 0 && (
+                  <span className={`text-xs shrink-0 font-bold ${(shop.real_pct ?? 0) >= 70 ? 'text-green-600' : (shop.real_pct ?? 0) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{shop.real_pct}%</span>
+                )}
+              </a>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">外部掲示板でパネマジ(パネル写真と実物)について言及が多い店です。</p>
+        </div>
+      )}
       {/* よくある質問 (SEO: FAQ schema と一致する visible 表示) */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-5 mt-5">
         <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">{prefName}に関する よくある質問</h2>

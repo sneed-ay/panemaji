@@ -1,4 +1,4 @@
-import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture, getRelatedAreas, getRecentlyClosedShopsByArea } from '@/lib/queries';
+import { getAreaBySlug, getShopsByArea, prefectureSlugToName, isValidCategory, CATEGORY_COLORS, getPopularGirlsInAreaTop, getAreasByPrefecture, getRelatedAreas, getRecentlyClosedShopsByArea, getShopGenuineReviewStats, getShopsByBakusaiComments } from '@/lib/queries';
 import { getAreaDescription } from '@/lib/area-descriptions';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
@@ -42,6 +42,8 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
   const prefName = prefectureSlugToName(prefSlug);
   // SEO: 同 pref 内の他エリア (アクティブ店舗数の多い順 8件) — 内部リンク強化
   const relatedAreas = getRelatedAreas(prefSlug, area.id, 8);
+  // 掲示板の声(ext-bakusai)が多い店 — パネマジ言及の多い店を回遊導線に(表示のみ・schema非掲載)
+  const bbsShops = getShopsByBakusaiComments({ areaId: area.id }, 8);
 
   // 独自エリア解説 (area-descriptions.ts) を CollectionPage.description に 流用
   const areaDesc = getAreaDescription(params.slug);
@@ -64,7 +66,9 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
         '@type': 'ItemList',
         numberOfItems: shops.length,
         itemListElement: shops.slice(0, 10).map((shop, i) => {
-          const hasRating = (shop.review_count ?? 0) > 0 && (shop.real_pct ?? -1) >= 0;
+          // 構造化データは会員生口コミのみ(外部転載 ext-* を除外 = レビュースパムポリシー対策)
+          const gen = getShopGenuineReviewStats(shop.id);
+          const hasRating = gen.reviewCount > 0 && gen.realPct >= 0;
           const item: Record<string, unknown> = {
             '@type': 'LocalBusiness',
             '@id': `https://panemaji.com/shop/${shop.id}#shop`,
@@ -75,10 +79,10 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
           if (hasRating) {
             item.aggregateRating = {
               '@type': 'AggregateRating',
-              ratingValue: Math.round((shop.real_pct as number) / 20 * 10) / 10,
+              ratingValue: Math.round(gen.realPct / 20 * 10) / 10,
               bestRating: 5,
               worstRating: 0,
-              reviewCount: shop.review_count,
+              reviewCount: gen.reviewCount,
             };
           }
           return {
@@ -223,6 +227,25 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* 掲示板で話題の店(ext-bakusai言及が多い順) — 回遊・内部リンク強化(schema非掲載) */}
+      {bbsShops.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-5">
+          <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3">{area.name} 掲示板で話題の店</h2>
+          <div className="space-y-2">
+            {bbsShops.map((shop) => (
+              <a key={shop.id} href={`/shop/${shop.id}`} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 hover:bg-pink-50 transition-colors no-underline">
+                <span className="inline-flex items-center justify-center shrink-0 bg-pink-100 text-pink-700 text-[10px] font-bold rounded-full px-2 h-6">掲示板{shop.bakusai_count}</span>
+                <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{shop.name}</span>
+                {(shop.real_pct ?? -1) >= 0 && (
+                  <span className={`text-xs shrink-0 font-bold ${(shop.real_pct ?? 0) >= 70 ? 'text-green-600' : (shop.real_pct ?? 0) >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{shop.real_pct}%</span>
+                )}
+              </a>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2">外部掲示板でパネマジ(パネル写真と実物)について言及が多い店です。</p>
         </div>
       )}
 

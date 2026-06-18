@@ -1,4 +1,4 @@
-import { getShopById, getGirlsByShop, getDepartedGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS, getShopComments, getShopGenuineReviewStats } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getDepartedGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS, getShopComments, getShopGenuineReviewStats, getBakusaiCommentCount } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
@@ -36,7 +36,8 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   } else {
     title = `${shop.name} 掲示板`;
   }
-  const description = `${shop.name}${areaName ? `(${areaName})` : ''}の口コミ掲示板。パネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCountLabel}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}。`;
+  const bkCount = getBakusaiCommentCount(shop.id);
+  const description = `${shop.name}${areaName ? `(${areaName})` : ''}の口コミ掲示板。パネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCountLabel}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}${bkCount > 0 ? `・掲示板の声${bkCount}件` : ''}。`;
   const ogParams = new URLSearchParams({
     name: shop.name,
     shop: shop.area_name || '',
@@ -283,6 +284,11 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 口コミ <span className="text-lg sm:text-xl text-blue-600 font-bold">{shop.review_count}</span> 件
               </p>
+              {bakusaiComments.length > 0 && (
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                  掲示板 <span className="text-lg sm:text-xl text-pink-600 font-bold">{bakusaiComments.length}</span> 件
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -344,6 +350,9 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
                     <a href={`/girl/${review.girl_id}`} className="font-medium text-blue-600 hover:text-blue-800">
                       {review.girl_name}
                     </a>
+                    {String((review as { browser_id?: string | null }).browser_id || '').startsWith('ext-bakusai') && (
+                      <span className="ml-1.5 text-[10px] text-gray-400 font-normal">外部掲示板より</span>
+                    )}
                   </p>
                   {review.comment && (
                     <p className="text-gray-600 text-xs sm:text-sm mt-1 break-words line-clamp-2">
