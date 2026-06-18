@@ -1,4 +1,4 @@
-import { getShopById, getGirlsByShop, getDepartedGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS } from '@/lib/queries';
+import { getShopById, getGirlsByShop, getDepartedGirlsByShop, getReviewsByShop, getNearbyShops, getRelatedAreas, prefectureSlugToName, CATEGORY_COLORS, getShopComments, getShopGenuineReviewStats } from '@/lib/queries';
 import { notFound } from 'next/navigation';
 import PanelRatingBadge from '@/components/PanelRatingBadge';
 import RealScore from '@/components/RealScore';
@@ -85,6 +85,12 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
   const girls = getGirlsByShop(shopId, query || undefined);
   const departedGirls = getDepartedGirlsByShop(shopId);
   const latestReviews = getReviewsByShop(shopId, 5);
+  // 外部掲示板(爆サイ)の声: 先頭5件SSR公開 + 残りは会員ゲート。新しい順に並べる
+  const bakusaiComments = getShopComments(shopId, 50)
+    .filter((c) => String(c.browser_id || '').startsWith('ext-bakusai'))
+    .reverse();
+  // 構造化データ専用: 会員生口コミのみ集計(外部転載 ext-* を schema.org に出さない)
+  const genuineStats = getShopGenuineReviewStats(shopId);
   const nearbyShops = getNearbyShops(shop.area_id, shopId, shop.category, 5);
   // SEO: 同 prefecture の他エリア (現在の area を除外) — internal linking 強化
   const relatedAreas = shop.area_prefecture
@@ -119,9 +125,13 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
 
   // JSON-LD LocalBusiness structured data
   const alternateNames = generateAlternateNames(shop.name);
-  // 最新口コミを Review schema に 流用 (rich result 用)
+  // 最新口コミを Review schema に 流用 (rich result 用)。会員生口コミのみ(外部転載 ext-*/ch-*/x-import-* を除外)
   const ratingMap: Record<string, number> = { panel_match: 5, panel_diff: 3, jirai: 1 };
-  const shopReviewsJsonLd = latestReviews.slice(0, 5).map(r => ({
+  const genuineLatest = latestReviews.filter((r) => {
+    const b = (r as { browser_id?: string | null }).browser_id;
+    return !b || (!b.startsWith('ext-') && !b.startsWith('ch-') && !b.startsWith('x-import-'));
+  });
+  const shopReviewsJsonLd = genuineLatest.slice(0, 5).map(r => ({
     '@type': 'Review' as const,
     author: { '@type': 'Person' as const, name: '匿名ユーザー' },
     datePublished: r.created_at?.substring(0, 10),
@@ -143,13 +153,14 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     ...(shop.area_name ? { areaServed: shop.area_name } : {}),
     // EEAT: 鮮度シグナル — last_seen_at から dateModified
     ...(shop.last_seen_at ? { dateModified: shop.last_seen_at } : {}),
-    ...(typeof shop.review_count === 'number' && shop.review_count > 0 && typeof shop.real_pct === 'number' && shop.real_pct >= 0 ? {
+    // 構造化データは会員生口コミのみ(外部転載 ext-* を除外 = レビュースパムポリシー対策)
+    ...(genuineStats.reviewCount > 0 && genuineStats.realPct >= 0 ? {
       aggregateRating: {
         '@type': 'AggregateRating',
-        ratingValue: Math.round(shop.real_pct / 20 * 10) / 10,
+        ratingValue: Math.round(genuineStats.realPct / 20 * 10) / 10,
         bestRating: 5,
         worstRating: 1,
-        reviewCount: shop.review_count,
+        reviewCount: genuineStats.reviewCount,
       },
     } : {}),
     // 最新口コミを 5 件まで Review schema として 添える
@@ -293,6 +304,29 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           </div>
         )}
       </div>
+
+      {/* 外部掲示板(爆サイ等)の声 — 先頭5件SSR公開 + 残りは会員ゲート */}
+      {bakusaiComments.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-1">{shop.name}の掲示板の声</h2>
+          <p className="text-xs text-gray-400 mb-4">外部掲示板で見つかった「パネマジ」(パネル写真と実物の違い)に関する声を引用しています。</p>
+          <div className="space-y-3">
+            {bakusaiComments.slice(0, 5).map((c) => (
+              <div key={c.id} className="p-3 bg-gray-50 rounded-lg border-l-2 border-pink-200">
+                <p className="text-gray-700 text-xs sm:text-sm break-words whitespace-pre-wrap">{c.comment}</p>
+                <p className="text-[10px] text-gray-400 mt-1.5">外部掲示板より{c.created_at ? ` · ${c.created_at.substring(0, 10)}` : ''}</p>
+              </div>
+            ))}
+          </div>
+          {bakusaiComments.length > 5 && (
+            <div className="mt-4 pt-3 border-t border-gray-100 text-center">
+              <a href={`/signup?next=/shop/${shopId}`} className="inline-block text-sm text-pink-600 font-medium hover:underline">
+                残り{bakusaiComments.length - 5}件の掲示板の声を見る（無料会員登録）→
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Latest Reviews */}
       {latestReviews.length > 0 && (

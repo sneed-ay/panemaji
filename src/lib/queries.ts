@@ -878,6 +878,30 @@ export function getShopCommentCount(shopId: number): number {
   return (db.prepare('SELECT COUNT(*) as c FROM shop_comments WHERE shop_id = ?').get(shopId) as { c: number }).c;
 }
 
+// ext-bakusai 由来の掲示板コメント件数 (店舗ページの「掲示板の声」用)
+export function getBakusaiCommentCount(shopId: number): number {
+  return (db.prepare("SELECT COUNT(*) as c FROM shop_comments WHERE shop_id = ? AND browser_id LIKE 'ext-bakusai%'").get(shopId) as { c: number }).c;
+}
+
+// 構造化データ(schema.org)専用の集計: 会員生口コミのみ(インポート系 browser_id を除外)。
+// 外部転載(ext-*/ch-*/x-import-*)を AggregateRating/Review として出すと Google レビュースパムポリシー
+// 違反リスク(リッチリザルト剥奪・手動対策)があるため、JSON-LD は genuine 会員口コミだけで生成する。
+// 画面表示用の real_pct(SHOP_STATS_JOIN・全件集計)とは別物。
+export function getShopGenuineReviewStats(shopId: number): { reviewCount: number; realPct: number } {
+  const row = db.prepare(`
+    SELECT COUNT(*) as c,
+      SUM(CASE WHEN r.panel_rating = 'panel_match' THEN 1 ELSE 0 END) as m,
+      SUM(CASE WHEN r.panel_rating = 'panel_diff' THEN 1 ELSE 0 END) as d
+    FROM reviews r
+    JOIN girls g ON r.girl_id = g.id
+    WHERE g.shop_id = ?
+      AND (r.browser_id IS NULL
+           OR (r.browser_id NOT LIKE 'ext-%' AND r.browser_id NOT LIKE 'ch-%' AND r.browser_id NOT LIKE 'x-import-%'))
+  `).get(shopId) as { c: number; m: number; d: number };
+  const c = row.c || 0;
+  return { reviewCount: c, realPct: c === 0 ? -1 : Math.round((row.m * 100 + row.d * 50) / c) };
+}
+
 export function getLastShopCommentTime(shopId: number, browserId: string): string | null {
   const row = db.prepare(
     'SELECT created_at FROM shop_comments WHERE shop_id = ? AND browser_id = ? ORDER BY created_at DESC LIMIT 1'
