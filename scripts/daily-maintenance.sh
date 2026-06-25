@@ -295,11 +295,14 @@ db.pragma('journal_mode = WAL');
 
 let total = { cleaned: 0, deduped: 0, deactivated: 0 };
 
-// 2-1: 空名前・1文字「半角記号/英数字」名の嬢を非アクティブ化
+// 2-1: 空名前・1文字「記号/英数字/絵文字」名の嬢を非アクティブ化
 //      旧: length(name)<=1 で deactivate → 1文字漢字 (椿/愛/凛/桜 等の valid な源氏名) も
-//      誤 deactivate していた (130K件規模)。 GLOB '[!-~?]' で ASCII 印字可能 (記号+英数字+?)
-//      の 1文字 のみ deactivate に絞る。
-const r1 = db.prepare(\"UPDATE girls SET is_active = 0 WHERE is_active = 1 AND (name IS NULL OR name = '' OR (length(name) = 1 AND name GLOB '[!-~?]'))\").run();
+//      誤 deactivate していた (130K件規模)。
+//      旧々: GLOB '[!-~?]' (ASCII印字可能のみ) → ◆☆◇♦①🔰🌸 等の全角/絵文字記号名が
+//            毎日すり抜けて Phase3 で恒久 NG 化 (2026-06-25 に 79件確認)。
+//      現: 1文字 name のうち CJK漢字 / かな 以外 (= unicode 範囲外) を全部 deactivate。
+//          19968-40959=CJK統合, 12352-12543=かな, 13312-19903=CJK拡張A, 63744-64255=CJK互換。
+const r1 = db.prepare(\"UPDATE girls SET is_active = 0 WHERE is_active = 1 AND (name IS NULL OR name = '' OR (length(name) = 1 AND NOT (unicode(name) BETWEEN 19968 AND 40959 OR unicode(name) BETWEEN 12352 AND 12543 OR unicode(name) BETWEEN 13312 AND 19903 OR unicode(name) BETWEEN 63744 AND 64255)))\").run();
 total.cleaned += r1.changes;
 console.log('  [2-1] 空/1文字記号 非アクティブ化:', r1.changes);
 
@@ -397,8 +400,8 @@ node -e "
 const Database = require('better-sqlite3');
 const db = new Database('$DB_PATH', { readonly: true });
 
-// Check 1: 空名前嬢
-const c1 = db.prepare(\"SELECT COUNT(*) as c FROM girls WHERE is_active=1 AND (name IS NULL OR name = '' OR length(name) = 1)\").get().c;
+// Check 1: 空名前嬢 (Phase 2-1 と同一定義: 1文字でも CJK漢字/かな は valid な源氏名なので除外)
+const c1 = db.prepare(\"SELECT COUNT(*) as c FROM girls WHERE is_active=1 AND (name IS NULL OR name = '' OR (length(name) = 1 AND NOT (unicode(name) BETWEEN 19968 AND 40959 OR unicode(name) BETWEEN 12352 AND 12543 OR unicode(name) BETWEEN 13312 AND 19903 OR unicode(name) BETWEEN 63744 AND 64255)))\").get().c;
 console.log('  [CHECK] 空/1文字名嬢:', c1, c1 === 0 ? 'OK' : 'NG');
 
 // Check 2: 重複店舗（同名+同カテゴリ）
