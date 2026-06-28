@@ -507,11 +507,15 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   const areaPlaceholders = areaIds.map(() => '?').join(',');
 
   // 対象店舗を取得（差分更新: last_seen_at が閾値より古い、またはNULLの店舗）
+  // 対象店舗: discoverArea由来のarea_id一致に加え、cityheaven由来の当該県shopをsource_urlでも拾う。
+  //   既存shopは migrate-areas で MECE area_id に再マップ済みのため area_id だけでは漏れ、
+  //   嬢(出勤)が更新されない不具合があった(2026-06-28修正)。source_url 前方一致で確実に当該県を捕捉。
+  const prefUrlPrefix = `${BASE}/${prefCode}/%`;
   let shopQuery = `
     SELECT id, name, source_url, last_seen_at FROM shops
     WHERE source_url IS NOT NULL AND is_active = 1
-      AND area_id IN (${areaPlaceholders})`;
-  const queryParams = [...areaIds];
+      AND (area_id IN (${areaPlaceholders}) OR source_url LIKE ?)`;
+  const queryParams = [...areaIds, prefUrlPrefix];
 
   if (skipThreshold) {
     // 差分更新: last_seen_atが古い店舗 OR 嬢が0人の店舗は常に対象
@@ -528,8 +532,8 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   const shops = db.prepare(shopQuery).all(...queryParams);
 
   const totalShopsInPref = db.prepare(
-    `SELECT COUNT(*) as c FROM shops WHERE source_url IS NOT NULL AND is_active = 1 AND area_id IN (${areaPlaceholders})`
-  ).get(...areaIds).c;
+    `SELECT COUNT(*) as c FROM shops WHERE source_url IS NOT NULL AND is_active = 1 AND (area_id IN (${areaPlaceholders}) OR source_url LIKE ?)`
+  ).get(...areaIds, prefUrlPrefix).c;
 
   const skippedCount = totalShopsInPref - shops.length;
   console.log(`  [girls] ${prefInfo.name}: 対象 ${shops.length} 店舗` +
@@ -675,13 +679,38 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
 }
 
 // ─── 30日以上見ていない店舗の非アクティブ化 ──────────
-function deactivateStaleShops(db) {
+// ⚠️ update-all は cityheaven のみを巡回する。cleanup を全ソース横断で走らせると
+//    ranking-deli / men-esthe / fuzoku / purelovers / esthe-zukan 等の別ソース店舗
+//    （別スクレイパー管轄・既定OFF含む）を巻き込んで全削除する事故が起きる(2026-06-28発生)。
+//    そのため cleanup は (1) cityheaven 由来のみ (2) 今回走査した県のみ (3) 取得0/異常時スキップ
+//    の三重ガードで限定する。
+function deactivateStaleShops(db, { scrapedPrefCodes = null, scrapedCount = 0 } = {}) {
+  // 安全弁①: 今回1件も取得できていない(遮断/構造変更)なら、大量非アクティブ化を回避
+  if (!scrapedCount || scrapedCount < 1) {
+    console.log('\n  [cleanup] スキップ: 今回取得した店舗が0件 → 全削除事故を回避');
+    return;
+  }
+
   const threshold = new Date(Date.now() - 30 * 86400000).toISOString();
-  const result = db.prepare(
-    'UPDATE shops SET is_active = 0 WHERE is_active = 1 AND last_seen_at IS NOT NULL AND last_seen_at < ?'
-  ).run(threshold);
+  // cityheaven 由来に限定（他ソースを絶対に巻き込まない）
+  let where = "is_active = 1 AND last_seen_at IS NOT NULL AND last_seen_at < ? AND source_url LIKE '%cityheaven.net%'";
+  const params = [threshold];
+  // --pref / --region 等の部分走査では、走査した県のみに限定（巻き添え防止）
+  if (Array.isArray(scrapedPrefCodes) && scrapedPrefCodes.length > 0) {
+    where += ' AND (' + scrapedPrefCodes.map(() => 'source_url LIKE ?').join(' OR ') + ')';
+    for (const pc of scrapedPrefCodes) params.push(`%cityheaven.net/${pc}/%`);
+  }
+
+  // 安全弁②: 非アクティブ化候補が今回取得数を大きく上回る場合は異常 → 中止
+  const wouldDeactivate = db.prepare(`SELECT COUNT(*) c FROM shops WHERE ${where}`).get(...params).c;
+  if (wouldDeactivate > scrapedCount * 2 && wouldDeactivate > 50) {
+    console.log(`\n  [cleanup] スキップ: 非アクティブ化候補 ${wouldDeactivate} 件 > 取得 ${scrapedCount} 件×2 → 異常検知で中止`);
+    return;
+  }
+
+  const result = db.prepare(`UPDATE shops SET is_active = 0 WHERE ${where}`).run(...params);
   if (result.changes > 0) {
-    console.log(`\n  [cleanup] 30日以上未確認の店舗を非アクティブ化: ${result.changes} 件`);
+    console.log(`\n  [cleanup] cityheaven 30日以上未確認の店舗を非アクティブ化: ${result.changes} 件`);
   }
 
   // その店舗の女性も非アクティブ化
@@ -776,6 +805,8 @@ async function main() {
     newGirls: 0, updatedGirls: 0, deactivated: 0, images: 0,
     errors: [],
   };
+  // cleanup を「実際に走査した県」に限定するための記録（巻き添え非アクティブ化を防ぐ）
+  const scrapedPrefCodes = [];
 
   try {
     for (const [prefCode, prefInfo] of targetPrefs) {
@@ -812,6 +843,7 @@ async function main() {
         progress.currentPref = null;
         progress.currentShopId = 0;
         saveProgress(progress);
+        scrapedPrefCodes.push(prefCode);
 
         const elapsed = ((Date.now() - prefStart) / 1000).toFixed(0);
         console.log(`  完了 (${elapsed}s)`);
@@ -831,8 +863,11 @@ async function main() {
       }
     }
 
-    // 古い店舗の非アクティブ化
-    deactivateStaleShops(db);
+    // 古い店舗の非アクティブ化（cityheaven由来・走査県のみ・三重ガード）
+    deactivateStaleShops(db, {
+      scrapedPrefCodes,
+      scrapedCount: totals.newShops + totals.updatedShops,
+    });
 
     // DB統計
     printStats(db);
