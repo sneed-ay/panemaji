@@ -464,6 +464,13 @@ if [ "$DB_OK" = true ] && command -v gh &> /dev/null; then
   gh release upload db-latest "$DB_PATH.gz" --repo sneed-ay/panemaji --clobber 2>&1 | tee -a "$LOG_FILE" || log "  [warn] GitHub Release upload failed"
   log "  GitHub Release(db-latest): アップロード完了"
 
+  # 🔄 本番同期の版数を bump (アップロード成功=DB_OK時のみ)。
+  #    次回 Render デプロイ時に init-db.sh が版数差を検知し db-latest を本番へ同期(会員保全UPSERT)する。
+  #    この自動bumpが未実装だったため、db-latest は毎日更新されても本番へ届かず 2026-05-21 で凍結していた。
+  #    → 恒久修正 (2026-06-29): 毎回の健全なアップロード後に版数を更新し、本番が自動追従するようにする。
+  date +%Y%m%d%H%M%S > scripts/.master-sync-version
+  log "  master-sync-version bump: $(cat scripts/.master-sync-version) (次回デプロイで本番反映)"
+
   # 日次バックアップ: db-YYYY-MM-DD タグで別保管 (万一の Restore用)
   BACKUP_TAG="db-$(date +%Y-%m-%d)"
   if ! gh release view "$BACKUP_TAG" --repo sneed-ay/panemaji &>/dev/null; then
