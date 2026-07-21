@@ -23,7 +23,7 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -105,17 +105,25 @@ async function getAuth() {
   return { token, quota: QUOTA_PROJECT, mode: `ADC (quota=${QUOTA_PROJECT})` };
 }
 
-async function fetchQueries(auth, startDate, endDate) {
-  // REST 直叩き (googleapis は quota header を送らず hang するため)。max 25000 rows。
-  const headers = { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' };
-  if (auth.quota) headers['x-goog-user-project'] = auth.quota;
-  const res = await fetch(GSC_ENDPOINT, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ startDate, endDate, dimensions: ['query'], rowLimit: 25000, dataState: 'all' }),
-  });
-  if (!res.ok) throw new Error(`GSC API ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const data = await res.json();
+function fetchQueries(auth, startDate, endDate) {
+  // curl にシェルアウト (-m でハードタイムアウト)。
+  //   Node の global fetch(undici) がこの環境で GSC への POST 時に稀に “永久 hang” する事象があり
+  //   (2026-07 判明: await Promise.all([fetchQueries...]) の手前で無反応)、実績のある curl に置換した。
+  //   body は @- で stdin 渡し (シェルエスケープ回避)。
+  const body = JSON.stringify({ startDate, endDate, dimensions: ['query'], rowLimit: 25000, dataState: 'all' });
+  const args = ['-sS', '-m', '90', '-X', 'POST', GSC_ENDPOINT,
+    '-H', `Authorization: Bearer ${auth.token}`,
+    '-H', 'Content-Type: application/json'];
+  if (auth.quota) args.push('-H', `x-goog-user-project: ${auth.quota}`);
+  args.push('--data-binary', '@-');
+  let out;
+  try {
+    out = execFileSync('curl', args, { input: body, maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' });
+  } catch (e) {
+    throw new Error(`GSC fetch failed (curl): ${e.message}`);
+  }
+  const data = JSON.parse(out);
+  if (data.error) throw new Error(`GSC API ${data.error.code}: ${JSON.stringify(data.error).slice(0, 300)}`);
   return data.rows || [];
 }
 
