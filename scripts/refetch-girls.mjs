@@ -15,6 +15,7 @@
 
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
+import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -164,10 +165,10 @@ async function main() {
   console.log(`対象: ${shops.length} 店舗 (${fetchAll ? '全店舗' : '嬢0人 + 100人上限'})`);
   console.log('');
 
-  const browser = await puppeteer.launch({
+  const browser = await puppeteer.launch(withChromePath({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-  });
+  }));
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
   await page.setCookie({ name: 'nenrei', value: 'y', domain: '.cityheaven.net' });

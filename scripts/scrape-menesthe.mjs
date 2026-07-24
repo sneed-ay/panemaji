@@ -28,6 +28,7 @@
 
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
+import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -716,10 +717,10 @@ async function main() {
     return;
   }
 
-  const browser = await puppeteer.launch({
+  const browser = await puppeteer.launch(withChromePath({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  }));
 
   try {
     if (command === 'shops' || command === 'all') {

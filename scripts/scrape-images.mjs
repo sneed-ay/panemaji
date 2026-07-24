@@ -5,6 +5,7 @@
  */
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
+import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -31,7 +32,7 @@ async function main() {
 
   console.log(`📷 画像URL収集: ${shops.length} 店舗 (画像未取得の女性あり)`);
 
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-gpu'] });
+  const browser = await puppeteer.launch(withChromePath({ headless: 'new', args: ['--no-sandbox', '--disable-gpu'] }));
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
   await page.setCookie({ name: 'nenrei', value: 'y', domain: '.cityheaven.net', path: '/' });

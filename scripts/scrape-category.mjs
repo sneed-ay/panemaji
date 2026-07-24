@@ -23,6 +23,7 @@
 
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
+import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -165,10 +166,10 @@ function openDb() {
 
 // ─── Puppeteer ──────────────────────────────────────
 async function setupBrowser() {
-  const browser = await puppeteer.launch({
+  const browser = await puppeteer.launch(withChromePath({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  }));
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
   await page.setCookie({

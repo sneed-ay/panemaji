@@ -27,6 +27,7 @@
 
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
+import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -212,12 +213,8 @@ async function setupBrowser() {
     ],
   };
 
-  // GitHub Actions では PUPPETEER_EXECUTABLE_PATH が設定される場合がある
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-
-  const browser = await puppeteer.launch(launchOptions);
+  // PUPPETEER_EXECUTABLE_PATH → ~/.cache/puppeteer → システム Chrome の順で解決
+  const browser = await puppeteer.launch(withChromePath(launchOptions));
   const page = await browser.newPage();
   await page.setUserAgent(
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
