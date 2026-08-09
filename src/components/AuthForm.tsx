@@ -95,9 +95,8 @@ export default function AuthForm({ mode }: Props) {
               className="mt-0.5 shrink-0"
             />
             <span>
-              お得な情報・広告メールの配信を受け取る（任意・
               <a href="/terms" target="_blank" className="text-pink-600 hover:underline">規約</a>
-              に同意／配信はいつでも停止可）
+              に同意し、おトクな情報のお知らせメールも受け取る（任意・停止いつでも可）
             </span>
           </label>
         )}
