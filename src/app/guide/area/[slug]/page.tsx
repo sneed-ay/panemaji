@@ -111,12 +111,8 @@ export default function AreaGuidePage({ params }: { params: { slug: string } }) 
           {shops.map((shop, i) => (
             <li key={shop.id} className="bg-white rounded-lg shadow p-4 flex gap-4">
               <span className="text-2xl font-bold text-gray-400 w-8 shrink-0">{i + 1}</span>
-              {shop.thumb ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={shop.thumb} alt={shop.name} className="w-16 h-16 object-cover rounded shrink-0" loading="lazy" />
-              ) : (
-                <div className="w-16 h-16 bg-gray-100 rounded shrink-0" />
-              )}
+              {/* 嬢画像の全面停止(肖像権・ホットリンク対応 2026-08) → 常にプレースホルダ */}
+              <div className="w-16 h-16 bg-gray-100 rounded shrink-0" />
               <div className="flex-1 min-w-0">
                 <Link href={`/shop/${shop.id}`} className="font-bold text-blue-600 hover:underline break-words">
                   {shop.name}

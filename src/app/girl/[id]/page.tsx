@@ -145,7 +145,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
     name: girl.name,
     ...(alternateNames.length > 0 ? { alternateName: alternateNames } : {}),
     url: `https://panemaji.com/girl/${girl.id}`,
-    ...(girl.image_url ? { image: girl.image_url } : {}),
+    // 嬢画像の全面停止(2026-08)に伴い、構造化データからも image を除去
     // EEAT: 最新取得日 を dateModified として 提示 (鮮度シグナル)
     ...(girl.last_seen_at ? { dateModified: girl.last_seen_at } : {}),
     // worksFor: 所属店舗との関連 (Google Knowledge Graph 用)

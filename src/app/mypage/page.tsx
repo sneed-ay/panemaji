@@ -102,10 +102,7 @@ export default function MyPage() {
             {reviews?.map((r) => (
               <a key={r.id} href={`/girl/${r.girl_id}`} className="block bg-white rounded-lg p-3 border border-gray-200 hover:border-pink-300 no-underline">
                 <div className="flex gap-3">
-                  {r.girl_image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.girl_image_url} alt="" className="w-12 h-16 object-cover rounded" loading="lazy" />
-                  )}
+                  {/* 嬢画像の全面停止(肖像権・ホットリンク対応 2026-08) */}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-800 truncate">{r.girl_name}</div>
                     <div className="text-xs text-gray-500 truncate">{r.shop_name}</div>
@@ -134,10 +131,7 @@ export default function MyPage() {
             {favorites?.map((f) => (
               <div key={f.girl_id} className="bg-white rounded-lg p-3 border border-gray-200 hover:border-pink-300">
                 <a href={`/girl/${f.girl_id}`} className="flex gap-3 no-underline">
-                  {f.girl_image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={f.girl_image_url} alt="" className="w-12 h-16 object-cover rounded" loading="lazy" />
-                  )}
+                  {/* 嬢画像の全面停止(肖像権・ホットリンク対応 2026-08) */}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-800 truncate">{f.girl_name}</div>
                     <div className="text-xs text-gray-500 truncate">{f.shop_name}</div>

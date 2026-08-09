@@ -10,11 +10,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // 🚨 外部画像 (img2.cityheaven.net 等) はホットリンク保護で Referer:panemaji.com 付き
-  //    リクエストに 403 を返す (サイト画像の約98%=cityheaven直リンクが該当し全滅していた)。
-  //    no-referrer でブラウザが Referer を送らないようにし全画像を復活させる
-  //    (Referer 無しなら cityheaven は 200 を返すことを実測確認済 / 2026-06-02)。
-  referrer: "no-referrer",
+  // 2026-08: 嬢のパネル写真(外部ホットリンク)を全面停止したため、Referer潜脱用の
+  //    no-referrer 設定は不要になり撤去。referrer はブラウザ既定に戻す。
   title: {
     default: "パネマジ掲示板｜風俗・ソープ・メンエスのパネル写真口コミ評価サイト",
     template: "%s｜パネマジ掲示板",
