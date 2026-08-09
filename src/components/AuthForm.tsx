@@ -11,6 +11,7 @@ export default function AuthForm({ mode }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [adOptIn, setAdOptIn] = useState(true); // 広告メール配信同意(特電法オプトイン)
 
   const isSignup = mode === 'signup';
 
@@ -23,7 +24,7 @@ export default function AuthForm({ mode }: Props) {
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(isSignup ? { adOptIn } : {}) }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -85,6 +86,21 @@ export default function AuthForm({ mode }: Props) {
             placeholder="••••••••"
           />
         </div>
+        {isSignup && (
+          <label className="flex items-start gap-2 text-[11px] text-gray-500 leading-relaxed cursor-pointer">
+            <input
+              type="checkbox"
+              checked={adOptIn}
+              onChange={(e) => setAdOptIn(e.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            <span>
+              お得な情報・広告メールの配信を受け取る（任意・
+              <a href="/terms" target="_blank" className="text-pink-600 hover:underline">規約</a>
+              に同意／配信はいつでも停止可）
+            </span>
+          </label>
+        )}
         {error && (
           <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
             {error}

@@ -165,6 +165,19 @@ function getDb(): Database.Database {
     _db.exec('ALTER TABLE areas ADD COLUMN display_order INTEGER DEFAULT 999');
   }
 
+  // 広告メール同意(特電法オプトイン)列を users に追加。既存会員は default 0 = 未同意
+  //   (規約変更を遡及適用しないため)。新規登録時に登録画面のチェックボックスで 1 を記録する。
+  const usersTable = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").get();
+  if (usersTable) {
+    const userCols = (_db.prepare('PRAGMA table_info(users)').all() as { name: string }[]).map((c) => c.name);
+    if (!userCols.includes('ad_opt_in')) {
+      _db.exec('ALTER TABLE users ADD COLUMN ad_opt_in INTEGER NOT NULL DEFAULT 0');
+    }
+    if (!userCols.includes('ad_opt_in_at')) {
+      _db.exec('ALTER TABLE users ADD COLUMN ad_opt_in_at TEXT');
+    }
+  }
+
   // Optimize SQLite for read-heavy workload (memory-aware: Render Starter 512MB)
   // 2026-06-10: 4MB → 48MB に拡大。covering index idx_girls_shop_active_image (~28MB) が
   //   4MB cache に収まらず、毎リクエスト 遅いネットワークディスクから index を再読込 →

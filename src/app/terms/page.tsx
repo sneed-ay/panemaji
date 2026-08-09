@@ -17,7 +17,7 @@ export default function TermsPage() {
 
       <div className="bg-white rounded-lg shadow p-6 sm:p-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">利用規約</h1>
-        <p className="text-sm text-gray-500 mb-8">最終更新日: 2026年3月21日</p>
+        <p className="text-sm text-gray-500 mb-8">最終更新日: 2026年8月9日</p>
 
         <div className="space-y-8 text-gray-700 text-sm leading-relaxed">
           <section>
@@ -121,6 +121,16 @@ export default function TermsPage() {
               <li>運営者は、必要と判断した場合には、ユーザーに通知することなく本規約を随時変更できるものとします。</li>
               <li>変更後の利用規約は、当サイトに掲載した時点で効力を生じるものとします。</li>
               <li>本規約の変更後に当サイトを利用した場合、ユーザーは変更後の規約に同意したものとみなします。</li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-gray-800 mb-3">第12条（メール配信について）</h2>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>当サイトは、会員登録時に配信の同意をされたユーザーに対し、当サイトおよび提携する広告主等に関するお得な情報・広告・宣伝を内容とする電子メール（以下「広告メール」といいます）を送信することがあります。</li>
+              <li>広告メールの受信は任意であり、会員登録画面のチェックボックスによる同意に基づきます。同意されない場合でも、当サイトの基本機能はご利用いただけます。</li>
+              <li>広告メールには、送信者の表示および配信停止（オプトアウト）の手段を記載します。ユーザーは、メール内の手続きにより、いつでも受信を停止できます。</li>
+              <li>配信停止後も、サービスの運営上必要な重要なお知らせ等（広告・宣伝を目的としないもの）を送信する場合があります。</li>
             </ol>
           </section>
         </div>

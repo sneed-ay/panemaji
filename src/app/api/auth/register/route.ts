@@ -15,7 +15,7 @@ export const revalidate = 0;
 export async function POST(req: NextRequest) {
   let body;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'invalid_json' }, { status: 400 }); }
-  const { email, password } = body as { email?: string; password?: string };
+  const { email, password, adOptIn } = body as { email?: string; password?: string; adOptIn?: boolean };
 
   if (!email || !isValidEmail(email)) {
     return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
@@ -31,7 +31,12 @@ export async function POST(req: NextRequest) {
   }
 
   const hash = await hashPassword(password);
-  const result = db.prepare(`INSERT INTO users (email, password_hash) VALUES (?, ?)`).run(email, hash);
+  // 広告メール同意(特電法オプトイン)を登録時のチェックボックスから記録。同意日時も保存(同意の証跡)。
+  const optIn = adOptIn === true ? 1 : 0;
+  const optInAt = optIn ? new Date().toISOString() : null;
+  const result = db
+    .prepare(`INSERT INTO users (email, password_hash, ad_opt_in, ad_opt_in_at) VALUES (?, ?, ?, ?)`)
+    .run(email, hash, optIn, optInAt);
   const userId = Number(result.lastInsertRowid);
 
   // 自動ログイン
