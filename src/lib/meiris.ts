@@ -3,10 +3,11 @@
  *
  * 仕様書: メーリスシステム/docs/パネマジ連携の指示書.md
  *
- * 🚨 送信対象は users.ad_opt_in = 1 の会員のみ。
- *    ad_opt_in は登録画面の「おトクな情報のお知らせメールも受け取る」チェックボックス由来の
- *    特電法オプトイン記録で、既存会員は default 0 (= 未同意 / 規約変更を遡及適用しない) で入っている。
- *    未同意の会員を配信システムへ送ってはいけない。呼び出し側で必ず絞り込むこと。
+ * 🚨 同意状況の扱い (2026-08-25 ユーザー判断):
+ *    未同意 (ad_opt_in=0) の会員も配信システムへ送る。誰に配信するかは配信システム側で
+ *    目視管理する方針。リストとタグは指示書どおり「パネマジ」1種類のみで増やさない。
+ *    同意状況は consent_source の文言にだけ載せる (リスト・タグは作らない)。
+ *    → 配信システム側で広告メールを送る際は、同意者だけに送ること。
  *
  * 設計方針:
  * - この API の成否を会員登録の成否に波及させない (仕様書 6章)。例外は投げず結果オブジェクトを返す。
@@ -21,10 +22,26 @@ const TIMEOUT_MS = 10_000;
 /** 1リクエストあたりの上限 (仕様書 2章: 501件以上は 400) */
 export const MEIRIS_MAX_BATCH = 500;
 
-/** パネマジ由来の連絡先に必ず付けるタグ / リスト / 同意元 */
+/** パネマジ由来の連絡先。同意状況でリスト・タグ・同意元を出し分ける。 */
+export interface MeirisContact {
+  email: string;
+  /** users.ad_opt_in = 1 (登録画面で広告メール受信に同意した) か */
+  optedIn: boolean;
+}
+
+/** タグ・リストは指示書どおり「パネマジ」のみ (増やさない)。 */
 const TAGS = ['パネマジ'];
 const LIST = 'パネマジ';
-const CONSENT_SOURCE = 'パネマジ会員登録';
+
+function toPayload(c: MeirisContact) {
+  return {
+    email: c.email,
+    tags: TAGS,
+    list: LIST,
+    // 同意状況はここにだけ載せる。新しいリスト・タグは作らない。
+    consent_source: c.optedIn ? 'パネマジ会員登録（広告メール同意あり）' : 'パネマジ会員登録（広告メール同意なし）',
+  };
+}
 
 export type MeirisStatus = 'created' | 'updated' | 'suppressed' | 'invalid';
 
@@ -89,16 +106,14 @@ async function post(body: unknown): Promise<MeirisOutcome> {
   }
 }
 
-/** 1件登録 (会員登録直後の呼び出し用) */
-export function sendContact(email: string): Promise<MeirisOutcome> {
-  return post({ email, tags: TAGS, list: LIST, consent_source: CONSENT_SOURCE });
+/** 1件登録 */
+export function sendContact(contact: MeirisContact): Promise<MeirisOutcome> {
+  return post(toPayload(contact));
 }
 
 /** まとめて登録。呼び出し側で MEIRIS_MAX_BATCH 以下に分割しておくこと。 */
-export function sendContacts(emails: string[]): Promise<MeirisOutcome> {
-  return post({
-    contacts: emails.map((email) => ({ email, tags: TAGS, list: LIST, consent_source: CONSENT_SOURCE })),
-  });
+export function sendContacts(contacts: MeirisContact[]): Promise<MeirisOutcome> {
+  return post({ contacts: contacts.map(toPayload) });
 }
 
 /** 疎通確認 (副作用なし / 仕様書 5章) */

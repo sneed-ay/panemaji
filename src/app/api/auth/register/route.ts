@@ -12,7 +12,8 @@ import { isMeirisConfigured } from '@/lib/meiris';
 import { flushPending } from '@/lib/meiris-sync';
 
 /**
- * メール配信システムへ連絡先を送る (広告メール同意者のみ)。
+ * メール配信システムへ連絡先を送る (同意の有無を問わず全員)。
+ * 同意済みは list「パネマジ」、未同意は list「パネマジ_広告未同意」に振り分けられる。
  *
  * 今回登録した会員は meiris_synced_at IS NULL なので flushPending の対象に入る。
  * あわせて直近7日ぶんの取りこぼし (通信断で送れなかった会員) も回収する。
@@ -69,8 +70,9 @@ export async function POST(req: NextRequest) {
     .run(email, hash, optIn, optInAt);
   const userId = Number(result.lastInsertRowid);
 
-  // 広告メール同意者のみ、メール配信システムへ連絡先を送る (会員登録の成否には影響させない)
-  if (optIn) flushMailingListAsync();
+  // メール配信システムへ連絡先を送る (同意有無に関わらず。同意状況はリスト・タグで区別される)
+  // 会員登録の成否には影響させない
+  flushMailingListAsync();
 
   // 自動ログイン
   const { token, expiresAt } = createSession(userId);
