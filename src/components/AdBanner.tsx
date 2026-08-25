@@ -98,6 +98,8 @@ function FanzaWidget() {
 function MerokanoAdImage({ size }: { size: AdSize }) {
   const [adSrc] = useState(() => getRandomImage(AD_CONFIG.merokanoAd.images));
   const [imgError, setImgError] = useState(false);
+  // 同じ basename で -512 / (無印=1024) / -1536 の3解像度を public/ad/ に配置してある
+  const srcBase = adSrc.replace(/\.webp$/, '');
   const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
   const link = wrapClickUrl(getMerokanoAdLink(size), { adType: 'merokano', adSize: size, adPage: pagePath });
 
@@ -110,7 +112,12 @@ function MerokanoAdImage({ size }: { size: AdSize }) {
   return (
     <a href={link} target="_blank" rel="noopener noreferrer sponsored"
       className="inline-block w-full max-w-lg" onClick={handleClick}>
+      {/* 端末の DPR に応じて 512/1024/1536 を出し分ける。
+          表示幅は px-2 の内側で最大 max-w-lg(512px) なので、DPR3 のスマホでは 1536px が要る。
+          1024 固定だと引き伸ばしでボケる (2026-08-25 修正)。 */}
       <img src={adSrc} alt="めろカノ - 推し活アプリ [PR]" className="w-full h-auto rounded-lg"
+        srcSet={`${srcBase}-512.webp 512w, ${srcBase}.webp 1024w, ${srcBase}-1536.webp 1536w`}
+        sizes="(max-width: 528px) calc(100vw - 16px), 512px"
         width={1024} height={318} onError={() => setImgError(true)} />
     </a>
   );
