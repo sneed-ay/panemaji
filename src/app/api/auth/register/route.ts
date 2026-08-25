@@ -49,7 +49,11 @@ export async function POST(req: NextRequest) {
   const { email, password, adOptIn } = body as { email?: string; password?: string; adOptIn?: boolean };
 
   if (!email || !isValidEmail(email)) {
-    return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+    // 何がダメなのか言わないと、ユーザーはピリオドを足すなどして回避しにいく
+    return NextResponse.json(
+      { error: 'invalid_email', message: 'メアドの形式が正しくありません（ピリオドの連続や、@の直前・直後のピリオドは使えません）' },
+      { status: 400 }
+    );
   }
   if (!password || !isValidPassword(password)) {
     return NextResponse.json({ error: 'invalid_password', message: '8文字以上' }, { status: 400 });

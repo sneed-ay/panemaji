@@ -6,10 +6,20 @@ interface Props {
   mode: 'login' | 'signup';
 }
 
+/** ?email= があれば初期値に使う (登録済みエラーからログインへ送るときに入力を引き継ぐ) */
+function initialEmail(): string {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get('email') || '';
+}
+
 export default function AuthForm({ mode }: Props) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // 登録済みメアドで新規登録しようとした場合。ログイン導線を出すためのフラグ。
+  // これを出さないと「既に登録済み」と言われた人がメアドを崩して回避しにいく
+  // (実際に kagakou.2026 がピリオドを増やして4アカウント作っていた / 2026-08-25)
+  const [emailTaken, setEmailTaken] = useState(false);
   const [loading, setLoading] = useState(false);
   const [adOptIn, setAdOptIn] = useState(true); // 広告メール配信同意(特電法オプトイン)
 
@@ -18,6 +28,7 @@ export default function AuthForm({ mode }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setEmailTaken(false);
     setLoading(true);
     try {
       const url = isSignup ? '/api/auth/register' : '/api/auth/login';
@@ -28,8 +39,10 @@ export default function AuthForm({ mode }: Props) {
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
+        if (data.error === 'email_taken') setEmailTaken(true);
         const msg =
-          data.error === 'email_taken' ? 'このメアドは既に登録済みです'
+          data.error === 'email_taken' ? 'このメアドは既に登録済みです。パスワードでログインしてください。'
+          : data.error === 'invalid_email' && data.message ? data.message
           : data.error === 'invalid_credentials' ? 'メアドかパスワードが違います'
           : data.error === 'invalid_email' ? 'メアドの形式が正しくありません'
           : data.error === 'invalid_password' ? 'パスワードは8文字以上にしてください'
@@ -102,7 +115,19 @@ export default function AuthForm({ mode }: Props) {
         )}
         {error && (
           <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
-            {error}
+            <p>{error}</p>
+            {emailTaken && (
+              <a
+                href={`/login?email=${encodeURIComponent(email)}${
+                  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('next')
+                    ? `&next=${encodeURIComponent(new URLSearchParams(window.location.search).get('next') as string)}`
+                    : ''
+                }`}
+                className="inline-block mt-1.5 font-medium text-pink-700 underline"
+              >
+                このメアドでログインする →
+              </a>
+            )}
           </div>
         )}
         <button

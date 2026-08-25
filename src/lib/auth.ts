@@ -78,8 +78,30 @@ export function deleteSession(token: string | undefined): void {
 }
 
 /** メアド validate (簡易) */
+/**
+ * メアド validate。
+ *
+ * 2026-08-25: ピリオド起因の不正アドレスが実際に会員登録を通っていたため厳格化。
+ *   `sougorou1010.@icloud.com` / `kagakou.2026..@gmail.com` 等が6件混入し、
+ *   メール配信システム側で invalid として弾かれた (実在しないので永久に届かない)。
+ *   うち4件は同一人物が「既に登録済み」を回避するためピリオドを増やして登録した跡。
+ *   RFC 5322 では以下が無効:
+ *     - ピリオドの連続        (abc..def@example.com)
+ *     - local/domain の先頭・末尾がピリオド (abc.@example.com / abc@.example.com)
+ *
+ * 注意: これは登録時のみの検証。login では使っていないので、
+ *       既に登録済みの不正アドレス会員がログインできなくなることはない。
+ */
 export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 255;
+  if (typeof email !== 'string' || email.length > 255) return false;
+  // 全体の形 (この正規表現の時点で @ はちょうど1個に限定される)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+  // ピリオドの連続
+  if (email.includes('..')) return false;
+  const [local, domain] = email.split('@');
+  if (local.startsWith('.') || local.endsWith('.')) return false;
+  if (domain.startsWith('.') || domain.endsWith('.')) return false;
+  return true;
 }
 
 /** パスワード validate (8文字以上) */
