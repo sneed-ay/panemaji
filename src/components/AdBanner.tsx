@@ -87,7 +87,11 @@ function FanzaWidget() {
           target="_blank" rel="noopener noreferrer sponsored"
           className="shrink-0 w-[100px] hover:opacity-80 transition-opacity no-underline"
           onClick={() => handleFanzaClick(i, item.url)}>
-          <img src={item.imageUrl} alt="" className="w-full h-auto rounded" loading="lazy" />
+          {/* width/height 必須: 無いと読み込み前の高さが 0 になり、loading="lazy" の
+              交差判定が成立せず画像が永久にフェッチされない (2026-08-25 修正)。
+              広告枠なので確実にインプレッションを出すため lazy 自体も外す。
+              DMM の ps.jpg サムネは 147x200。読み込み後は h-auto で実比率に従う。 */}
+          <img src={item.imageUrl} alt="" className="w-full h-auto rounded" width={147} height={200} />
         </a>
       ))}
     </div>
