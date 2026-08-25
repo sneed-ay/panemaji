@@ -8,7 +8,7 @@ export const AD_CONFIG = {
 
   // めろカノ (推し活アプリ / merokano.jp) — 2026-08-25 掲載開始
   // 素材: Drive「めろカノバナー」1-5.png (1856x576 PNG) を WebP(q92/sharp_yuv) 3解像度で配置。
-  // images は 1024px 版のパス。AdBanner が同じ basename から -512 / -1536 を srcset で出し分ける。
+  // images は 1024px 版のパス。AdBanner が同じ basename の -1536 と併せて srcset で出し分ける。
   merokanoAd: {
     link: 'https://merokano.jp/',
     images: [

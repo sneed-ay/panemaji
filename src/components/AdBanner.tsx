@@ -112,11 +112,13 @@ function MerokanoAdImage({ size }: { size: AdSize }) {
   return (
     <a href={link} target="_blank" rel="noopener noreferrer sponsored"
       className="inline-block w-full max-w-lg" onClick={handleClick}>
-      {/* 端末の DPR に応じて 512/1024/1536 を出し分ける。
-          表示幅は px-2 の内側で最大 max-w-lg(512px) なので、DPR3 のスマホでは 1536px が要る。
-          1024 固定だと引き伸ばしでボケる (2026-08-25 修正)。 */}
+      {/* 表示幅は px-2 の内側で最大 max-w-lg(512px)。DPR に応じて 1024/1536 を出し分ける。
+          - DPR3 のスマホは 512css x3 = 1536px 必要。1024 固定だと引き伸ばしでボケる
+          - DPR1 でも下限は 1024px にする。512px を等倍で出すより、1024px を
+            ブラウザに縮小させた方が 2倍スーパーサンプリングが効いて精細に見えるため
+          (2026-08-25 修正) */}
       <img src={adSrc} alt="めろカノ - 推し活アプリ [PR]" className="w-full h-auto rounded-lg"
-        srcSet={`${srcBase}-512.webp 512w, ${srcBase}.webp 1024w, ${srcBase}-1536.webp 1536w`}
+        srcSet={`${srcBase}.webp 1024w, ${srcBase}-1536.webp 1536w`}
         sizes="(max-width: 528px) calc(100vw - 16px), 512px"
         width={1024} height={318} onError={() => setImgError(true)} />
     </a>
