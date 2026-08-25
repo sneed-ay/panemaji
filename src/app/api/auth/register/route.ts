@@ -8,6 +8,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { hashPassword, createSession, isValidEmail, isValidPassword, SESSION_COOKIE, SESSION_TTL_DAYS } from '@/lib/auth';
+import { isMeirisConfigured } from '@/lib/meiris';
+import { flushPending } from '@/lib/meiris-sync';
+
+/**
+ * メール配信システムへ連絡先を送る (広告メール同意者のみ)。
+ *
+ * 今回登録した会員は meiris_synced_at IS NULL なので flushPending の対象に入る。
+ * あわせて直近7日ぶんの取りこぼし (通信断で送れなかった会員) も回収する。
+ * 過去の会員へのまとめ送りにならないよう sinceDays で必ず期間を切る。
+ *
+ * 意図的に await しない: 配信システムは自宅回線経由で瞬断するとのことなので、
+ * 会員登録のレスポンスを最大10秒待たせない (仕様書 6章: 本処理を API の成否に依存させない)。
+ * Render は常駐 Node のためレスポンス返却後もイベントループ上で完走する。
+ * 失敗しても meiris_synced_at が NULL のまま残り、次の登録か管理画面から再送される。
+ */
+function flushMailingListAsync(): void {
+  if (!isMeirisConfigured()) return;
+  void flushPending({ limit: 50, sinceDays: 7 })
+    .then((r) => {
+      if (r.skipped) return;
+      if (r.batch_errors.length > 0) {
+        console.error('[meiris] 送信エラー', JSON.stringify(r.batch_errors));
+      }
+      if (r.failures.length > 0) {
+        console.error('[meiris] 登録できない連絡先', JSON.stringify(r.failures));
+      }
+      console.info('[meiris] 同期', JSON.stringify({ attempted: r.attempted, synced: r.marked_synced, ...r.summary }));
+    })
+    .catch((err) => console.error('[meiris] 到達不可', err));
+}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -38,6 +68,9 @@ export async function POST(req: NextRequest) {
     .prepare(`INSERT INTO users (email, password_hash, ad_opt_in, ad_opt_in_at) VALUES (?, ?, ?, ?)`)
     .run(email, hash, optIn, optInAt);
   const userId = Number(result.lastInsertRowid);
+
+  // 広告メール同意者のみ、メール配信システムへ連絡先を送る (会員登録の成否には影響させない)
+  if (optIn) flushMailingListAsync();
 
   // 自動ログイン
   const { token, expiresAt } = createSession(userId);

@@ -176,6 +176,11 @@ function getDb(): Database.Database {
     if (!userCols.includes('ad_opt_in_at')) {
       _db.exec('ALTER TABLE users ADD COLUMN ad_opt_in_at TEXT');
     }
+    // メール配信システム(meiris)へ連絡先を送信済みかの記録。NULL = 未送信。
+    // 通信失敗で取りこぼした会員を /api/admin/meiris-sync が拾い直すために使う。
+    if (!userCols.includes('meiris_synced_at')) {
+      _db.exec('ALTER TABLE users ADD COLUMN meiris_synced_at TEXT');
+    }
   }
 
   // Optimize SQLite for read-heavy workload (memory-aware: Render Starter 512MB)

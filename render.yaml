@@ -24,3 +24,7 @@ services:
         value: "--max-old-space-size=400 --expose-gc"
       - key: UV_THREADPOOL_SIZE
         value: "2"
+      # メール配信システム(meiris / mail.merokano.jp)連携。
+      # public リポジトリなので値はここに書かない。Render ダッシュボードで設定する。
+      - key: MEIRIS_API_KEY
+        sync: false
