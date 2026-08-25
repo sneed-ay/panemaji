@@ -56,3 +56,6 @@ cityheaven-progress.json
 
 # daily-maintenance.sh lock (runtime, never commit)
 .daily-maintenance.lock
+
+# 広告素材の原本 (Google Drive 同期フォルダ。最適化済みは public/ad/ に配置)
+/めろカノバナー/

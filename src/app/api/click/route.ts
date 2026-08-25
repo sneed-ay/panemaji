@@ -16,6 +16,7 @@ import db from '@/lib/db';
 
 // 許可する遷移先ホスト (suffix マッチ)
 const ALLOWED_HOST_SUFFIXES = [
+  'merokano.jp',    // めろカノ (2026-08-25 掲載開始)
   'dmm.com',        // DMM アフィリンク (al.dmm.com, affiliate.dmm.com 等)
   'dmm.co.jp',
   'fanza.co.jp',    // FANZA (al.fanza.co.jp が /api/fanza から返る)

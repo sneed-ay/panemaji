@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AD_CONFIG, getParallyAdLink, wrapClickUrl } from '@/lib/ad-config';
+import { AD_CONFIG, getParallyAdLink, getMerokanoAdLink, wrapClickUrl } from '@/lib/ad-config';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
 import { pickFreshFanza } from '@/lib/fanzaPool';
 // adstir は 2026-05-09 撤去
 // parally (sneed) は 2026-05-10 追加 → fanza:note:parally = 1:1:1
+// めろカノ (merokano.jp) は 2026-08-25 追加 → merokano:fanza = 4:1 (parally は Ratio 0 で停止)
 
 type AdSize = 'header' | 'rectangle' | 'footer';
 
@@ -73,7 +74,8 @@ function FanzaWidget() {
   };
 
   // 2026-06-12: note(kaito_ura) 撤去 → FANZA0件時のフォールバックは parally に
-  if (loaded && items.length === 0) return <ParallyAdImage size="rectangle" />;
+  // 2026-08-25: parally 停止 → フォールバックは めろカノ に
+  if (loaded && items.length === 0) return <MerokanoAdImage size="rectangle" />;
   if (!loaded) return <div className="flex justify-center min-h-[50px]" />;
 
   const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -89,6 +91,28 @@ function FanzaWidget() {
         </a>
       ))}
     </div>
+  );
+}
+
+/** めろカノ バナー広告 (merokano.jp) */
+function MerokanoAdImage({ size }: { size: AdSize }) {
+  const [adSrc] = useState(() => getRandomImage(AD_CONFIG.merokanoAd.images));
+  const [imgError, setImgError] = useState(false);
+  const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const link = wrapClickUrl(getMerokanoAdLink(size), { adType: 'merokano', adSize: size, adPage: pagePath });
+
+  const handleClick = () => {
+    trackAdEvent('banner_click', 'merokano', { ad_size: size });
+  };
+
+  if (imgError) return null;
+
+  return (
+    <a href={link} target="_blank" rel="noopener noreferrer sponsored"
+      className="inline-block w-full max-w-lg" onClick={handleClick}>
+      <img src={adSrc} alt="めろカノ - 推し活アプリ [PR]" className="w-full h-auto rounded-lg"
+        width={1024} height={318} onError={() => setImgError(true)} />
+    </a>
   );
 }
 
@@ -141,6 +165,7 @@ export default function AdBanner({ size, className = '' }: AdBannerProps) {
   return (
     <div className={`relative bg-gray-50 border border-gray-200 rounded-lg text-center py-2 my-3 ${className}`}>
       <div className="px-2">
+        {adType === 'merokano' && <MerokanoAdImage size={size} />}
         {adType === 'fanza' && <FanzaWidget />}
         {adType === 'parally' && <ParallyAdImage size={size} />}
       </div>

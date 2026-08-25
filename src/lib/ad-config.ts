@@ -1,9 +1,24 @@
 /**
- * Ad configuration: FANZA(コンテキスト連動) / parally (sneed)。note(kaito_ura)は2026-06-12撤去
- * adstir は 2026-05-09 撤去
+ * Ad configuration: めろカノ (merokano.jp) / FANZA(コンテキスト連動)。
+ * parally (sneed) は 2026-08-25 に配信比率 0 で停止 (設定は残置・再開可)。
+ * note(kaito_ura) は 2026-06-12 撤去、adstir は 2026-05-09 撤去。
  */
 export const AD_CONFIG = {
   enabled: true,
+
+  // めろカノ (推し活アプリ / merokano.jp) — 2026-08-25 掲載開始
+  // 素材: Drive「めろカノバナー」1-5.png (1856x576 PNG) を 1024x318 WebP に最適化して配置
+  merokanoAd: {
+    link: 'https://merokano.jp/',
+    images: [
+      '/ad/merokano-1.webp',
+      '/ad/merokano-2.webp',
+      '/ad/merokano-3.webp',
+      '/ad/merokano-4.webp',
+      '/ad/merokano-5.webp',
+    ],
+    utm: { source: 'panemaji', medium: 'banner', campaign: 'merokano_ad' },
+  },
 
   // 自社広告: parally note 記事誘導 (2026-05-10 追加 / note(kaito_ura)は撤去)
   // 2次元エロ・1億円稼げる系のバナー (3 メッセージ × 2 デザイン variant = 6 枚)
@@ -80,13 +95,27 @@ export const AD_CONFIG = {
   // 2026-05-11: kaito_ura note を一旦 OFF → fanza:parally = 1:1 (parally 効果検証 A/B)
   // 2026-05-12: note 復活 + parally の 配分微調整 → fanza:note:parally = 4:4:2 (40% / 40% / 20%)
   // 2026-06-12: note(kaito_ura) 完全撤去 → fanza:parally = 1:1 (50% / 50%)
+  // 2026-08-25: めろカノ 掲載開始 → merokano:fanza = 4:1 (80% / 20%)。parally は 0 に停止
+  merokanoRatio: 4,
   fanzaRatio: 1,
-  parallyRatio: 1,
+  parallyRatio: 0,
   adstirRatio: 0,
   ninjaRatio: 0,
   exoclickRatio: 0,
   juicyadsRatio: 0,
 };
+
+/** Build the full ad link with UTM parameters (めろカノ) */
+export function getMerokanoAdLink(content: string): string {
+  const { merokanoAd } = AD_CONFIG;
+  const params = new URLSearchParams({
+    utm_source: merokanoAd.utm.source,
+    utm_medium: merokanoAd.utm.medium,
+    utm_campaign: merokanoAd.utm.campaign,
+    utm_content: content,
+  });
+  return `${merokanoAd.link}?${params.toString()}`;
+}
 
 /** Build the full ad link with UTM parameters (parally note ad) */
 export function getParallyAdLink(content: string): string {
