@@ -45,7 +45,9 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     realPct !== null ? `パネル通り率${realPct}%` : null,
     reviewCount > 0 ? `口コミ${reviewCount}件` : null,
   ].filter(Boolean).join('・');
-  const description = `${girl.name}さん（${girl.shop_name}・${categoryStr}）の口コミ・パネマジ度。${facts ? `${facts}。` : ''}実際に行った人の投稿で、パネル写真と実物の一致度を確認できます。`;
+  // ⚠️ 「掲示板」は最大流入クエリ語。数値前方化の際に description から完全に消してしまい、
+  //    クリックの47.6%・CTR最良(19.4%)の嬢ページで最大の検索語を落としていた (2026-08-27 修正)。
+  const description = `${girl.name}さん（${girl.shop_name}・${categoryStr}）の口コミ掲示板・パネマジ度。${facts ? `${facts}。` : ''}実際に行った人の投稿で、パネル写真と実物の一致度を確認できます。`;
   const ogParams = new URLSearchParams({
     name: girl.name,
     shop: girl.shop_name || '',

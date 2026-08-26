@@ -4,6 +4,9 @@ import ContactForm from "./ContactForm";
 export const metadata: Metadata = {
   title: "お問い合わせ",
   description: "パネマジ掲示板へのお問い合わせはこちらからお願いいたします。",
+  // layout.tsx が canonical をトップ固定で設定しているため、
+  // 上書きしないとこのページが「トップの複製」と申告される (2026-08-27 修正)
+  alternates: { canonical: "https://panemaji.com/contact" },
 };
 
 export default function ContactPage() {

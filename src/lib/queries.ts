@@ -260,6 +260,27 @@ export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
  *
  * Note: 評価データがある shop は 閉店していても 価値が残るので 上位に出す。
  */
+/**
+ * エリアの metadata 用の軽量集計。
+ * 以前は generateMetadata から getShopsByArea() を呼んでいたが、ページ本体でも同じ呼び出しがあり
+ * 全行(最大370件)を2回取得していた。description に必要なのは3つの数だけなので集計で済ませる。
+ * catSlug も受けてページ本体と同じ母集団にする (?cat= 付きURLで数字が食い違うのを防ぐ)。
+ */
+export function getAreaMetaStats(areaId: number, catSlug?: string): { shopCount: number; girlTotal: number; reviewTotal: number } {
+  const catValue = categoryToDbValue(catSlug);
+  const catFilter = catValue ? ' AND s.category = ?' : '';
+  const params = catValue ? [areaId, catValue] : [areaId];
+  const row = db.prepare(`
+    SELECT COUNT(*) AS shopCount,
+           COALESCE(SUM(COALESCE(gc.girl_count, 0)), 0) AS girlTotal,
+           COALESCE(SUM(COALESCE(rc.review_count, 0)), 0) AS reviewTotal
+    FROM shops s
+    ${SHOP_STATS_JOIN}
+    WHERE s.area_id = ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1${catFilter}
+  `).get(...params) as { shopCount: number; girlTotal: number; reviewTotal: number };
+  return row;
+}
+
 export function getRecentlyClosedShopsByArea(areaId: number, catSlug?: string, limit: number = 30): Shop[] {
   const catValue = categoryToDbValue(catSlug);
   const catFilter = catValue ? ' AND s.category = ?' : '';

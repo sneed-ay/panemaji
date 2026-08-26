@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "利用規約",
   description: "パネマジ掲示板の利用規約です。当サイトをご利用いただく前に、必ずお読みください。",
+  // layout.tsx が canonical をトップ固定で設定しているため、
+  // 上書きしないとこのページが「トップの複製」と申告される (2026-08-27 修正)
+  alternates: { canonical: "https://panemaji.com/terms" },
 };
 
 export default function TermsPage() {
