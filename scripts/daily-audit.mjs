@@ -22,7 +22,13 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
-const DB_PATH = process.env.DB_PATH || path.join(PROJECT_ROOT, 'panemaji.db');
+// マスターDBは $HOME/panemaji-data (2026-06-10 に Google Drive 外へ移設済)。
+// PROJECT_ROOT/panemaji.db は 8/21 で更新が止まった破損コピーで、
+// これを見ていたため監査が毎日 red (integrity failed) を出し data_freshness も常に null だった。
+// daily-maintenance.sh の既定と揃える (2026-08-26 修正)。
+const DEFAULT_DB = path.join(process.env.HOME || '', 'panemaji-data', 'panemaji.db');
+const DB_PATH =
+  process.env.DB_PATH || (fs.existsSync(DEFAULT_DB) ? DEFAULT_DB : path.join(PROJECT_ROOT, 'panemaji.db'));
 const LOG_DIR = path.join(PROJECT_ROOT, 'logs');
 
 const PROD_BASE = 'https://panemaji.com';
