@@ -10,6 +10,7 @@ import RelatedGuides from '@/components/RelatedGuides';
 import RelatedAreas from '@/components/RelatedAreas';
 import { generateAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
+import { latestContentDate } from '@/lib/content-date';
 
 export const revalidate = 7200; // 2026-05-17: 30min → 2h (ISR rebuild storm 防止 / Render Starter 0.5CPU 救済)
 
@@ -37,7 +38,15 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     title = `${shop.name} 掲示板`;
   }
   const bkCount = getBakusaiCommentCount(shop.id);
-  const description = `${shop.name}${areaName ? `(${areaName})` : ''}の口コミ掲示板。パネル写真と実物の一致度をチェック。${realPct !== null ? `パネル通り率${realPct}%。` : ''}在籍${girlCountLabel}人${reviewCount > 0 ? `・口コミ${reviewCount}件` : ''}${bkCount > 0 ? `・掲示板の声${bkCount}件` : ''}。`;
+  // 数値は他社(爆サイ等)に無い独自情報なので、汎用の説明文より前に置く。
+  // Google が description を途中で切っても数値が残るようにする (2026-08-26)。
+  const stats = [
+    realPct !== null ? `パネル通り率${realPct}%` : null,
+    reviewCount > 0 ? `口コミ${reviewCount}件` : null,
+    bkCount > 0 ? `掲示板の声${bkCount}件` : null,
+    `在籍${girlCountLabel}人`,
+  ].filter(Boolean).join('・');
+  const description = `${shop.name}${areaName ? `(${areaName})` : ''}の口コミ掲示板。${stats}。実際に行った人の投稿で、パネル写真と実物の一致度をチェックできます。`;
   const ogParams = new URLSearchParams({
     name: shop.name,
     shop: shop.area_name || '',
@@ -144,6 +153,8 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     },
     ...(r.comment ? { reviewBody: r.comment.slice(0, 200) } : {}),
   }));
+  // getReviewsByShop は created_at DESC なので [0] が最新
+  const contentModifiedAt = latestContentDate(shop.last_seen_at, latestReviews[0]?.created_at);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
@@ -152,8 +163,10 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     url: `https://panemaji.com/shop/${shop.id}`,
     description: shop.description || `${shop.area_name}エリアの風俗店「${shop.name}」`,
     ...(shop.area_name ? { areaServed: shop.area_name } : {}),
-    // EEAT: 鮮度シグナル — last_seen_at から dateModified
-    ...(shop.last_seen_at ? { dateModified: shop.last_seen_at } : {}),
+    // EEAT: 鮮度シグナル。last_seen_at 単独だと「スクレイパーが最後に見た日」になり、
+    // 取り込み停滞で店舗の72%が91日超 → SERP に数か月前の日付が出て CTR を落としていた。
+    // 実際に内容が変わった日 = max(last_seen_at, 最新口コミ日) を使う (2026-08-26)。
+    ...(contentModifiedAt ? { dateModified: contentModifiedAt } : {}),
     // 構造化データは会員生口コミのみ(外部転載 ext-* を除外 = レビュースパムポリシー対策)
     ...(genuineStats.reviewCount > 0 && genuineStats.realPct >= 0 ? {
       aggregateRating: {

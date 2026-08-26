@@ -1,4 +1,5 @@
 import { getGirlWithReviewStats, getReviewsByGirl, getOtherGirlsInShopExpanded, getPopularGirlsInArea, getShopAreaId, getShopById } from '@/lib/queries';
+import { latestContentDate } from '@/lib/content-date';
 import { notFound } from 'next/navigation';
 import RealScore from '@/components/RealScore';
 import GirlImage from '@/components/GirlImage';
@@ -139,6 +140,9 @@ export default function GirlPage({ params }: { params: { id: string } }) {
     : undefined;
 
   const alternateNames = generateGirlAlternateNames(girl.name, girl.shop_name);
+  // getReviewsByGirl は created_at DESC なので [0] が最新
+  const contentModifiedAt = latestContentDate(girl.last_seen_at, reviews[0]?.created_at);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -146,8 +150,9 @@ export default function GirlPage({ params }: { params: { id: string } }) {
     ...(alternateNames.length > 0 ? { alternateName: alternateNames } : {}),
     url: `https://panemaji.com/girl/${girl.id}`,
     // 嬢画像の全面停止(2026-08)に伴い、構造化データからも image を除去
-    // EEAT: 最新取得日 を dateModified として 提示 (鮮度シグナル)
-    ...(girl.last_seen_at ? { dateModified: girl.last_seen_at } : {}),
+    // EEAT: 鮮度シグナル。last_seen_at 単独だと嬢の93%が91日超となり、
+    // SERP に数か月前の日付が出て CTR を落とす。内容が実際に変わった日を使う (2026-08-26)。
+    ...(contentModifiedAt ? { dateModified: contentModifiedAt } : {}),
     // worksFor: 所属店舗との関連 (Google Knowledge Graph 用)
     ...(girl.shop_name ? {
       worksFor: {
