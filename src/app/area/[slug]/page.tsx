@@ -20,9 +20,20 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const title = areaLen <= 14
     ? `${area.name} 風俗 口コミ・パネマジ度`           // 例: "新宿・歌舞伎町 風俗 口コミ・パネマジ度" (19字)
     : `${area.name} 口コミ・パネマジ度`;                // 長エリア用に短縮
+  // 全325エリアがほぼ同一文面で数値ゼロだったため CTR 3.8% (店舗ページ10.1%の1/3) に留まっていた。
+  // 店舗数・在籍数・口コミ数を前に出して、他エリアと区別できる説明文にする (2026-08-26)。
+  const areaShops = getShopsByArea(area.id);
+  const shopCount = areaShops.length;
+  const girlTotal = areaShops.reduce((sum, s) => sum + (s.girl_count || 0), 0);
+  const reviewTotal = areaShops.reduce((sum, s) => sum + (s.review_count || 0), 0);
+  const scale = [
+    shopCount > 0 ? `${shopCount.toLocaleString()}店` : null,
+    girlTotal > 0 ? `在籍${girlTotal.toLocaleString()}人` : null,
+    reviewTotal > 0 ? `口コミ${reviewTotal.toLocaleString()}件` : null,
+  ].filter(Boolean).join('・');
   return {
     title,
-    description: `${prefDisplayName} ${area.name}エリアの風俗店の口コミ掲示板。パネル写真と実物の一致度（パネマジ度）をチェック。${area.name}のデリヘル・ソープ・メンエス・ヘルスのリアル評判・在籍嬢ランキング。`,
+    description: `${prefDisplayName}${area.name}の風俗店${scale ? `${scale}` : ''}。パネル写真と実物の一致度（パネマジ度）を口コミでチェック。デリヘル・ソープ・メンエス・ヘルスのリアル評判が分かる掲示板。`,
     alternates: {
       canonical: `https://panemaji.com/area/${params.slug}`,
     },

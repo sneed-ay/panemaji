@@ -37,11 +37,15 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   if (girl.bust) specs.push(`B${girl.bust}${girl.cup ? '(' + girl.cup + ')' : ''}`);
   if (girl.waist) specs.push(`W${girl.waist}`);
   if (girl.hip) specs.push(`H${girl.hip}`);
-  const specStr = specs.length > 0 ? ` ${specs.join('・')}。` : '';
-  const realPctStr = realPct !== null ? ` パネル通り率${realPct}%。` : '';
-  const reviewStr = reviewCount > 0 ? ` 口コミ${reviewCount}件。` : '';
   const categoryStr = shop?.category ? `${shop.category}` : '風俗';
-  const description = `${girl.name}さん（${girl.shop_name}・${categoryStr}）のパネル写真と実物の一致度をチェック。${specStr}${realPctStr}${reviewStr}在籍店舗の口コミ掲示板・パネマジ度を確認できます。`;
+  // 数値(スペック・パネル通り率・口コミ件数)は他サイトに無い独自情報なので、
+  // 汎用の説明文より前に置く。Google が description を切っても残るようにする (2026-08-26)。
+  const facts = [
+    specs.length > 0 ? specs.join('・') : null,
+    realPct !== null ? `パネル通り率${realPct}%` : null,
+    reviewCount > 0 ? `口コミ${reviewCount}件` : null,
+  ].filter(Boolean).join('・');
+  const description = `${girl.name}さん（${girl.shop_name}・${categoryStr}）の口コミ・パネマジ度。${facts ? `${facts}。` : ''}実際に行った人の投稿で、パネル写真と実物の一致度を確認できます。`;
   const ogParams = new URLSearchParams({
     name: girl.name,
     shop: girl.shop_name || '',
