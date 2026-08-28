@@ -1,5 +1,7 @@
 /**
- * Ad configuration: めろカノ (merokano.jp) / FANZA(コンテキスト連動)。
+ * Ad configuration: FANZA(コンテキスト連動) 100%。
+ * めろカノ (merokano.jp) は 2026-08-28 に配信比率 0 で停止 (設定・素材は残置・再開可)。
+ *   FANZA 0件時のフォールバックとしてのみ表示される。
  * parally (sneed) は 2026-08-25 に配信比率 0 で停止 (設定は残置・再開可)。
  * note(kaito_ura) は 2026-06-12 撤去、adstir は 2026-05-09 撤去。
  */
@@ -97,7 +99,13 @@ export const AD_CONFIG = {
   // 2026-05-12: note 復活 + parally の 配分微調整 → fanza:note:parally = 4:4:2 (40% / 40% / 20%)
   // 2026-06-12: note(kaito_ura) 完全撤去 → fanza:parally = 1:1 (50% / 50%)
   // 2026-08-25: めろカノ 掲載開始 → merokano:fanza = 4:1 (80% / 20%)。parally は 0 に停止
-  merokanoRatio: 4,
+  // 2026-08-28: FANZA 100% に変更 (ユーザー判断)。
+  //   実績: めろカノ 44クリック (8/25 15:01〜8/28) に対し FANZA 3,634。
+  //   配信比率は めろカノ80% / FANZA20% だったので、1リンクあたりでは FANZA が約60倍。
+  //   (FANZA はサムネイル3枚=3リンク、めろカノは1リンクである点を補正した値)
+  //   ※ FANZA 側の絶対数はボット混入で水増しされている疑いがあるが、
+  //     めろカノが80%配信で 9〜12クリック/日 で頭打ちなのは事実。
+  merokanoRatio: 0,
   fanzaRatio: 1,
   parallyRatio: 0,
   adstirRatio: 0,
