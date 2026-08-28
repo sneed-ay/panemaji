@@ -59,3 +59,5 @@ cityheaven-progress.json
 
 # 広告素材の原本 (Google Drive 同期フォルダ。最適化済みは public/ad/ に配置)
 /めろカノバナー/
+refetch-progress.json
+update-progress.json
