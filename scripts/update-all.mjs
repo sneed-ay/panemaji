@@ -414,6 +414,10 @@ async function scrapeShops(db, page, prefCode, areas) {
 
   let totalNew = 0, totalUpdated = 0;
   const seenHrefs = new Set();
+  // 🚨 実際に「1店以上を拾えた」エリアだけを記録する。
+  //    後段の deactivateStaleShops は、ここに入ったエリア配下の店しか
+  //    非アクティブ化してはいけない (下の説明を参照)。
+  const coveredAreaPrefixes = new Set();
 
   for (const [code, info] of Object.entries(areas)) {
     insertArea.run(info.name, info.slug, prefCode);
@@ -466,6 +470,8 @@ async function scrapeShops(db, page, prefCode, areas) {
       const areaRow = getAreaBySlug.get(areaInfo.slug);
       if (!areaRow) continue;
 
+      if (allShops.length > 0) coveredAreaPrefixes.add(`${BASE}/${prefCode}/${areaCode}/`);
+
       for (const shop of allShops) {
         if (seenHrefs.has(shop.href)) continue;
         seenHrefs.add(shop.href);
@@ -490,8 +496,8 @@ async function scrapeShops(db, page, prefCode, areas) {
     }
   }
 
-  console.log(`    => 新規: ${totalNew} | 更新: ${totalUpdated}`);
-  return { newShops: totalNew, updatedShops: totalUpdated };
+  console.log(`    => 新規: ${totalNew} | 更新: ${totalUpdated} | 走査できたエリア: ${coveredAreaPrefixes.size}/${Object.keys(areas).length}`);
+  return { newShops: totalNew, updatedShops: totalUpdated, coveredAreaPrefixes: [...coveredAreaPrefixes] };
 }
 
 // ─── Phase 2: 女性スクレイピング ──────────────────────
@@ -713,7 +719,7 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
 //    （別スクレイパー管轄・既定OFF含む）を巻き込んで全削除する事故が起きる(2026-06-28発生)。
 //    そのため cleanup は (1) cityheaven 由来のみ (2) 今回走査した県のみ (3) 取得0/異常時スキップ
 //    の三重ガードで限定する。
-function deactivateStaleShops(db, { scrapedPrefCodes = null, scrapedCount = 0 } = {}) {
+function deactivateStaleShops(db, { scrapedPrefCodes = null, scrapedCount = 0, coveredAreaPrefixes = null } = {}) {
   // 安全弁①: 今回1件も取得できていない(遮断/構造変更)なら、大量非アクティブ化を回避
   if (!scrapedCount || scrapedCount < 1) {
     console.log('\n  [cleanup] スキップ: 今回取得した店舗が0件 → 全削除事故を回避');
@@ -728,6 +734,24 @@ function deactivateStaleShops(db, { scrapedPrefCodes = null, scrapedCount = 0 } 
   if (Array.isArray(scrapedPrefCodes) && scrapedPrefCodes.length > 0) {
     where += ' AND (' + scrapedPrefCodes.map(() => 'source_url LIKE ?').join(' OR ') + ')';
     for (const pc of scrapedPrefCodes) params.push(`%cityheaven.net/${pc}/%`);
+  }
+
+  // 🚨 安全弁③ (2026-09-06 追加): 「今回実際に店を拾えたエリア」配下の店しか落とさない。
+  //
+  //   これまでは県単位でしか絞っておらず、県の途中でエリア巡回が失敗/タイムアウトすると
+  //   未走査エリアの店は last_seen_at が更新されないまま残り、30日後にまとめて
+  //   is_active=0 にされていた。実際そうやって「営業中なのに閉店表示」が量産されていた:
+  //     - 名古屋駅周辺 (aichi/A2301/A230101): 掲載元に今も載る29店のうち22店が is_active=0
+  //     - 川崎堀之内 (kanagawa/A1403/A140301): 18071〜18099 の30店超が同日に全滅
+  //   会員フィードバックの「閉店していない」(#5/#84/#85) と店舗からの苦情はこれが原因。
+  //   エリアを1つも拾えていない場合は 1件も落とさない。
+  if (Array.isArray(coveredAreaPrefixes)) {
+    if (coveredAreaPrefixes.length === 0) {
+      console.log('\n  [cleanup] スキップ: 走査できたエリアが0 → 誤って一括閉店にしない');
+      return;
+    }
+    where += ' AND (' + coveredAreaPrefixes.map(() => 'source_url LIKE ?').join(' OR ') + ')';
+    for (const p of coveredAreaPrefixes) params.push(`${p}%`);
   }
 
   // 安全弁②: 非アクティブ化候補が今回取得数を大きく上回る場合は異常 → 中止
@@ -837,6 +861,8 @@ async function main() {
   // cleanup を「実際に走査した県」に限定するための記録（巻き添え非アクティブ化を防ぐ）
   const scrapedPrefCodes = [];
 
+  // 今回のランで実際に店を拾えた cityheaven エリアの URL prefix (誤って一括閉店にしないため)
+  const coveredAreaPrefixes = [];
   try {
     for (const [prefCode, prefInfo] of targetPrefs) {
       const prefStart = Date.now();
@@ -856,6 +882,7 @@ async function main() {
           const shopResult = await scrapeShops(db, page, prefCode, areas);
           totals.newShops += shopResult.newShops;
           totals.updatedShops += shopResult.updatedShops;
+          for (const p of shopResult.coveredAreaPrefixes || []) coveredAreaPrefixes.push(p);
         }
 
         // Phase 2: 女性 + 画像
@@ -898,6 +925,7 @@ async function main() {
     deactivateStaleShops(db, {
       scrapedPrefCodes,
       scrapedCount: totals.newShops + totals.updatedShops,
+      coveredAreaPrefixes,
     });
 
     // DB統計

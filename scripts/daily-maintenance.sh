@@ -59,7 +59,7 @@ trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
 #   ローカル DB を破損させる事故が起きた (girls 40.7万→27.2万 の誤非アクティブ化)。
 #   開始時点で外部 scraper が走行中なら衝突回避で exit する。
 # ----------------------------------------------------------------------
-EXT_SCRAPER=$(pgrep -f "fill-missing-images-safe|scrape-images|scrape-rankingdeli|scrape-purelovers|scrape-cityheaven|scrape-fuzoku|scrape-menesu|update-all|refetch-girls|refresh-source-girls" 2>/dev/null | grep -vx "$$" | head -1 || true)
+EXT_SCRAPER=$(pgrep -f "fill-missing-images-safe|scrape-images|scrape-rankingdeli|scrape-purelovers|scrape-cityheaven|scrape-fuzoku|scrape-menesu|update-all|refetch-girls|refresh-source-girls|recheck-closed-shops" 2>/dev/null | grep -vx "$$" | head -1 || true)
 if [ -n "$EXT_SCRAPER" ]; then
   echo "[lock] 外部 scraper (PID $EXT_SCRAPER) が走行中 — 衝突回避で exit 0 (trap が LOCK_FILE を掃除)"
   exit 0
