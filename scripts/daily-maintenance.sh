@@ -290,11 +290,17 @@ run_timeout 14400 node scripts/update-all.mjs $FORCE_FLAG $UPDATE_ALL_MODE >> "$
 #   ranking-deli 2,518店 ÷ 7 ≒ 360   (約10秒/店 → 約60分)
 #   fuzoku.jp    1,295店 ÷ 7 ≒ 185   (約4秒/店  → 約12分)
 #   purelovers     879店 ÷ 7 ≒ 125   (約2秒/店  → 約4分)
+#   esthe-zukan    641店 ÷ 7 ≒  92   (約4分)
+#   fues.jp        214店 ÷ 7 ≒  31   (約2分)
+#   aromaesthe      83店 ÷ 7 ≒  12   (約1分)
 # 対象は「嬢の最終取得が古い順」なので、毎晩自然に巡回する。
-log "  [1-1b] 他ソース在籍更新 (駅ちか/風俗じゃぱん/ぴゅあらば)..."
+log "  [1-1b] 他ソース在籍更新 (駅ちか/風俗じゃぱん/ぴゅあらば/エステ図鑑/フーズ/アロマエステ)..."
 run_timeout 5400 node scripts/refresh-source-girls.mjs --source rd     --limit 400 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh rd 失敗/タイムアウト"
 run_timeout 1800 node scripts/refresh-source-girls.mjs --source fuzoku --limit 200 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh fuzoku 失敗/タイムアウト"
 run_timeout 1200 node scripts/refresh-source-girls.mjs --source pl     --limit 150 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh pl 失敗/タイムアウト"
+run_timeout  900 node scripts/refresh-source-girls.mjs --source ez     --limit 100 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh ez 失敗/タイムアウト"
+run_timeout  600 node scripts/refresh-source-girls.mjs --source fues   --limit  50 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh fues 失敗/タイムアウト"
+run_timeout  600 node scripts/refresh-source-girls.mjs --source ar     --limit  20 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh ar 失敗/タイムアウト"
 
 # 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）— puppeteer 系
 # stall watchdog 経由で hang 自動回避

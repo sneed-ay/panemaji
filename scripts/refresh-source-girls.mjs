@@ -170,6 +170,88 @@ const ADAPTERS = {
     },
   },
 
+  // エステ図鑑 (在籍は /staff。実測で 271人が1ページに出るのでページングは不要)
+  ez: {
+    label: 'esthe-zukan',
+    match: '%esthe-zukan%',
+    listUrl(shop, page) {
+      return page === 1 ? shop.source_url.replace(/\/?$/, '') + '/staff' : null;
+    },
+    parse(html) {
+      const out = [];
+      const seen = new Set();
+      const re = /href="https:\/\/esthe-zukan\.com\/[^"]*\/staff\/(\d+)\/[^"]*"[\s\S]{0,600}?<img\s+src="([^"]+)"\s+alt="([^"]+)"/g;
+      let m;
+      while ((m = re.exec(html))) {
+        const id = m[1];
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const name = cleanGirlName(m[3]);
+        if (!name) continue;
+        const img = m[2].includes('noimage') ? null : m[2];
+        out.push({ name, imageUrl: img, sourceId: `ez-${id}` });
+      }
+      return out;
+    },
+  },
+
+  // 東京アロマエステ案内所 (在籍は shop ページ内)
+  ar: {
+    label: 'aromaesthe',
+    match: '%aromaesthe%',
+    listUrl(shop, page) {
+      return page === 1 ? shop.source_url : null;
+    },
+    parse(html, shop) {
+      // 🚨 shop ページには「近隣店のおすすめ」など他店のセラピストも載る。
+      //    lady の slug は {shopSlug}_{hash} なので、この店のものだけに絞らないと
+      //    他店の嬢を取り込み、source_id の UNIQUE 制約 (idx_girls_source_id) で落ちる。
+      const sm = shop.source_url.match(/\/shop\/([^/?#]+)/);
+      const shopSlug = sm ? sm[1] : null;
+      const out = [];
+      const seen = new Set();
+      const re = /href="[^"]*\/lady\/([^"/]+)\/"[^>]*>\s*<img\s+src="([^"]+)"\s+alt="([^"]+)"/g;
+      let m;
+      while ((m = re.exec(html))) {
+        const id = m[1];
+        if (seen.has(id)) continue;
+        if (shopSlug && !id.startsWith(shopSlug + '_')) continue;
+        seen.add(id);
+        const name = cleanGirlName(m[3]);
+        if (!name) continue;
+        out.push({ name, imageUrl: m[2], sourceId: `ar-${id}` });
+      }
+      return out;
+    },
+  },
+
+  // フーズエステ (在籍は shop ページ内。画像パスは相対)
+  fues: {
+    label: 'fues.jp',
+    match: '%fues.jp%',
+    listUrl(shop, page) {
+      return page === 1 ? shop.source_url : null;
+    },
+    parse(html, shop) {
+      const idm = shop.source_url.match(/\/store\/(\d+)/);
+      if (!idm) return [];
+      const out = [];
+      const seen = new Set();
+      const re = new RegExp(`href="/store/${idm[1]}/(\\d+)/"[^>]*>\\s*<img\\s+src="([^"]+)"[^>]*alt="([^"]+)"`, 'g');
+      let m;
+      while ((m = re.exec(html))) {
+        const id = m[1];
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const name = cleanGirlName(m[3]);
+        if (!name) continue;
+        const img = m[2].startsWith('http') ? m[2] : `https://www.fues.jp${m[2]}`;
+        out.push({ name, imageUrl: img, sourceId: `fues-${id}` });
+      }
+      return out;
+    },
+  },
+
   // ぴゅあらば (在籍は shop ページ内。専用一覧ページは無い)
   pl: {
     label: 'purelovers',
@@ -236,6 +318,10 @@ console.log(`  対象 ${shops.length} 店 / active ${totalShops} 店  (${opts.st
 //   「ひずき【148cm☆...」のように途中で切れた名前が残っている)。SQL の name 完全一致では
 //   拾えないので、両側を cleanGirlName で正規化してから突き合わせる。
 const loadExisting = db.prepare('SELECT id, name, source_id, is_active FROM girls WHERE shop_id = ?');
+// idx_girls_source_id は source_id 全体に UNIQUE。別店に同じ source_id が居ると
+// INSERT が落ちるので、入れる前に必ず全体を引く。見つかったら「別店の嬢を
+// 誤って引き込む」ことを避けるため、移動はさせず今回はスキップする。
+const findSourceIdAnywhere = db.prepare('SELECT id, shop_id FROM girls WHERE source_id = ?');
 const markSeen = db.prepare("UPDATE girls SET is_active = 1, last_seen_at = ?, image_url = COALESCE(NULLIF(image_url,''), ?) WHERE id = ?");
 const insertGirl = db.prepare('INSERT INTO girls (name, shop_id, image_url, source_id, is_active, last_seen_at) VALUES (?, ?, ?, ?, 1, ?)');
 // 在籍一覧が取れた = その店はまだ存在する。店側の last_seen_at も更新しておく
@@ -244,7 +330,7 @@ const insertGirl = db.prepare('INSERT INTO girls (name, shop_id, image_url, sour
 //   ここで更新しても他ソースの店が巻き込まれて消えることはない。
 const markShopSeen = db.prepare('UPDATE shops SET last_seen_at = ? WHERE id = ?');
 
-let nShops = 0, nNew = 0, nSeen = 0, nDeact = 0, nSkip = 0, nImg = 0, nTrunc = 0, nPoor = 0;
+let nShops = 0, nNew = 0, nSeen = 0, nDeact = 0, nSkip = 0, nImg = 0, nTrunc = 0, nPoor = 0, nForeign = 0;
 
 for (const shop of shops) {
   nShops++;
@@ -309,6 +395,10 @@ for (const shop of shops) {
         matched++;
         nSeen++;
       } else {
+        if (g.sourceId) {
+          const elsewhere = findSourceIdAnywhere.get(g.sourceId);
+          if (elsewhere && elsewhere.shop_id !== shop.id) { nForeign++; continue; }
+        }
         const r = insertGirl.run(g.name, shop.id, g.imageUrl, g.sourceId, now);
         seenRowIds.add(Number(r.lastInsertRowid));
         nNew++;
@@ -320,8 +410,9 @@ for (const shop of shops) {
     //    掲載元の表記変更 (名前にキャッチコピーが付く等) や source_id の
     //    名前空間ズレが起きると、同じ嬢を「新規 + 既存を退店」に倒してしまい
     //    /girl/{id} の URL が総入れ替えになる (SEO 的に致命的)。
-    //    既存が5人以上いるのに3割も照合できないのは異常とみなす。
-    const poorMatch = existingActive >= 5 && matched / existingActive < 0.3;
+    //    既存が3人以上いるのに3割も照合できないのは異常とみなす。
+    //   3人以上を閾値にする (fues.jp のように1店あたり数人しかいないソースがあるため)。
+    const poorMatch = existingActive >= 3 && matched / existingActive < 0.34;
     if (poorMatch) {
       nPoor++;
       console.log(`  [warn] ${shop.name}: 既存 ${existingActive} 人中 ${matched} 人しか照合できず → 退店処理を見送り`);
