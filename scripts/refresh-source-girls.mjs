@@ -33,6 +33,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { withChromePath } from './lib/chrome-path.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -81,6 +82,7 @@ function parseArgs() {
   };
 }
 
+// 素の fetch。ほとんどのソースはこれで足りる。
 async function fetchPage(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -91,6 +93,37 @@ async function fetchPage(url, retries = 3) {
     } catch (e) {
       if (i === retries - 1) return null;
       await sleep(2000 * (i + 1));
+    }
+  }
+  return null;
+}
+
+// men-esthe.jp は WAF が素の fetch を 403 で弾く (UA/Accept/Referer を揃えてもダメ)。
+// ブラウザ経由なら 200 で返るので、そのアダプタだけ puppeteer を使う。
+let browser = null;
+let browserPage = null;
+async function openBrowser() {
+  const puppeteer = (await import('puppeteer')).default;
+  browser = await puppeteer.launch(
+    withChromePath({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
+    })
+  );
+  browserPage = await browser.newPage();
+  await browserPage.setUserAgent(UA);
+}
+async function fetchPageBrowser(url, retries = 2) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await browserPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      if (!r) throw new Error('no response');
+      if (r.status() === 404 || r.status() === 410) return null;
+      if (r.status() >= 400) throw new Error(`HTTP ${r.status()}`);
+      return await browserPage.content();
+    } catch (e) {
+      if (i === retries - 1) return null;
+      await sleep(3000 * (i + 1));
     }
   }
   return null;
@@ -165,6 +198,50 @@ const ADAPTERS = {
         const name = alt ? cleanGirlName(alt[1]) : '';
         if (!name) continue;
         out.push({ name, imageUrl: img ? img[1] : null, sourceId: `fj-${slug}-${gid}` });
+      }
+      return out;
+    },
+  },
+
+  // メンエス (men-esthe.jp)
+  //
+  // 🚫 **daily-maintenance には入れていない。実質スクレイプ不可。**
+  //    素の fetch は UA/Accept/Language/Referer を揃えても常に 403。
+  //    puppeteer なら「最初の1リクエストだけ」200 が返るが、以降は間隔を
+  //    20秒空けても 403 になり、しばらくすると最初の1回も 0件になる
+  //    (2026-09-05 実測: 1件目200 → 20秒後403 → 20秒後403 → 20秒後403)。
+  //    WAF が自動アクセスを能動的に遮断している。これ以上叩いても
+  //    データは取れず IP 遮断のリスクだけが残るので、定期実行には載せない。
+  //
+  //    アダプタ自体は解析・実装済みなので、将来アクセス手段ができたら
+  //    `--source me` で使える。在籍一覧は /therapistlist.php?id={salonId}
+  //    (実測300人が1ページ)。DB の source_id は menesthe_{therapistId} 形式で
+  //    既に 100% 入っているので ID 照合が効く。
+  //    対象規模: 1,493店 / 28,924人 (全在籍の 7.8%)
+  me: {
+    label: 'men-esthe',
+    match: '%men-esthe%',
+    browser: true,
+    listUrl(shop, page) {
+      const m = shop.source_url.match(/salon\.php\?id=(\d+)/);
+      if (!m || page !== 1) return null;
+      return `https://men-esthe.jp/therapistlist.php?id=${m[1]}`;
+    },
+    parse(html) {
+      const out = [];
+      const seen = new Set();
+      const re = /<li therapist_id="(\d+)"[\s\S]{0,900}?class="th-name">([^<]+)</g;
+      let m;
+      while ((m = re.exec(html))) {
+        const id = m[1];
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const name = cleanGirlName(m[2]);
+        if (!name) continue;
+        const ctx = html.slice(m.index, m.index + 900);
+        const im = ctx.match(/data-src="([^"]+\.(?:jpg|jpeg|png|webp))"/);
+        const img = im ? (im[1].startsWith('http') ? im[1] : `https://men-esthe.jp/${im[1].replace(/^\//, '')}`) : null;
+        out.push({ name, imageUrl: img, sourceId: `menesthe_${id}` });
       }
       return out;
     },
@@ -309,6 +386,8 @@ const params = [ad.match, threshold];
 if (opts.limit > 0) { sql += ' LIMIT ?'; params.push(opts.limit); }
 const shops = db.prepare(sql).all(...params);
 
+if (ad.browser) await openBrowser();
+
 const totalShops = db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active = 1 AND source_url LIKE ?').get(ad.match).c;
 console.log(`\n=== ${ad.label} 在籍更新 ===`);
 console.log(`  対象 ${shops.length} 店 / active ${totalShops} 店  (${opts.staleDays}日以上未更新${opts.limit ? ` / 上限${opts.limit}` : ''})${opts.dryRun ? '  [DRY-RUN]' : ''}`);
@@ -341,7 +420,7 @@ for (const shop of shops) {
   for (let page = 1; page <= MAX_PAGES; page++) {
     const url = ad.listUrl(shop, page);
     if (!url) break;
-    const html = await fetchPage(url);
+    const html = ad.browser ? await fetchPageBrowser(url) : await fetchPage(url);
     await delay();
     if (!html) break;
     const rows = ad.parse(html, shop);
@@ -439,4 +518,5 @@ for (const shop of shops) {
 
 console.log(`\n  完了: ${nShops} 店`);
 console.log(`  新規 ${nNew} | 在籍確認 ${nSeen} | 退店 ${nDeact} | 画像補完 ${nImg} | 取得0でスキップ ${nSkip}`);
+if (browser) { try { await browser.close(); } catch { /* 終了時のみ */ } }
 db.close();
