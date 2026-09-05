@@ -59,7 +59,7 @@ trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
 #   ローカル DB を破損させる事故が起きた (girls 40.7万→27.2万 の誤非アクティブ化)。
 #   開始時点で外部 scraper が走行中なら衝突回避で exit する。
 # ----------------------------------------------------------------------
-EXT_SCRAPER=$(pgrep -f "fill-missing-images-safe|scrape-images|scrape-rankingdeli|scrape-purelovers|scrape-cityheaven|scrape-fuzoku|scrape-menesu|update-all|refetch-girls" 2>/dev/null | grep -vx "$$" | head -1 || true)
+EXT_SCRAPER=$(pgrep -f "fill-missing-images-safe|scrape-images|scrape-rankingdeli|scrape-purelovers|scrape-cityheaven|scrape-fuzoku|scrape-menesu|update-all|refetch-girls|refresh-source-girls" 2>/dev/null | grep -vx "$$" | head -1 || true)
 if [ -n "$EXT_SCRAPER" ]; then
   echo "[lock] 外部 scraper (PID $EXT_SCRAPER) が走行中 — 衝突回避で exit 0 (trap が LOCK_FILE を掃除)"
   exit 0
@@ -277,6 +277,24 @@ else
   UPDATE_ALL_MODE="--skip-shops"
 fi
 run_timeout 14400 node scripts/update-all.mjs $FORCE_FLAG $UPDATE_ALL_MODE >> "$LOG_FILE" 2>&1 || log "  [warn] update-all.mjs がタイムアウトまたはエラー"
+
+# 1-1b: cityheaven 以外のソースの在籍更新 (2026-09-05 新設)
+#
+# これまで update-all.mjs (cityheaven 専用) しか巡回しておらず、
+# 在籍嬢の 51% にあたる ranking-deli / fuzoku.jp / purelovers は
+# **更新経路が1つも無かった**。最終確認が 2026-04-26 のまま止まり、
+# sitemap の lastmod も4月のままで Google がクロールを絞る原因になっていた。
+#
+# fetch ベース (puppeteer 不使用) なので detached-frame 破損の心配はない。
+# 1周が7日で終わる程度に --limit を配って毎晩少しずつ回す:
+#   ranking-deli 2,518店 ÷ 7 ≒ 360   (約10秒/店 → 約60分)
+#   fuzoku.jp    1,295店 ÷ 7 ≒ 185   (約4秒/店  → 約12分)
+#   purelovers     879店 ÷ 7 ≒ 125   (約2秒/店  → 約4分)
+# 対象は「嬢の最終取得が古い順」なので、毎晩自然に巡回する。
+log "  [1-1b] 他ソース在籍更新 (駅ちか/風俗じゃぱん/ぴゅあらば)..."
+run_timeout 5400 node scripts/refresh-source-girls.mjs --source rd     --limit 400 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh rd 失敗/タイムアウト"
+run_timeout 1800 node scripts/refresh-source-girls.mjs --source fuzoku --limit 200 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh fuzoku 失敗/タイムアウト"
+run_timeout 1200 node scripts/refresh-source-girls.mjs --source pl     --limit 150 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh pl 失敗/タイムアウト"
 
 # 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）— puppeteer 系
 # stall watchdog 経由で hang 自動回避
