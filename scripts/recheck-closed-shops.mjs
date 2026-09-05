@@ -62,19 +62,35 @@ function parseArgs() {
   };
 }
 
+/**
+ * 🚨 cityheaven は年齢確認ゲートを持つ。
+ *   一定数のリクエストを超えると店ページが 302 で
+ *   http://img.cityheaven.net/cs/nenrei/ に飛ばされ、5KB ほどの確認ページが返る。
+ *   curl では `nenrei=y` cookie も `?nenrei=y` も効かず突破できなかった (2026-09-06 実測)。
+ *   update-all.mjs は puppeteer で cookie nenrei=y を張った実ブラウザ・セッションを使うので通る。
+ *   → ゲートに当たった場合は「確認不能」として**絶対に閉店扱いにしない**。
+ *      嬢0人と同じ扱いにすると、生きている店を閉店のまま放置してしまう。
+ */
+function isAgeGate(url, html) {
+  if (/img\.cityheaven\.net\/cs\/nenrei/.test(url || '')) return true;
+  return !!html && html.length < 20000 && html.includes('18歳未満');
+}
+
 async function fetchPage(url) {
   for (let i = 0; i < 3; i++) {
     try {
       const r = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow' });
-      if (r.status === 404 || r.status === 410) return { status: r.status, html: null };
+      if (r.status === 404 || r.status === 410) return { status: r.status, html: null, gated: false };
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return { status: r.status, html: await r.text() };
+      const html = await r.text();
+      if (isAgeGate(r.url, html)) return { status: r.status, html: null, gated: true };
+      return { status: r.status, html, gated: false };
     } catch {
-      if (i === 2) return { status: 0, html: null };
+      if (i === 2) return { status: 0, html: null, gated: false };
       await sleep(2000 * (i + 1));
     }
   }
-  return { status: 0, html: null };
+  return { status: 0, html: null, gated: false };
 }
 
 const opts = parseArgs();
@@ -109,13 +125,14 @@ const dupQ = db.prepare(
 );
 const revive = db.prepare('UPDATE shops SET is_active = 1, last_seen_at = ? WHERE id = ?');
 
-let alive = 0, gone = 0, unknown = 0, dup = 0, revived = 0;
+let alive = 0, gone = 0, unknown = 0, dup = 0, revived = 0, gatedCount = 0;
 const aliveList = [];
 
 for (const s of shops) {
-  const { status, html } = await fetchPage(s.source_url);
+  const { status, html, gated } = await fetchPage(s.source_url);
   await delay();
 
+  if (gated) { gatedCount++; unknown++; continue; }  // 年齢確認ゲート = 判定不能。触らない
   if (status === 404 || status === 410) { gone++; continue; }
   if (!html) { unknown++; continue; }
 
@@ -139,7 +156,13 @@ for (const s of shops) {
 
 console.log(`\n  掲載元で営業中 : ${alive}`);
 console.log(`  掲載終了/404   : ${gone}`);
-console.log(`  取得できず     : ${unknown}  (触っていない)`);
+console.log(`  取得できず     : ${unknown}  (触っていない / うち年齢確認ゲート ${gatedCount})`);
+if (gatedCount > shops.length * 0.3) {
+  console.log('\n  ⚠ 年齢確認ゲートが多すぎて全件は確認できていません。');
+  console.log('    cityheaven は連続アクセスでゲートを出すため curl ベースの本スクリプトには限界があります。');
+  console.log('    誤閉店の回復は update-all.mjs の店舗巡回 (日曜のフル実行) が本命です。');
+  console.log('    updateShopSeen が「エリア一覧で見つけた店」を is_active=1 に戻すため自動で復帰します。');
+}
 console.log(`  重複で据え置き : ${dup}`);
 console.log(`  ${opts.apply ? '復帰させた' : '復帰対象'}     : ${opts.apply ? revived : aliveList.length}`);
 if (aliveList.length) {
