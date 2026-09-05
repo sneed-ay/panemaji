@@ -515,8 +515,23 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   const queryParams = [...areaIds, prefUrlPrefix];
 
   if (skipThreshold) {
-    // 差分更新: last_seen_atが古い店舗 OR 嬢が0人の店舗は常に対象
-    shopQuery += ` AND (last_seen_at IS NULL OR last_seen_at < ? OR NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id = shops.id AND g.is_active = 1))`;
+    // 🚨 2026-09-05: ここを shops.last_seen_at で判定してはいけない。
+    //   直前に走る scrapeShops() が「エリア一覧ページに載っていた」だけで
+    //   全店の last_seen_at を now に更新する (updateShopSeen)。そのため
+    //   `last_seen_at < 7日前` は常に false になり、実質「嬢が0人の店」しか
+    //   処理されず、嬢の在籍情報が永久に更新されなくなっていた。
+    //
+    //   実測 (2026-09-05 の夜間実行ログ): 3,124 店中 2,783 店 (89.1%) をスキップ。
+    //   在籍嬢 371,988 人のうち直近30日に確認できたのは 4.6% のみ。
+    //   sitemap の lastmod も girls.last_seen_at 基準なので、Google から見ると
+    //   37万の嬢ページが「5月から更新なし」に見えていた
+    //   (GSC「検出 - インデックス未登録」11万ページの一因)。
+    //
+    //   → 判定は「その店の嬢を最後に取得した日時」で行う。
+    shopQuery += ` AND (
+      NOT EXISTS (SELECT 1 FROM girls g WHERE g.shop_id = shops.id AND g.is_active = 1)
+      OR COALESCE((SELECT MAX(g2.last_seen_at) FROM girls g2 WHERE g2.shop_id = shops.id AND g2.is_active = 1), '') < ?
+    )`;
     queryParams.push(skipThreshold);
   }
 
