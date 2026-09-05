@@ -1,3 +1,22 @@
 User-agent: *
 Allow: /
+
+# 2026-09-02: クロール予算の無駄を止める。
+# GSC「ページのインデックス登録」で noindex 除外が 2,247,061 URL に達していた
+# (サイトの実ページ数 約38万の6倍)。会員限定化以降、各ページから
+# /login?next=... /signup?next=... が大量に生成され、Google が取得してから
+# 捨てる状態になっていた。これらは meta robots で noindex 済だが
+# クロール自体は止まっていなかった。
+# 本体 37万ページの再クロール頻度を上げるため、取得段階で止める。
+Disallow: /login
+Disallow: /signup
+Disallow: /search
+
+# API はクロール対象外。特に /api/click は広告クリック計測を兼ねており、
+# クローラの巡回で ad_clicks が大幅に水増しされていた
+# (実測: 通常 400〜700/日 に対し 8/17 は 14,660。上位ページが /login と /signup)。
+Disallow: /api/
+# ただし OGP 画像生成だけは通す (SNS・検索のプレビューに必要)
+Allow: /api/og
+
 Sitemap: https://panemaji.com/sitemap.xml
