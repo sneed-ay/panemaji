@@ -236,6 +236,32 @@ const SHOP_STATS_COLS = `
   END as real_pct
 `;
 
+// ── 相関サブクエリ版の stats (候補行が少ないクエリ専用) ────────────────────
+// SHOP_STATS_JOIN / GIRL_STATS_JOIN の derived table は SQLite が毎回 MATERIALIZE するため、
+// 「1店舗を引くだけ」でも girls 62万行と reviews 4.4万行を丸ごと GROUP BY していた。
+// 実測 (master DB): getShopById 45.7ms → 0.01ms / getGirlWithReviewStats 6.8ms → 0.01ms。
+// better-sqlite3 は同期実行なので、この 1本が Render Starter (0.5CPU) の event loop を
+// 数秒ブロックし、無関係なリクエストまで巻き添えで遅くなっていた (/api/health が 2.1秒)。
+// 候補行が少ないクエリでは index seek になる相関サブクエリの方が速く、結果は完全に同一
+// (25件 x 8クエリで全件一致を検証済)。
+// ⚠ 都道府県横断・全件走査のクエリ (getTopRealGirls / searchShops 等) は候補行が多く、
+//    derived table を1回作る方が速いので JOIN 版のまま据え置くこと。
+const SHOP_GIRL_COUNT = `(SELECT COUNT(*) FROM girls gsub WHERE gsub.shop_id = s.id AND gsub.is_active = 1 AND gsub.image_url IS NOT NULL AND gsub.image_url <> '')`;
+const shopReviews = (rating?: string) =>
+  `(SELECT COUNT(*) FROM reviews rsub JOIN girls gsub2 ON rsub.girl_id = gsub2.id WHERE gsub2.shop_id = s.id${rating ? ` AND rsub.panel_rating = '${rating}'` : ''})`;
+const SHOP_REVIEW_COUNT = shopReviews();
+const SHOP_STATS_COLS_SUB = `
+  ${SHOP_GIRL_COUNT} as girl_count,
+  ${SHOP_REVIEW_COUNT} as review_count,
+  ${shopReviews('panel_match')} as panel_match_count,
+  ${shopReviews('panel_diff')} as panel_diff_count,
+  ${shopReviews('jirai')} as jirai_count,
+  CASE
+    WHEN ${SHOP_REVIEW_COUNT} = 0 THEN -1
+    ELSE ROUND((${shopReviews('panel_match')} * 100.0 + ${shopReviews('panel_diff')} * 50.0) / ${SHOP_REVIEW_COUNT})
+  END as real_pct
+`;
+
 // Shops (only active shops with at least 1 girl)
 // 嬢0の店は一覧から除外 (個別shopページは引き続き表示可能)
 export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
@@ -243,11 +269,10 @@ export function getShopsByArea(areaId: number, catSlug?: string): Shop[] {
   const catFilter = catValue ? ' AND s.category = ?' : '';
   const params = catValue ? [areaId, catValue] : [areaId];
   return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS_SUB}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
-    ${SHOP_STATS_JOIN}
-    WHERE s.area_id = ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1${catFilter}
+    WHERE s.area_id = ? AND s.is_active = 1 AND ${SHOP_GIRL_COUNT} >= 1${catFilter}
     ORDER BY real_pct DESC, review_count DESC, s.name
   `).all(...params) as Shop[];
 }
@@ -272,11 +297,10 @@ export function getAreaMetaStats(areaId: number, catSlug?: string): { shopCount:
   const params = catValue ? [areaId, catValue] : [areaId];
   const row = db.prepare(`
     SELECT COUNT(*) AS shopCount,
-           COALESCE(SUM(COALESCE(gc.girl_count, 0)), 0) AS girlTotal,
-           COALESCE(SUM(COALESCE(rc.review_count, 0)), 0) AS reviewTotal
+           COALESCE(SUM(${SHOP_GIRL_COUNT}), 0) AS girlTotal,
+           COALESCE(SUM(${SHOP_REVIEW_COUNT}), 0) AS reviewTotal
     FROM shops s
-    ${SHOP_STATS_JOIN}
-    WHERE s.area_id = ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1${catFilter}
+    WHERE s.area_id = ? AND s.is_active = 1 AND ${SHOP_GIRL_COUNT} >= 1${catFilter}
   `).get(...params) as { shopCount: number; girlTotal: number; reviewTotal: number };
   return row;
 }
@@ -287,31 +311,29 @@ export function getRecentlyClosedShopsByArea(areaId: number, catSlug?: string, l
   const baseParams: (number | string)[] = [areaId];
   if (catValue) baseParams.push(catValue);
   baseParams.push(limit);
-  // 2026-05-13: gc.girl_count は 「画像あり girls」 のみで 算定するよう SHOP_STATS_JOIN 変更済。
+  // 2026-05-13: girl_count は 「画像あり girls」 のみで 算定する。
   //   結果 girl_count=0 の shop は ① 本物の 0 girl shop or ② 全 girls 画像なし の どちらか。
   //   どちらも area の メインリストには 不適切 (前者=閉店, 後者=データ未整備)。
   //   ここでは 7日 縛り を 緩めて active=1 で gc=0 の shop も 「閉店候補」 として 拾う。
   return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS_SUB}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
-    ${SHOP_STATS_JOIN}
     WHERE s.area_id = ?${catFilter}
       AND (
         (s.is_active = 0 AND s.last_seen_at >= date('now', '-180 days'))
-        OR (s.is_active = 1 AND COALESCE(gc.girl_count, 0) = 0)
+        OR (s.is_active = 1 AND ${SHOP_GIRL_COUNT} = 0)
       )
-    ORDER BY COALESCE(rc.review_count, 0) DESC, s.last_seen_at DESC, s.name
+    ORDER BY ${SHOP_REVIEW_COUNT} DESC, s.last_seen_at DESC, s.name
     LIMIT ?
   `).all(...baseParams) as Shop[];
 }
 
 export function getShopById(id: number): Shop | undefined {
   return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, a.prefecture as area_prefecture, ${SHOP_STATS_COLS}
+    SELECT s.*, a.name as area_name, a.slug as area_slug, a.prefecture as area_prefecture, ${SHOP_STATS_COLS_SUB}
     FROM shops s
     JOIN areas a ON s.area_id = a.id
-    ${SHOP_STATS_JOIN}
     WHERE s.id = ?
   `).get(id) as Shop | undefined;
 }
@@ -353,6 +375,20 @@ const GIRL_STATS_COLS = `
   END as real_pct
 `;
 
+const girlReviews = (rating?: string) =>
+  `(SELECT COUNT(*) FROM reviews rgsub WHERE rgsub.girl_id = g.id${rating ? ` AND rgsub.panel_rating = '${rating}'` : ''})`;
+const GIRL_REVIEW_COUNT = girlReviews();
+const GIRL_STATS_COLS_SUB = `
+  ${GIRL_REVIEW_COUNT} as review_count,
+  ${girlReviews('panel_match')} as panel_match_count,
+  ${girlReviews('panel_diff')} as panel_diff_count,
+  ${girlReviews('jirai')} as jirai_count,
+  CASE
+    WHEN ${GIRL_REVIEW_COUNT} = 0 THEN -1
+    ELSE ROUND((${girlReviews('panel_match')} * 100.0 + ${girlReviews('panel_diff')} * 50.0) / ${GIRL_REVIEW_COUNT})
+  END as real_pct
+`;
+
 // Girls (only active by default)
 // 並び順: 画像あり優先 → real_pct → review_count → name
 //   (UX 改善: 画像なし girl が混在で見栄え悪い問題への対応)
@@ -363,10 +399,9 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
     : 'WHERE g.shop_id = ? AND g.is_active = 1 AND g.image_url IS NOT NULL AND g.image_url <> \'\'';
   const params = search ? [shopId, `%${search}%`] : [shopId];
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
-    ${GIRL_STATS_JOIN}
     ${where}
     ORDER BY real_pct DESC, review_count DESC, g.name
   `).all(...params) as Girl[];
@@ -376,10 +411,9 @@ export function getGirlsByShop(shopId: number, search?: string): Girl[] {
 // 一覧の最下部に「退店」タグ付きで表示する用。
 export function getDepartedGirlsByShop(shopId: number): Girl[] {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
-    ${GIRL_STATS_JOIN}
     WHERE g.shop_id = ? AND g.is_active = 0
       AND g.image_url IS NOT NULL AND g.image_url <> ''
       AND g.last_seen_at >= date('now', '-180 days')
@@ -400,11 +434,10 @@ export function getGirlById(id: number): Girl | undefined {
 
 export function getGirlWithReviewStats(id: number): Girl | undefined {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
-    ${GIRL_STATS_JOIN}
     WHERE g.id = ?
   `).get(id) as Girl | undefined;
 }
@@ -487,12 +520,11 @@ export function updateReviewComment(girlId: number, browserId: string, comment: 
 // Prioritizes girls with fewer reviews, excludes the current girl
 export function getOtherGirlsInShop(shopId: number, excludeGirlId: number, limit: number = 3): Girl[] {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
-    ${GIRL_STATS_JOIN}
     WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
-    ORDER BY COALESCE(rs.review_count, 0) ASC, g.name
+    ORDER BY ${GIRL_REVIEW_COUNT} ASC, g.name
     LIMIT ?
   `).all(shopId, excludeGirlId, limit) as Girl[];
 }
@@ -741,14 +773,13 @@ export function isValidPrefecture(slug: string): boolean {
 // 2026-05-13: 画像あり優先 — girl 詳細ページの 「近隣 popular 嬢」widget で placeholder 撲滅
 export function getPopularGirlsInArea(areaId: number, excludeGirlId: number, limit: number = 4): Girl[] {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
-    ${GIRL_STATS_JOIN}
-    WHERE s.area_id = ? AND g.id != ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) > 0
+    WHERE s.area_id = ? AND g.id != ? AND g.is_active = 1 AND ${GIRL_REVIEW_COUNT} > 0
       AND g.image_url IS NOT NULL AND g.image_url <> ''
-    ORDER BY rs.review_count DESC, real_pct DESC
+    ORDER BY ${GIRL_REVIEW_COUNT} DESC, real_pct DESC
     LIMIT ?
   `).all(areaId, excludeGirlId, limit) as Girl[];
 }
@@ -757,13 +788,12 @@ export function getPopularGirlsInArea(areaId: number, excludeGirlId: number, lim
 // 2026-05-13: 画像必須 (公開画像配置率 100% 担保 / placeholder 撲滅)
 export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: number, limit: number = 6): Girl[] {
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
-    ${GIRL_STATS_JOIN}
     WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
       AND g.image_url IS NOT NULL AND g.image_url <> ''
-    ORDER BY COALESCE(rs.review_count, 0) ASC, g.name
+    ORDER BY ${GIRL_REVIEW_COUNT} ASC, g.name
     LIMIT ?
   `).all(shopId, excludeGirlId, limit) as Girl[];
 }
@@ -809,17 +839,17 @@ export function getPopularGirlsInAreaTop(areaId: number, limit: number = 10): Gi
   // 2026-05-13: 画像あり優先 — TOP10 popular girls カルーセルで placeholder が 出ないよう
   //   image_url IS NOT NULL を 条件に。 視覚的に 100% 画像配置で 表示できる。
   return db.prepare(`
-    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS}
+    SELECT g.*, s.name as shop_name, a.name as area_name, a.slug as area_slug, ${GIRL_STATS_COLS_SUB}
     FROM girls g
     JOIN shops s ON g.shop_id = s.id
     JOIN areas a ON s.area_id = a.id
-    ${GIRL_STATS_JOIN}
-    WHERE s.area_id = ? AND g.is_active = 1 AND COALESCE(rs.review_count, 0) >= 1
+    WHERE s.area_id = ? AND g.is_active = 1 AND ${GIRL_REVIEW_COUNT} >= 1
       AND g.image_url IS NOT NULL AND g.image_url <> ''
     ORDER BY
-      (COALESCE(rs.review_count, 0) * COALESCE(real_pct, 0)) DESC,  -- 複合スコア (高評価×多口コミ)
-      rs.review_count DESC,                                          -- 同点は 口コミ多い順
-      real_pct DESC                                                  -- 次に 評価高い順
+      -- 複合スコア (高評価×多口コミ) → 同点は 口コミ多い順 → 次に 評価高い順
+      (${GIRL_REVIEW_COUNT} * COALESCE(real_pct, 0)) DESC,
+      ${GIRL_REVIEW_COUNT} DESC,
+      real_pct DESC
     LIMIT ?
   `).all(areaId, limit) as Girl[];
 }
@@ -827,13 +857,12 @@ export function getPopularGirlsInAreaTop(areaId: number, limit: number = 10): Gi
 // Nearby shops in same area (same category first, then others)
 export function getNearbyShops(areaId: number, shopId: number, category: string, limit = 5): Shop[] {
   return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS},
+    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS_SUB},
       CASE WHEN s.category = ? THEN 0 ELSE 1 END as cat_order
     FROM shops s
     JOIN areas a ON s.area_id = a.id
-    ${SHOP_STATS_JOIN}
-    WHERE s.area_id = ? AND s.id != ? AND s.is_active = 1 AND COALESCE(gc.girl_count, 0) >= 1
-    ORDER BY cat_order ASC, COALESCE(rc.review_count, 0) DESC, gc.girl_count DESC
+    WHERE s.area_id = ? AND s.id != ? AND s.is_active = 1 AND ${SHOP_GIRL_COUNT} >= 1
+    ORDER BY cat_order ASC, ${SHOP_REVIEW_COUNT} DESC, ${SHOP_GIRL_COUNT} DESC
     LIMIT ?
   `).all(category, areaId, shopId, limit) as Shop[];
 }
