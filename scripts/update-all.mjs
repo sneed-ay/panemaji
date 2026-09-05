@@ -23,6 +23,7 @@
  *   node scripts/update-all.mjs --resume       # 中断から再開
  *   node scripts/update-all.mjs --region 関東  # 特定リージョンのみ
  *   node scripts/update-all.mjs --pref tokyo   # 特定都道府県のみ
+ *   node scripts/update-all.mjs --skip-shops   # 店舗一覧の巡回を省略し嬢だけ更新
  */
 
 import Database from 'better-sqlite3';
@@ -102,6 +103,12 @@ function parseArgs() {
   return {
     force: args.includes('--force'),
     resume: args.includes('--resume'),
+    // --skip-shops: 店舗一覧の巡回 (scrapeShops) を飛ばし、嬢の更新だけ行う。
+    //   店舗の新規開店は日単位ではほとんど動かないのに、全エリアのページング巡回で
+    //   毎晩 3時間以上 (実測 2026-09-05: 04:07→07:26) を消費していた。
+    //   夜間バッチの timeout は 4h なので、これだけで嬢の更新時間がほぼ残らない。
+    //   → 平日は --skip-shops で嬢の鮮度に全振りし、週1回だけ店舗探索を回す。
+    skipShops: args.includes('--skip-shops'),
     region: args.find((a, i) => args[i - 1] === '--region') || null,
     pref: args.find((a, i) => args[i - 1] === '--pref') || null,
   };
@@ -494,25 +501,35 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   const skipThreshold = opts.force ? null : new Date(Date.now() - SKIP_THRESHOLD_DAYS * 86400000).toISOString();
 
   // エリアIDを取得
+  //
+  // 🚨 2026-09-05: areaIds が空でも return してはいけない。
+  //   cityheaven のエリア slug は scrapeShops() が areas に INSERT するが、
+  //   毎晩の migrate-areas-mece.mjs --apply が「MECE 325 定義に無い slug」として
+  //   削除するため、翌晩の時点では基本的に存在しない。--skip-shops の晩は
+  //   INSERT 自体が走らないので areaIds は必ず空になる。
+  //   ここで return すると嬢の更新が丸ごと行われない (--skip-shops 導入時に実測で発覚)。
+  //   当該県の shop は source_url の前方一致だけで漏れなく拾えるので、それで続行する。
   const areaSlugs = Object.values(areas).map(a => a.slug);
-  if (areaSlugs.length === 0) return { newGirls: 0, updatedGirls: 0, deactivated: 0, images: 0 };
+  const areaIds = areaSlugs.length
+    ? db.prepare(`SELECT id FROM areas WHERE slug IN (${areaSlugs.map(() => '?').join(',')})`).all(...areaSlugs).map(r => r.id)
+    : [];
 
-  const placeholders = areaSlugs.map(() => '?').join(',');
-  const areaIds = db.prepare(`SELECT id FROM areas WHERE slug IN (${placeholders})`).all(...areaSlugs).map(r => r.id);
-  if (areaIds.length === 0) return { newGirls: 0, updatedGirls: 0, deactivated: 0, images: 0 };
-
-  const areaPlaceholders = areaIds.map(() => '?').join(',');
+  // area_id 条件は areaIds がある時だけ足す (無ければ source_url だけで絞る)
+  const areaCond = areaIds.length
+    ? `(area_id IN (${areaIds.map(() => '?').join(',')}) OR source_url LIKE ?)`
+    : `source_url LIKE ?`;
 
   // 対象店舗を取得（差分更新: last_seen_at が閾値より古い、またはNULLの店舗）
   // 対象店舗: discoverArea由来のarea_id一致に加え、cityheaven由来の当該県shopをsource_urlでも拾う。
   //   既存shopは migrate-areas で MECE area_id に再マップ済みのため area_id だけでは漏れ、
   //   嬢(出勤)が更新されない不具合があった(2026-06-28修正)。source_url 前方一致で確実に当該県を捕捉。
   const prefUrlPrefix = `${BASE}/${prefCode}/%`;
+  const areaParams = areaIds.length ? [...areaIds, prefUrlPrefix] : [prefUrlPrefix];
   let shopQuery = `
     SELECT id, name, source_url, last_seen_at FROM shops
     WHERE source_url IS NOT NULL AND is_active = 1
-      AND (area_id IN (${areaPlaceholders}) OR source_url LIKE ?)`;
-  const queryParams = [...areaIds, prefUrlPrefix];
+      AND ${areaCond}`;
+  const queryParams = [...areaParams];
 
   if (skipThreshold) {
     // 🚨 2026-09-05: ここを shops.last_seen_at で判定してはいけない。
@@ -544,8 +561,8 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   const shops = db.prepare(shopQuery).all(...queryParams);
 
   const totalShopsInPref = db.prepare(
-    `SELECT COUNT(*) as c FROM shops WHERE source_url IS NOT NULL AND is_active = 1 AND (area_id IN (${areaPlaceholders}) OR source_url LIKE ?)`
-  ).get(...areaIds, prefUrlPrefix).c;
+    `SELECT COUNT(*) as c FROM shops WHERE source_url IS NOT NULL AND is_active = 1 AND ${areaCond}`
+  ).get(...areaParams).c;
 
   const skippedCount = totalShopsInPref - shops.length;
   console.log(`  [girls] ${prefInfo.name}: 対象 ${shops.length} 店舗` +
@@ -834,10 +851,12 @@ async function main() {
         }
         await delay();
 
-        // Phase 1: 店舗
-        const shopResult = await scrapeShops(db, page, prefCode, areas);
-        totals.newShops += shopResult.newShops;
-        totals.updatedShops += shopResult.updatedShops;
+        // Phase 1: 店舗 (--skip-shops のときは飛ばす)
+        if (!opts.skipShops) {
+          const shopResult = await scrapeShops(db, page, prefCode, areas);
+          totals.newShops += shopResult.newShops;
+          totals.updatedShops += shopResult.updatedShops;
+        }
 
         // Phase 2: 女性 + 画像
         const resumeShopId = (opts.resume && progress.currentPref === prefCode) ? progress.currentShopId : 0;

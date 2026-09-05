@@ -76,6 +76,21 @@ else
   TIMEOUT=""
 fi
 
+# timeout が無い環境でも壊れないラッパ。
+#   従来の `$TIMEOUT 14400 node ...` は TIMEOUT が空だと `14400 node ...` になり
+#   「14400 というコマンドが無い」で即死していた (フォールバックが機能していなかった)。
+#   併せて -k を付ける: SIGTERM を無視した puppeteer が居座って timeout が効かず
+#   丸一日パイプラインが止まった事故があった (2026-07-08)。猶予後に SIGKILL する。
+# 使い方: run_timeout <秒> <コマンド...>
+run_timeout() {
+  local secs="$1"; shift
+  if [ -n "$TIMEOUT" ]; then
+    "$TIMEOUT" -k 120 "$secs" "$@"
+  else
+    "$@"
+  fi
+}
+
 FORCE_FLAG=""
 QUICK_MODE=false
 for arg in "$@"; do
@@ -241,9 +256,27 @@ run_with_stall_watchdog() {
 }
 
 # 1-1: cityheaven全国更新（デリヘル + 他カテゴリ差分）
-# fetch+regex 軽量実装で puppeteer 不使用 → 通常通り timeout 制御のみ
-log "  [1-1] cityheaven 全国更新..."
-$TIMEOUT 14400 node scripts/update-all.mjs $FORCE_FLAG >> "$LOG_FILE" 2>&1 || log "  [warn] update-all.mjs がタイムアウトまたはエラー"
+#
+# 🚨 2026-09-05: 時間配分を見直した。
+#   それまでは毎晩フル実行していたが、実測 (2026-09-05 のログ) では
+#   04:07→07:26 の 3時間19分をほぼ全部「店舗一覧ページの巡回」(scrapeShops) が
+#   消費し、肝心の嬢の更新にほとんど時間が残っていなかった。
+#   店舗の新規開店・閉店は日単位ではほぼ動かないのに対し、嬢の在籍は毎日変わる。
+#   → 平日は --skip-shops で嬢の更新に全振りし、店舗探索は週1回 (日曜) だけ回す。
+#   店舗の非アクティブ化 (deactivateStaleShops) は scrapedCount=0 だと自動でスキップ
+#   されるため、--skip-shops の晩に誤って店舗が消えることはない。
+#
+# 🚨 timeout に -k を付ける (2026-07-08 の 24時間 hang 再発防止)。
+#   SIGTERM を無視した puppeteer が居座り timeout が効かず、丸一日パイプラインが
+#   止まった事故があった。-k 120 で猶予後に SIGKILL する。
+if [ "$(date +%u)" = "7" ] || [ "$FORCE_FLAG" = "--force" ]; then
+  log "  [1-1] cityheaven 全国更新 (週次フル: 店舗探索あり)..."
+  UPDATE_ALL_MODE=""
+else
+  log "  [1-1] cityheaven 全国更新 (嬢の在籍更新のみ / 店舗探索は日曜)..."
+  UPDATE_ALL_MODE="--skip-shops"
+fi
+run_timeout 14400 node scripts/update-all.mjs $FORCE_FLAG $UPDATE_ALL_MODE >> "$LOG_FILE" 2>&1 || log "  [warn] update-all.mjs がタイムアウトまたはエラー"
 
 # 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）— puppeteer 系
 # stall watchdog 経由で hang 自動回避
