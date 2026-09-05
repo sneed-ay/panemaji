@@ -8,6 +8,7 @@
  *   - ログイン済: トグル (POST/DELETE)
  */
 import { useEffect, useState } from 'react';
+import { getMe } from '@/lib/client-fetch';
 
 interface Props {
   girlId: number;
@@ -19,20 +20,33 @@ export default function FavoriteButton({ girlId }: Props) {
   const [isFav, setIsFav] = useState(false);
   const [pending, setPending] = useState(false);
 
+  // 2026-09-05: 以前は /api/favorites と /api/me を必ず両方叩いていた。
+  // 訪問者のほとんどは未ログインなので、まず (ページ内で共有される) /api/me を見て、
+  // 会員のときだけ /api/favorites を取りに行く。未ログインなら API は実質 0 本になる
+  // (/api/me は他コンポーネントと共有)。
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      const r = await fetch(`/api/favorites?girl_id=${girlId}`);
-      const d = await r.json();
-      setIsAuthed(!!('is_favorite' in d) && d.user !== null);
-      // user フィールドは GET /api/favorites が未ログインの場合だけ null を返す
-      // 簡易判定: error がなく is_favorite が boolean なら ok
-      setIsFav(!!d.is_favorite);
-      // 認証状態は /api/me で正確に取りたいが、コスト削減で /api/favorites の蹴られ方で判断
-      // しっかり判定するため /api/me を別途叩く
-      const me = await fetch('/api/me').then((x) => x.json()).catch(() => ({ user: null }));
-      setIsAuthed(!!me.user);
+      const me = await getMe();
+      if (cancelled) return;
+      if (!me?.user) {
+        setIsAuthed(false);
+        setIsFav(false);
+        setLoading(false);
+        return;
+      }
+      setIsAuthed(true);
+      // トグル直後に古い値を掴まないよう、ここは共有キャッシュを使わない
+      const d = await fetch(`/api/favorites?girl_id=${girlId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      if (cancelled) return;
+      setIsFav(!!d?.is_favorite);
       setLoading(false);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [girlId]);
 
   async function toggle() {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getMe } from '@/lib/client-fetch';
 
 /**
  * 口コミ閲覧ゲート。
@@ -42,14 +43,12 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
   const [gate, setGate] = useState<'open' | 'guest' | 'stale'>('open');
 
   useEffect(() => {
-    fetch('/api/me')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d.user) setGate('guest');
-        else if (!d.user.is_admin && !d.reviewed_recently) setGate('stale');
-        // 管理者 or 直近30日に投稿あり → open のまま (見放題)
-      })
-      .catch(() => {});
+    getMe().then((d) => {
+      if (!d) return; // 取得失敗時は open のまま (SSR と同じ表示を維持)
+      if (!d.user) setGate('guest');
+      else if (!d.user.is_admin && !d.reviewed_recently) setGate('stale');
+      // 管理者 or 直近30日に投稿あり → open のまま (見放題)
+    });
   }, []);
 
   // 口コミ0件 or open → そのまま表示

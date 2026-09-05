@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AD_CONFIG, getParallyAdLink, getMerokanoAdLink, wrapClickUrl } from '@/lib/ad-config';
 import { pickAdType, type AdType } from '@/lib/pickAdType';
 import { pickFreshFanza } from '@/lib/fanzaPool';
+import { sharedGet } from '@/lib/client-fetch';
 // adstir は 2026-05-09 撤去
 // parally (sneed) は 2026-05-10 追加 → fanza:note:parally = 1:1:1
 // めろカノ (merokano.jp) は 2026-08-25 追加 → merokano:fanza = 4:1 (parally は Ratio 0 で停止)
@@ -51,13 +52,13 @@ function FanzaWidget() {
 
   useEffect(() => {
     // 大きめのプールを取得し、ページ内 FANZA 共有プールで重複しない3件を選ぶ
-    fetch('/api/fanza?n=12')
-      .then(r => r.json())
-      .then((data: { title: string; url: string; imageUrl: string }[]) => {
-        const picked = pickFreshFanza(data, 3);
+    // 1ページに FANZA 枠が3つあるので取得は共有する (pickFreshFanza が
+    // shownFanzaUrls で重複を避けるため、同じプールから引いても3枠で別商品になる)
+    sharedGet<{ title: string; url: string; imageUrl: string }[]>('/api/fanza?n=12')
+      .then((data) => {
+        const picked = pickFreshFanza(data ?? [], 3);
         if (picked.length > 0) setItems(picked);
       })
-      .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
 

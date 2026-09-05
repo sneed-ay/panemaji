@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getMe } from '@/lib/client-fetch';
 
 type Props = { targetType: 'shop' | 'girl'; targetId: number };
 
@@ -26,7 +27,7 @@ export default function FeedbackButton({ targetType, targetId }: Props) {
   const [otherText, setOtherText] = useState('');
 
   useEffect(() => {
-    fetch('/api/me').then((r) => r.json()).then((d) => setAuthed(!!d.user)).catch(() => setAuthed(false));
+    getMe().then((d) => setAuthed(!!d?.user));
   }, []);
 
   // 会員のみに表示

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { getMe } from '@/lib/client-fetch';
 
 type Props = {
   girlId: number;
@@ -40,7 +41,7 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
   // 🔒 投票・コメントは会員限定 (匿名投稿は廃止 — bot 流入の根本遮断)
   const [isMember, setIsMember] = useState<boolean | null>(null);
   useEffect(() => {
-    fetch('/api/me').then((r) => r.json()).then((d) => setIsMember(!!d.user)).catch(() => setIsMember(false));
+    getMe().then((d) => setIsMember(!!d?.user));
   }, []);
 
   const handleVote = useCallback(async (rating: string) => {

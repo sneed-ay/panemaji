@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getMe } from '@/lib/client-fetch';
 
 type Props = {
   girlId: number;
@@ -30,7 +31,7 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
   useEffect(() => {
     const reviewed = localStorage.getItem(`reviewed_${girlId}`);
     if (reviewed) setAlreadyReviewed(true);
-    fetch('/api/me').then(r => r.json()).then(d => setIsMember(!!d.user)).catch(() => setIsMember(false));
+    getMe().then(d => setIsMember(!!d?.user));
   }, [girlId]);
 
   if (alreadyReviewed) {
