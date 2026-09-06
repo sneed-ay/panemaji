@@ -121,6 +121,18 @@ async function makeBrowserFetcher() {
     })
   );
   const page = await browser.newPage();
+
+  // 判定に必要なのは HTML だけ (嬢リンク・閉店語・最終URL) なので、画像/動画/フォントは落とす。
+  // 1,079店を4.4時間 = 1店あたり 14.7秒かかっており、夜間バッチの枠内で行列が捌けないため。
+  // 落としても判定結果は変わらないことを同じ10店で A/B 確認済 (2026-09-06)。
+  // CSS は落とさない: 落とす構成も試したが結果が変わらず、判定への寄与も無いので触らない。
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    const t = req.resourceType();
+    if (t === 'image' || t === 'media' || t === 'font') req.abort().catch(() => {});
+    else req.continue().catch(() => {});
+  });
+
   await page.setUserAgent(UA);
   await page.setCookie({ name: 'nenrei', value: 'y', domain: '.cityheaven.net' });
   await page.setViewport({ width: 1280, height: 800 });
@@ -260,10 +272,11 @@ console.log(`\n  掲載元で営業中 : ${alive}`);
 console.log(`  掲載終了/404   : ${gone}`);
 console.log(`  取得できず     : ${unknown}  (触っていない / 年齢確認ゲート ${gatedCount} / 別ページへ転送 ${redirected})`);
 if (gatedCount > shops.length * 0.3) {
-  console.log('\n  ⚠ 年齢確認ゲートが多すぎて全件は確認できていません。');
-  console.log('    cityheaven は連続アクセスでゲートを出すため curl ベースの本スクリプトには限界があります。');
-  console.log('    誤閉店の回復は update-all.mjs の店舗巡回 (日曜のフル実行) が本命です。');
-  console.log('    updateShopSeen が「エリア一覧で見つけた店」を is_active=1 に戻すため自動で復帰します。');
+  console.log('\n  ⚠ 年齢確認ゲートが多すぎて今回は全件を確認できていません。');
+  console.log('    cityheaven は同日に大量アクセスするとゲートを出す (実測: 約1,000件を超えたあたりから)。');
+  console.log('    ゲートは「確認不能」として扱い閉店のままにするので害は無い。日を分けて再実行すれば進む。');
+  console.log('    ※「日曜のフル巡回 (updateShopSeen) で自動回復する」は誤り。');
+  console.log('      その巡回自体が4時間枠で13県しか回れておらず、大半の県に到達していなかった。');
 }
 console.log(`  重複で据え置き : ${dup}`);
 console.log(`  ${opts.apply ? '復帰させた' : '復帰対象'}     : ${opts.apply ? revived : aliveList.length}`);
