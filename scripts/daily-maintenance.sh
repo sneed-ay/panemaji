@@ -319,34 +319,35 @@ if [ "$QUICK_MODE" = false ] && [ "${ENABLE_PUPPETEER:-false}" = true ]; then
   done
 fi
 
+# 🚨 2026-09-06 追記: 1-3 / 1-4 を既定OFFにした理由「detached-frame で DB を破損させる」は
+#    真因ではなかった可能性が高い。SQLITE_CORRUPT の正体は scrape-category / scrape-menesu が
+#    DB_PATH を無視して Google Drive 上のリポジトリ内 panemaji.db を掴んでいたこと (commit b04a238 で修正)。
+#    ただし再有効化はしていない: update-all だけで既に4時間枠を使い切って13県で
+#    打ち切られている状態なので、これ以上 puppeteer 系を足す余地が無い。
+#    巡回が全県に行き渡ってから、1本ずつ様子を見て戻すこと。
+
 # 1-3: メンエス（aromaesthe + fues）— puppeteer 系 (★detached-frame破損源・既定OFF。ENABLE_PUPPETEER=true で有効化)
 if [ "${ENABLE_PUPPETEER:-false}" = true ]; then
   log "  [1-3] メンエスデータ更新..."
   run_with_stall_watchdog "scrape-menesu" 120 7200 node scripts/scrape-menesu.mjs all || log "  [warn] scrape-menesu stall/timeout"
-else log "  [1-3] スキップ (puppeteer破損回避)"; fi
+else log "  [1-3] スキップ (既定OFF: 時間枠が無い)"; fi
 
 # 1-4: men-esthe.jp — puppeteer 系 (★detached-frame破損源・既定OFF)
 if [ "${ENABLE_PUPPETEER:-false}" = true ]; then
   log "  [1-4] men-esthe.jp データ更新..."
   run_with_stall_watchdog "scrape-menesthe" 120 3600 node scripts/scrape-menesthe.mjs girls || log "  [warn] scrape-menesthe stall/timeout"
-else log "  [1-4] スキップ (puppeteer破損回避)"; fi
+else log "  [1-4] スキップ (既定OFF: 時間枠が無い)"; fi
 
-# 1-5: 0人店・100人上限店の再取得
-log "  [1-5] 0人/100人上限店の再取得..."
-$TIMEOUT 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] refetch-girls がタイムアウト"
-
-# 1-6: 画像URL補完
-log "  [1-6] 画像URL補完..."
-$TIMEOUT 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
-
-# 1-7: 誤閉店の洗い直し
+# 1-4c: 誤閉店の洗い直し
+#   ここで戻した店は嬢0人になるので、直後の [1-5] refetch-girls が同じ晩に在籍を埋める。
+#   (以前は [1-6] の後ろに置いていたため、埋まるのが翌晩になっていた)
 #   deactivateStaleShops の県単位絞り (2026-09-06 に修正) で作られた誤閉店が
 #   cityheaven だけで 1,914 店たまっており、抜き取り20店中18店が実際には営業中だった。
 #   「日曜のフル巡回で自動回復する」と考えていたが、その巡回自体が13県で
 #   打ち切られていたため回復していなかった。毎晩少しずつ洗って戻す。
 #   古い last_seen_at 順に見るので、放置が長い店から順に回復していく。
 #   復帰は「掲載元が200を返し・閉店語が無く・嬢リンクがあり・URLが転送されていない」時のみ。
-log "  [1-7] 誤閉店の洗い直し (cityheaven 300店)..."
+log "  [1-4c] 誤閉店の洗い直し (cityheaven 300店)..."
 $TIMEOUT 2400 node scripts/recheck-closed-shops.mjs --source cityheaven --limit 300 --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops がタイムアウト"
 
 #   他ソースも同様に誤閉店を抱えている (2026-09-06 抜き取り30店の実測):
@@ -357,9 +358,17 @@ $TIMEOUT 2400 node scripts/recheck-closed-shops.mjs --source cityheaven --limit 
 #   一度に全部戻すと「嬢0人の店」が数千件生まれ、在籍を埋める側が追いつかない。
 #   毎晩少しずつに絞って、refetch-girls / refresh-source-girls が埋められる速度に合わせる。
 for _src in fuzoku purelovers; do
-  log "  [1-7b] 誤閉店の洗い直し ($_src 150店)..."
+  log "  [1-4d] 誤閉店の洗い直し ($_src 150店)..."
   $TIMEOUT 1200 node scripts/recheck-closed-shops.mjs --source "$_src" --limit 150 --no-browser --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops ($_src) がタイムアウト"
 done
+
+# 1-5: 0人店・100人上限店の再取得
+log "  [1-5] 0人/100人上限店の再取得..."
+$TIMEOUT 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] refetch-girls がタイムアウト"
+
+# 1-6: 画像URL補完
+log "  [1-6] 画像URL補完..."
+$TIMEOUT 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
 
 # ============================================================================
 # Phase 2: データ品質メンテナンス
