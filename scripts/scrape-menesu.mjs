@@ -23,7 +23,10 @@ import { cleanShopName } from './lib/clean-shop-name.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
-const DB_PATH = path.join(PROJECT_ROOT, 'panemaji.db');
+// 🚨 DB_PATH を必ず尊重する。リポジトリは Google Drive 上にあり、そこの panemaji.db は
+//    同期で壊れる (2026-09-06 に refetch-girls / scrape-images が SQLITE_CORRUPT を出した)。
+//    本番マスターは $HOME/panemaji-data/panemaji.db。daily-maintenance.sh が export している。
+const DB_PATH = process.env.DB_PATH || path.join(PROJECT_ROOT, 'panemaji.db');
 const PROGRESS_PATH = path.join(PROJECT_ROOT, 'menesu-progress.json');
 
 const DELAY_MIN = 2000;

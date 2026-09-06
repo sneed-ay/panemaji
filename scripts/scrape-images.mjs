@@ -10,7 +10,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '..', 'panemaji.db');
+// 🚨 DB_PATH を必ず尊重する。リポジトリは Google Drive 上にあり、そこの panemaji.db は
+//    同期で壊れる (2026-09-06 に SQLITE_CORRUPT を実際に発生させた)。
+//    本番マスターは $HOME/panemaji-data/panemaji.db。daily-maintenance.sh が export している。
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'panemaji.db');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
