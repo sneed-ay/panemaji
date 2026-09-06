@@ -14,7 +14,6 @@ type GirlData = {
   waist: number | null;
   hip: number | null;
   cup: string | null;
-  image_url: string | null;
   review_count: number;
   panel_match_count: number;
   panel_diff_count: number;
@@ -127,7 +126,7 @@ export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; qu
                 >
                   <div className="p-2.5 sm:p-3">
                     <div className="flex flex-col items-center text-center gap-2">
-                      <GirlImage src={girl.image_url} alt={girl.name} size={80} />
+                      <GirlImage alt={girl.name} size={80} />
                       <div className="min-w-0 w-full">
                         <h4 className="text-sm sm:text-base font-bold text-gray-800 truncate">{girl.name}</h4>
                         <p className="text-xs text-gray-500 mt-0.5">
@@ -163,7 +162,7 @@ export default function GirlSortFilter({ girls, query }: { girls: GirlData[]; qu
               href={`/girl/${girl.id}`}
               className="flex items-center gap-3 bg-white rounded-lg shadow hover:shadow-md transition-shadow p-3 no-underline"
             >
-              <GirlImage src={girl.image_url} alt={girl.name} size={56} />
+              <GirlImage alt={girl.name} size={56} />
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm sm:text-base font-bold text-gray-800 break-words truncate">{girl.name}</h4>
                 <p className="text-xs text-gray-500 mt-0.5">

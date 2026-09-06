@@ -12,7 +12,6 @@ import ContentLocker from '@/components/ContentLocker';
 type OtherGirl = {
   id: number;
   name: string;
-  image_url: string | null;
   review_count: number;
 };
 
@@ -73,7 +72,7 @@ export default function GirlPageClient({ girlId, girlName, shopName, initialRevi
                 href={`/girl/${g.id}`}
                 className="flex flex-col items-center gap-1.5 p-2 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors no-underline"
               >
-                <GirlImage src={g.image_url} alt={g.name} size={64} />
+                <GirlImage alt={g.name} size={64} />
                 <span className="text-xs font-medium text-gray-800 text-center break-words line-clamp-1">{g.name}</span>
                 <span className="text-[10px] text-gray-400">
                   {g.review_count === 0 ? 'まだ評価なし' : `${g.review_count}件`}

@@ -15,7 +15,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'login_required' }, { status: 401, headers: NO_STORE });
   const rows = db.prepare(`
     SELECT r.id, r.girl_id, r.visit_date, r.panel_rating, r.comment, r.created_at,
-           g.name AS girl_name, g.image_url AS girl_image_url,
+           g.name AS girl_name,
            s.id AS shop_id, s.name AS shop_name
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id

@@ -159,7 +159,7 @@ export default function RankingPage({ searchParams }: { searchParams: { pref?: s
                     }`}>
                       {i + 1}
                     </span>
-                    <GirlImage src={girl.image_url} alt={girl.name} size={48} />
+                    <GirlImage alt={girl.name} size={48} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-800 text-sm sm:text-base truncate">{girl.name}</p>
                       <p className="text-xs text-gray-500 truncate">{girl.shop_name}</p>
@@ -198,7 +198,7 @@ export default function RankingPage({ searchParams }: { searchParams: { pref?: s
                     }`}>
                       {i + 1}
                     </span>
-                    <GirlImage src={girl.image_url} alt={girl.name} size={48} />
+                    <GirlImage alt={girl.name} size={48} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-800 text-sm sm:text-base truncate">{girl.name}</p>
                       <p className="text-xs text-gray-500 truncate">{girl.shop_name}</p>

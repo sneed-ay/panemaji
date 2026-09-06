@@ -125,7 +125,6 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
     waist: g.waist,
     hip: g.hip,
     cup: g.cup,
-    image_url: g.image_url,
     review_count: g.review_count || 0,
     panel_match_count: g.panel_match_count || 0,
     panel_diff_count: g.panel_diff_count || 0,
@@ -418,7 +417,7 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
             {departedGirls.map((g) => (
               <a key={g.id} href={`/girl/${g.id}`} className="block bg-white rounded-lg border border-gray-200 p-2 opacity-75 hover:opacity-100 no-underline">
                 <div className="relative inline-block">
-                  <GirlImage src={g.image_url} alt={g.name} size={120} />
+                  <GirlImage alt={g.name} size={120} />
                   <span className="absolute top-1 left-1 bg-gray-700 text-white text-[10px] px-1.5 py-0.5 rounded">退店</span>
                 </div>
                 <p className="text-sm font-bold text-gray-700 truncate mt-1">{g.name}</p>

@@ -472,7 +472,7 @@ export function getReviewsByShop(shopId: number, limit: number = 5): Review[] {
 export function getLatestReviews(limit: number = 20, prefectureSlug?: string): Review[] {
   if (prefectureSlug) {
     return qmemo(`latestRev:${prefectureSlug}:${limit}`, Q_TTL, () => db.prepare(`
-      SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
+      SELECT r.*, g.name as girl_name, s.name as shop_name
       FROM reviews r
       JOIN girls g ON r.girl_id = g.id
       JOIN shops s ON g.shop_id = s.id
@@ -484,7 +484,7 @@ export function getLatestReviews(limit: number = 20, prefectureSlug?: string): R
     `).all(prefectureSlug, limit) as Review[]);
   }
   return qmemo(`latestRev::${limit}`, Q_TTL, () => db.prepare(`
-    SELECT r.*, g.name as girl_name, s.name as shop_name, g.image_url as girl_image_url
+    SELECT r.*, g.name as girl_name, s.name as shop_name
     FROM reviews r
     JOIN girls g ON r.girl_id = g.id
     JOIN shops s ON g.shop_id = s.id

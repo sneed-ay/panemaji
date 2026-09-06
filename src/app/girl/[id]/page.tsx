@@ -225,8 +225,8 @@ export default function GirlPage({ params }: { params: { id: string } }) {
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex items-start gap-4">
-              <GirlImage src={girl.image_url} alt={girl.name} size={200} className="hidden sm:flex" />
-              <GirlImage src={girl.image_url} alt={girl.name} size={120} className="flex sm:hidden" />
+              <GirlImage alt={girl.name} size={200} className="hidden sm:flex" />
+              <GirlImage alt={girl.name} size={120} className="flex sm:hidden" />
               <div className="min-w-0">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{girl.name}</h2>
                 {/* Shop link - prominent */}
@@ -353,7 +353,6 @@ export default function GirlPage({ params }: { params: { id: string } }) {
         otherGirls={otherGirls.slice(0, 3).map(g => ({
           id: g.id,
           name: g.name,
-          image_url: g.image_url,
           review_count: g.review_count || 0,
         }))}
       />
@@ -373,7 +372,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                 href={`/girl/${g.id}`}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors no-underline"
               >
-                <GirlImage src={g.image_url} alt={g.name} size={72} />
+                <GirlImage alt={g.name} size={72} />
                 <span className="text-sm font-medium text-gray-800 text-center break-words line-clamp-1">{g.name}</span>
                 <span className="text-xs text-gray-400">
                   {(g.review_count || 0) === 0 ? '口コミ募集中' : `口コミ ${g.review_count}件`}
@@ -403,7 +402,7 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                 href={`/girl/${g.id}`}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors no-underline"
               >
-                <GirlImage src={g.image_url} alt={g.name} size={72} />
+                <GirlImage alt={g.name} size={72} />
                 <span className="text-sm font-medium text-gray-800 text-center break-words line-clamp-1">{g.name}</span>
                 <span className="text-xs text-gray-500 text-center line-clamp-1">{g.shop_name}</span>
                 <span className="text-xs text-gray-400">口コミ {g.review_count}件</span>

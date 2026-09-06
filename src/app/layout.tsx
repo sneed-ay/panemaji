@@ -73,6 +73,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
+        {/* 2026-09-06: 嬢の写真は表示していないので、掲載元の画像CDNへの
+            preconnect / dns-prefetch は無意味なうえ「どこから画像を引いているか」を
+            公開するだけだったので撤去した (feedback #52〜#56 の無断掲載の苦情への対応)。 */}
         <meta name="google-site-verification" content="TzICLVP1AEQfl0OnOYdsvLmx0DthDQk5J4IPEH3_MAo" />
         <meta name="google-site-verification" content="PSaa2abLK1zBpmEGM4_h6DlO0YcBdtgnI4xwSY429wY" />
         <meta name="juicyads-site-verification" content="c3797979fbf983b489abba36968255d9" />
@@ -83,18 +86,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-
-        {/* 画像CDN への preconnect / dns-prefetch (LCP 改善・副作用ゼロ) */}
         {/* girl画像が大量に表示されるためファーストペイント前に DNS+TLS 解決させる */}
-        <link rel="preconnect" href="https://img2.cityheaven.net" crossOrigin="" />
-        <link rel="preconnect" href="https://d1ywb8dvwodsnl.cloudfront.net" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://img.cityheaven.net" />
-        <link rel="dns-prefetch" href="https://fuzoku-images.ranking-deli.jp" />
-        <link rel="dns-prefetch" href="https://contents.purelovers.com" />
-        <link rel="dns-prefetch" href="https://men-esthe.jp" />
-        <link rel="dns-prefetch" href="https://www.aromaesthe.co.jp" />
-        <link rel="dns-prefetch" href="https://tokyo.aromaesthe.co.jp" />
-        <link rel="dns-prefetch" href="https://assets.fuzoku.jp" />
         {/* GA への接続も先にやる */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />

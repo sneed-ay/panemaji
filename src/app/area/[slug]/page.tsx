@@ -224,7 +224,7 @@ export default function AreaPage({ params, searchParams }: { params: { slug: str
                     {i + 1}
                   </div>
                   <div className="flex flex-col items-center text-center gap-1.5">
-                    <GirlImage src={girl.image_url} alt={girl.name} size={64} />
+                    <GirlImage alt={girl.name} size={64} />
                     <div className="min-w-0 w-full">
                       <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{girl.name}</p>
                       <p className="text-[10px] sm:text-xs text-gray-500 truncate">{girl.shop_name}</p>

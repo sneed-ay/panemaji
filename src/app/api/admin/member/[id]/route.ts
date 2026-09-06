@@ -34,7 +34,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const reviews = db
     .prepare(
       `SELECT r.id, r.girl_id, r.visit_date, r.panel_rating, r.comment, r.created_at,
-              g.name AS girl_name, g.image_url AS girl_image_url,
+              g.name AS girl_name,
               s.id AS shop_id, s.name AS shop_name
        FROM reviews r
        JOIN girls g ON r.girl_id = g.id
@@ -46,7 +46,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const favorites = db
     .prepare(
-      `SELECT g.id AS girl_id, g.name AS girl_name, g.image_url AS girl_image_url,
+      `SELECT g.id AS girl_id, g.name AS girl_name,
               s.id AS shop_id, s.name AS shop_name, a.name AS area_name,
               f.created_at AS favorited_at
        FROM favorites f

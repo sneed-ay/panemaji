@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 
 interface Review {
   id: number; girl_id: number; visit_date: string; panel_rating: string; comment: string | null;
-  created_at: string; girl_name: string; girl_image_url: string | null;
+  created_at: string; girl_name: string;
   shop_id: number; shop_name: string;
 }
 interface Favorite {
-  girl_id: number; girl_name: string; girl_image_url: string | null;
+  girl_id: number; girl_name: string;
   shop_id: number; shop_name: string; area_name: string;
   favorited_at: string;
 }

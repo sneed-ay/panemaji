@@ -64,7 +64,6 @@ export default function AreaGuidePage({ params }: { params: { slug: string } }) 
       SELECT s.id, s.name, s.description,
         (SELECT COUNT(*) FROM girls g WHERE g.shop_id=s.id AND g.is_active=1) AS girl_count,
         (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id=g.id WHERE g.shop_id=s.id) AS review_count,
-        (SELECT g2.image_url FROM girls g2 WHERE g2.shop_id=s.id AND g2.is_active=1 AND g2.image_url IS NOT NULL AND g2.image_url != '' LIMIT 1) AS thumb
       FROM shops s
       JOIN areas a ON s.area_id=a.id
       WHERE s.is_active=1 AND a.slug=? AND s.category=?
@@ -79,7 +78,6 @@ export default function AreaGuidePage({ params }: { params: { slug: string } }) 
     description: string | null;
     girl_count: number;
     review_count: number;
-    thumb: string | null;
   }>;
 
   // thin content対策: 嬢付き shop 5件未満なら 404

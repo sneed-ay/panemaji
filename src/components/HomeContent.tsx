@@ -123,7 +123,7 @@ export default function HomeContent({ prefSlug, catSlug }: Props) {
                 className="flex items-start gap-2 sm:gap-3 p-2 bg-gray-50 rounded-lg"
               >
                 <a href={`/girl/${review.girl_id}`} className="shrink-0">
-                  <GirlImage src={review.girl_image_url ?? null} alt={review.girl_name || ''} size={40} />
+                  <GirlImage alt={review.girl_name || ''} size={40} />
                 </a>
                 <PanelRatingBadge rating={review.panel_rating} size="sm" />
                 <div className="flex-1 min-w-0">
