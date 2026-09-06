@@ -19,6 +19,9 @@
  *   node scripts/recheck-closed-shops.mjs --source cityheaven --limit 200          # 確認のみ
  *   node scripts/recheck-closed-shops.mjs --source cityheaven --limit 200 --apply  # 復帰させる
  *
+ *   cityheaven は年齢確認ゲートがあり curl では突破できないため、既定で puppeteer を使う。
+ *   --no-browser を付けると fetch のみ (他ソース向け・高速)。
+ *
  * 安全設計:
  *   - 既定は dry-run。--apply を付けたときだけ書き込む。
  *   - 復帰させるのは「掲載元が HTTP 200 を返し」「閉店を示す語が無く」「嬢のリンクが1件以上ある」場合のみ。
@@ -27,6 +30,8 @@
  *   - is_active を 0→1 にするだけで、行の削除も他テーブルの変更も一切しない。
  */
 import Database from 'better-sqlite3';
+import puppeteer from 'puppeteer';
+import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -59,6 +64,8 @@ function parseArgs() {
     source: val('--source') || 'cityheaven',
     limit: Number(val('--limit') || 200),
     apply: a.includes('--apply'),
+    // cityheaven は年齢確認ゲートのため既定でブラウザ。--no-browser で無効化。
+    browser: !a.includes('--no-browser'),
   };
 }
 
@@ -93,6 +100,43 @@ async function fetchPage(url) {
   return { status: 0, html: null, gated: false };
 }
 
+
+/**
+ * puppeteer 版の取得。cityheaven の年齢確認ゲートは cookie nenrei=y を張った
+ * 実ブラウザなら通る (update-all.mjs と同じ手口)。
+ * 404/410 は response.status() から判定する。
+ */
+async function makeBrowserFetcher() {
+  const browser = await puppeteer.launch(
+    withChromePath({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
+    })
+  );
+  const page = await browser.newPage();
+  await page.setUserAgent(UA);
+  await page.setCookie({ name: 'nenrei', value: 'y', domain: '.cityheaven.net' });
+  await page.setViewport({ width: 1280, height: 800 });
+
+  const get = async (url) => {
+    for (let i = 0; i < 2; i++) {
+      try {
+        const res = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        const status = res ? res.status() : 0;
+        if (status === 404 || status === 410) return { status, html: null, gated: false };
+        const html = await page.content();
+        if (isAgeGate(page.url(), html)) return { status, html: null, gated: true };
+        return { status, html, gated: false, finalUrl: page.url() };
+      } catch {
+        if (i === 1) return { status: 0, html: null, gated: false };
+        await sleep(2000);
+      }
+    }
+    return { status: 0, html: null, gated: false };
+  };
+  return { get, close: () => browser.close() };
+}
+
 const opts = parseArgs();
 const src = SOURCES[opts.source];
 if (!src) {
@@ -125,16 +169,28 @@ const dupQ = db.prepare(
 );
 const revive = db.prepare('UPDATE shops SET is_active = 1, last_seen_at = ? WHERE id = ?');
 
-let alive = 0, gone = 0, unknown = 0, dup = 0, revived = 0, gatedCount = 0;
+let alive = 0, gone = 0, unknown = 0, dup = 0, revived = 0, gatedCount = 0, redirected = 0;
 const aliveList = [];
 
+const bf = opts.browser ? await makeBrowserFetcher() : null;
+if (bf) console.log('  取得方法: puppeteer (年齢確認ゲート突破)');
+const getPage = bf ? bf.get : fetchPage;
+
 for (const s of shops) {
-  const { status, html, gated } = await fetchPage(s.source_url);
+  const { status, html, gated, finalUrl } = await getPage(s.source_url);
   await delay();
 
   if (gated) { gatedCount++; unknown++; continue; }  // 年齢確認ゲート = 判定不能。触らない
   if (status === 404 || status === 410) { gone++; continue; }
   if (!html) { unknown++; continue; }
+
+  // 掲載終了の店がエリア一覧へリダイレクトされると、嬢リンクが大量にあり閉店語も無いため
+  // 「営業中」と誤判定しうる。最終 URL が要求した店ページのままであることを必ず確認する。
+  const norm = (u) => String(u || '').replace(/[?#].*$/, '').replace(/\/$/, '');
+  if (finalUrl && norm(finalUrl) !== norm(s.source_url)) {
+    redirected++; unknown++;
+    continue;
+  }
 
   const closed = CLOSED_WORDS.some((w) => html.includes(w));
   const girls = new Set(html.match(src.girlRe) || []).size;
@@ -156,7 +212,7 @@ for (const s of shops) {
 
 console.log(`\n  掲載元で営業中 : ${alive}`);
 console.log(`  掲載終了/404   : ${gone}`);
-console.log(`  取得できず     : ${unknown}  (触っていない / うち年齢確認ゲート ${gatedCount})`);
+console.log(`  取得できず     : ${unknown}  (触っていない / 年齢確認ゲート ${gatedCount} / 別ページへ転送 ${redirected})`);
 if (gatedCount > shops.length * 0.3) {
   console.log('\n  ⚠ 年齢確認ゲートが多すぎて全件は確認できていません。');
   console.log('    cityheaven は連続アクセスでゲートを出すため curl ベースの本スクリプトには限界があります。');
@@ -170,4 +226,5 @@ if (aliveList.length) {
   for (const a of aliveList.slice(0, 30)) console.log(`    #${String(a.id).padStart(6)} ${a.name.slice(0, 34).padEnd(36)} 嬢${String(a.girls).padStart(3)}人  最終${a.last}`);
   if (aliveList.length > 30) console.log(`    … 他 ${aliveList.length - 30} 件`);
 }
+if (bf) await bf.close();
 db.close();
