@@ -13,6 +13,13 @@ set -u
 
 cd "$(dirname "$0")/.."
 PROJECT_ROOT="$(pwd)"
+
+# 🚨 本番マスターは $HOME/panemaji-data/panemaji.db (daily-maintenance.sh:27 と同じ既定)。
+#    リポジトリは Google Drive 上にあり、そこの panemaji.db は同期で壊れる。
+#    export しないと fill-missing-images-safe.mjs が破損DBを read-write で開き、
+#    ログのカバレッジ数値も死んだスナップショット由来の嘘になる (2026-09-06 判明)。
+DB_PATH="${DB_PATH:-$HOME/panemaji-data/panemaji.db}"
+export DB_PATH
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 SUMMARY="$LOG_DIR/overnight-chain-summary.log"
@@ -63,7 +70,7 @@ fi
 sleep 5
 
 # 中間 stats
-NO_IMG_BEFORE=$(sqlite3 "$PROJECT_ROOT/panemaji.db" "SELECT COUNT(*) FROM girls WHERE is_active=1 AND (image_url IS NULL OR image_url='')")
+NO_IMG_BEFORE=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM girls WHERE is_active=1 AND (image_url IS NULL OR image_url='')")
 log "[stats] rd fill 後 no-img: $NO_IMG_BEFORE"
 
 # ─── Step 2: purelovers fill ─────────────────────
@@ -75,11 +82,11 @@ else
   log "[step 2] purelovers fill エラー (exit=$?) — 詳細 $PURE_LOG"
 fi
 
-NO_IMG_AFTER=$(sqlite3 "$PROJECT_ROOT/panemaji.db" "SELECT COUNT(*) FROM girls WHERE is_active=1 AND (image_url IS NULL OR image_url='')")
+NO_IMG_AFTER=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM girls WHERE is_active=1 AND (image_url IS NULL OR image_url='')")
 log "[stats] purelovers fill 後 no-img: $NO_IMG_AFTER (差分: $((NO_IMG_BEFORE - NO_IMG_AFTER)))"
 
 # ─── Step 3: 最終サマリ ──────────────────────────
-TOTAL_ACTIVE=$(sqlite3 "$PROJECT_ROOT/panemaji.db" "SELECT COUNT(*) FROM girls WHERE is_active=1")
+TOTAL_ACTIVE=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM girls WHERE is_active=1")
 IMG_PCT=$(echo "scale=1; (1 - $NO_IMG_AFTER / $TOTAL_ACTIVE) * 100" | bc 2>/dev/null || echo "?")
 
 log "=========================================="

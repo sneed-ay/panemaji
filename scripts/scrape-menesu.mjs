@@ -20,6 +20,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { cleanShopName } from './lib/clean-shop-name.mjs';
+import { pickArea } from './lib/unified-areas.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -111,17 +112,40 @@ const FUES_AREA_MAP = {
   '町田': 'nishi-tokyo',
 };
 
-function resolveAreaId(db, areaName) {
-  // Try direct mapping
+/**
+ * 🚨 2026-09-06 修正。
+ *
+ *   旧実装は AREA_MAP / FUES_AREA_MAP のハードコード slug を引き、
+ *   外れたら無条件に slug='shinjuku' へ落としていた。
+ *   ところがこのマップの slug は v5b (325エリア) にほとんど存在しない
+ *   (shinbashi / akihabara / ueno / kichijoji / itabashi / otsuka / kamata /
+ *    roppongi / kinshicho / kokubunji / tachikawa / iidabashi / nishi-tokyo /
+ *    tokyo-st / seibu / tokyu / shibuya / gotanda はどれも無い)。
+ *   実在するのは shinjuku と ikebukuro だけなので、
+ *   実質すべての店が新宿に落ちる状態だった。
+ *   b04a238 以前はその汚染が Google Drive 上の破損DBに落ちていたので表に出なかったが、
+ *   DB_PATH を尊重するようにした結果、本番マスターに届くようになった。
+ *
+ *   → CLAUDE.md が取込チェックリストで必須と定めている pickArea() に寄せる。
+ *     ハードコードマップは「掲載元のエリア名」というヒントとしてのみ残す。
+ */
+function resolveAreaId(db, areaName, shopName, sourceUrl) {
+  // 掲載元のエリア名 → 正規 slug を pickArea に解かせる (第4引数が oldAreaName)
+  const target = pickArea('tokyo', shopName || '', sourceUrl || '', areaName || '');
+  if (target && target.slug) {
+    const a = db.prepare("SELECT id FROM areas WHERE slug = ? AND prefecture = 'tokyo'").get(target.slug);
+    if (a) return a.id;
+  }
+  // 旧マップも一応見る (pickArea が拾えなかった表記のため)
   for (const [key, slug] of Object.entries({ ...AREA_MAP, ...FUES_AREA_MAP })) {
-    if (areaName.includes(key) || key.includes(areaName)) {
+    if (areaName && (areaName.includes(key) || key.includes(areaName))) {
       const area = db.prepare("SELECT id FROM areas WHERE slug = ? AND prefecture = 'tokyo'").get(slug);
       if (area) return area.id;
     }
   }
-  // Fallback to shinjuku
-  const fallback = db.prepare("SELECT id FROM areas WHERE slug = 'shinjuku'").get();
-  return fallback ? fallback.id : 1;
+  // ここまで来たら黙って新宿に落とさない。呼び出し側でスキップさせる。
+  console.log(`  [warn] エリアを特定できずスキップ: area="${areaName}" shop="${shopName}"`);
+  return null;
 }
 
 // ─── DB準備 ───────────────────────────────────────────
@@ -230,7 +254,8 @@ async function scrapeAromaestheShops(browser, db, stmts) {
         stmts.updateShop.run(existing.id);
         console.log(`  更新: ${shopName} (${detail.area})`);
       } else {
-        const areaId = resolveAreaId(db, detail.area || shop.area);
+        const areaId = resolveAreaId(db, detail.area || shop.area, shop.name, shop.url);
+        if (!areaId) continue; // エリア不明の店は入れない (全部新宿に落とす事故を防ぐ)
         stmts.insertShop.run({
           name: shopName,
           area_id: areaId,
@@ -304,7 +329,8 @@ async function scrapeFuesShops(browser, db, stmts) {
         return [...new Set(storeLinks.map(a => a.href))];
       });
 
-      const areaId = resolveAreaId(db, areaInfo.area);
+      const areaId = resolveAreaId(db, areaInfo.area, areaInfo.name, areaInfo.url);
+      if (!areaId) continue; // エリア不明の店は入れない
 
       for (const sourceUrl of shopUrls) {
         const existing = stmts.findShopBySource.get(sourceUrl);

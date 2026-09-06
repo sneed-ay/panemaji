@@ -5,13 +5,23 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+# 🚨 本番マスターは $HOME/panemaji-data/panemaji.db。
+#    リポジトリ (Google Drive 上) の panemaji.db は同期で壊れるので使わない。
+DB_PATH="${DB_PATH:-$HOME/panemaji-data/panemaji.db}"
+export DB_PATH
+
+# 🚨 このスクリプトは xargs -P で取込を並列起動する。
+#    CLAUDE.md の絶対不可侵ルール #2 (取込スクリプトの並行起動禁止) に反するので、
+#    使う前に必ず --parallel 1 にするか、並列部分を直すこと。
+
 TS=$(date +%Y%m%d-%H%M%S)
 LOG_DIR="logs/fuzoku-live-${TS}"
 mkdir -p "$LOG_DIR"
 
 # DBバックアップ
-BACKUP="panemaji.db.bak_fuzoku_live_${TS}"
-cp panemaji.db "$BACKUP"
+# バックアップは DB と同じ場所へ (Google Drive 上に 200MB を複製しない)
+BACKUP="${DB_PATH}.bak_fuzoku_live_${TS}"
+cp "$DB_PATH" "$BACKUP"
 echo "💾 DBバックアップ: $BACKUP"
 
 # 都道府県リスト
@@ -46,6 +56,6 @@ node scripts/migrate-fuzoku-areas.mjs | tee "${LOG_DIR}/migrate.log"
 
 echo ""
 echo "=== 完了サマリー ==="
-sqlite3 panemaji.db "SELECT 'total shops', COUNT(*) FROM shops UNION ALL SELECT 'fj-areas残', COUNT(*) FROM areas WHERE slug LIKE '%-fj-%';"
+sqlite3 "$DB_PATH" "SELECT 'total shops', COUNT(*) FROM shops UNION ALL SELECT 'fj-areas残', COUNT(*) FROM areas WHERE slug LIKE '%-fj-%';"
 echo "ログ: ${LOG_DIR}/"
 echo "バックアップ: ${BACKUP}"

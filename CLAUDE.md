@@ -15,6 +15,16 @@ Claude Codeでこのリポジトリを触る際の必須ルール。最初に読
    - `node scripts/health-check.mjs` で `レガシーslug残: 0` ✅・`店舗重複候補グループ: 0` ✅
    - 上記 3 つのいずれかが NG なら原因究明・修復まで完了
 4. **取込前に他の取込／daily-maintenance プロセスが動いていないか必ず確認** (`ps -ef | grep "scripts/scrape-\|daily-maintenance"`)。 動いてたら完了を待つか kill する。 並行起動は puppeteer 競合と DB lock を引き起こす。
+6. **DB を触るコマンドは必ず `DB_PATH` を指定する。**
+   本番マスターは `$HOME/panemaji-data/panemaji.db`。
+   リポジトリは Google Drive 上にあり、そこの `panemaji.db` は同期で壊れる。
+   `DB_PATH` 無しで実行すると **破損した別の DB を書き換えて「成功」と報告する**。
+   2026-09-06 に実害が出た: refetch-girls が 1094店中1012店 SQLITE_CORRUPT で
+   新規嬢0・更新0、`npm run verify-areas` は破損DBを読んで「OK: 325 areas」と表示していた。
+   ```bash
+   export DB_PATH="$HOME/panemaji-data/panemaji.db"
+   ```
+
 5. **CLAUDE.md のルールは「読んだ」では足りない。 取込のたびに上記 1–4 を実行で示す。**
 
 ## 🚨 エリア定義は必ず MECE の独自定義（**325エリア固定 / v5b**）
@@ -64,6 +74,7 @@ const target = pickArea(pref, shopName, sourceUrl, oldAreaName);
 ### 取込完了後の必須実行
 
 ```bash
+export DB_PATH="$HOME/panemaji-data/panemaji.db"   # 🚨 必須。付けないと破損DBを触る (下記)
 node scripts/migrate-areas-mece.mjs --apply  # 全shopsをMECE再分配 + 空エリア削除
 node scripts/preview-duplicate-shops.mjs     # 店舗重複確認
 node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
@@ -88,6 +99,7 @@ node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
 4. ❌ `areas` テーブルへの直接 INSERT は禁止（事前にユーザーと docs同期）
 5. ✅ 取込完了後、必ず以下3コマンドを実行：
    ```bash
+   export DB_PATH="$HOME/panemaji-data/panemaji.db"   # 🚨 必須
    node scripts/migrate-areas-mece.mjs --apply  # 全shopsをMECE再分配
    node scripts/preview-duplicate-shops.mjs     # 店舗重複確認
    node scripts/merge-duplicate-shops.mjs --apply # 店舗重複統合
