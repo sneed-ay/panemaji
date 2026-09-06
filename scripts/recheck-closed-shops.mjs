@@ -32,6 +32,7 @@
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
 import { withChromePath } from './lib/chrome-path.mjs';
+import { registerNormalizeUdf } from './lib/normalize-shop-name.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -153,7 +154,14 @@ async function makeBrowserFetcher() {
     }
     return { status: 0, html: null, gated: false };
   };
-  return { get, close: () => browser.close() };
+  // close が解決しないことがある (レンダラが壊れた Chrome)。15秒で見切って強制終了する。
+  const close = async () => {
+    await Promise.race([
+      browser.close().catch(() => {}),
+      sleep(15000).then(() => { try { browser.process()?.kill('SIGKILL'); } catch {} }),
+    ]);
+  };
+  return { get, close };
 }
 
 
@@ -183,6 +191,18 @@ function loadConfirmed() {
   }
 }
 
+/**
+ * 🚨 保存はループ内で逐次行う (2026-09-06)。
+ *
+ *   以前は最後の1回だけだった。ところがこのスクリプトの実際の終わり方は
+ *     (1) 夜間バッチの timeout による SIGTERM 打ち切り
+ *     (2) getPage の await が解決しないままイベントループが空になっての自然終了
+ *   の2つが主で、どちらも最後の行に到達しない。
+ *   実際 2026-09-06 の 1,914店 --apply は (2) で終わり、
+ *   logs/.recheck-confirmed-closed.json は {} (2バイト) のままだった。
+ *   = 「確定済みを30日スキップして行列を前進させる」機構が一度も働いていなかった。
+ *   毎晩 --limit 300 で先頭を取り直すだけになり、後ろの店には永久に到達しない。
+ */
 function saveConfirmed(map) {
   try {
     fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
@@ -203,32 +223,112 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('busy_timeout = 30000');
 
+registerNormalizeUdf(db);
+
 // 対象: そのソースの is_active=0 の店。誤閉店は古い last_seen_at に集中するので古い順。
+//
+// 🚨 is_active=0 には「掲載元がまだ生きている正当な閉店」が混ざっている。
+//    掲載元を見るだけでは区別できないので、SQL 側で最初から外す:
+//
+//    (a) 会員が「閉店」「存在しない」と報告した店 (process-feedback.mjs が落とした店)
+//        掲載は閉店後もしばらく残るため、掲載元だけ見ると必ず復活してしまい、
+//        フィードバック運用を真っ向から潰す。
+//    (b) 重複統合で負けた店 (merge-duplicate-shops.mjs が落とした店)
+//        掲載元は統合後も生きているので必ず復活する。すると同じ晩の Phase 2 が
+//        また統合して落とす。復活時に last_seen_at=now を打つので行列の末尾へ回り、
+//        確定済みリストにも載らないため、この往復が永久に続く。
+//        判定は CLAUDE.md 標準の normalize_shop + 都道府県 で行う
+//        (旧: name 完全一致 + area_id。全角半角・中黒・括弧差やエリア跨ぎを取りこぼしていた)
+//    (c) 同じ source_url を既にアクティブな行が持っている店
+//        掲載元1店に対しサイト上に2つの店舗ページが生まれる。
+//        DB には name が嬢名になっている行も混ざっており、それが「嬢名の偽店舗」として公開される。
+// (a) 会員が「閉店」「存在しない」と報告した店は絶対に復活させない。
+//     掲載は閉店後もしばらく残るので、掲載元だけ見ると必ず復活してしまい、
+//     同じ会員から同じ報告がまた届く = フィードバック運用を正面から潰す。
+//     feedback テーブルは本番にしか無い (users/sessions と同じ) のでマスターDBには存在しない。
+//     テーブルがあれば直接見る。無ければ本番から吸い出した shop_id 一覧を使う。
+const hasFeedback = !!db
+  .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='feedback'")
+  .get();
+const FEEDBACK_CLAUSE = hasFeedback
+  ? "AND NOT EXISTS (SELECT 1 FROM feedback f WHERE f.shop_id = s.id AND f.reason IN ('closed','not_exist'))"
+  : '';
+const NEVER_REVIVE_FILE = path.join(ROOT, 'logs', '.recheck-never-revive.json');
+let neverRevive = new Set();
+try {
+  neverRevive = new Set(JSON.parse(fs.readFileSync(NEVER_REVIVE_FILE, 'utf8')).map(Number));
+} catch {
+  /* 無ければ空。hasFeedback が true ならそちらで担保される */
+}
+if (!hasFeedback && neverRevive.size === 0) {
+  console.log('  [warn] feedback テーブルも復活禁止リストも無い');
+  console.log('         → 会員が閉店報告した店を復活させる恐れがある。本番から吸い出して');
+  console.log(`         ${NEVER_REVIVE_FILE} に shop_id の配列として置くこと`);
+}
+
 const confirmedClosed = loadConfirmed();
 const shops = db
   .prepare(
-    `SELECT id, name, area_id, source_url, last_seen_at
-       FROM shops
-      WHERE is_active = 0 AND source_url LIKE ?
-      ORDER BY last_seen_at ASC
+    `SELECT s.id, s.name, s.area_id, s.source_url, s.last_seen_at
+       FROM shops s
+       LEFT JOIN areas a ON a.id = s.area_id
+      WHERE s.is_active = 0
+        AND s.source_url LIKE ?
+        -- (a) 会員が閉店/存在しないと報告した店は触らない (テーブルが無い環境では空文字)
+        ${FEEDBACK_CLAUSE}
+        -- (b) 同一県内に normalize_shop が一致する稼働中の店がある
+        AND NOT EXISTS (
+              SELECT 1 FROM shops o JOIN areas oa ON oa.id = o.area_id
+               WHERE o.is_active = 1 AND o.id <> s.id
+                 AND oa.prefecture = a.prefecture
+                 AND normalize_shop(o.name) = normalize_shop(s.name)
+                 AND normalize_shop(s.name) <> ''
+            )
+        -- (c) 同じ掲載ページを既にアクティブな行が指している
+        AND NOT EXISTS (
+              SELECT 1 FROM shops u
+               WHERE u.is_active = 1 AND u.id <> s.id AND u.source_url = s.source_url
+            )
+      ORDER BY s.last_seen_at ASC
       LIMIT ?`
   )
   .all(src.match, opts.limit + Object.keys(confirmedClosed).length)
-  .filter((r) => !confirmedClosed[r.id])
+  .filter((r) => !confirmedClosed[r.id] && !neverRevive.has(r.id))
   .slice(0, opts.limit);
 
 const totalClosed = db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active = 0 AND source_url LIKE ?').get(src.match).c;
 console.log(`\n=== 誤閉店の洗い直し (${opts.source}) ===`);
 console.log(`  閉店扱い ${totalClosed} 店 / 今回 ${shops.length} 店を確認${opts.apply ? '' : '  [DRY-RUN]'}`);
 
-// 同名・同エリアで既にアクティブな店があるか (重複を作らないため)
+// 走行中にも重複を作らないための最終ガード。
+// (SQL 側で除外済みだが、同じバッチ内で先に復活させた店とぶつかる可能性があるので二重に見る)
+// CLAUDE.md 標準の「同一県 + normalize_shop 一致」を使う。
 const dupQ = db.prepare(
-  'SELECT id FROM shops WHERE is_active = 1 AND area_id = ? AND name = ? AND id <> ? LIMIT 1'
+  `SELECT o.id FROM shops o
+     JOIN areas oa ON oa.id = o.area_id
+     JOIN areas sa ON sa.id = ?
+    WHERE o.is_active = 1 AND o.id <> ?
+      AND oa.prefecture = sa.prefecture
+      AND normalize_shop(o.name) = normalize_shop(?)
+      AND normalize_shop(?) <> ''
+    LIMIT 1`
 );
 const revive = db.prepare('UPDATE shops SET is_active = 1, last_seen_at = ? WHERE id = ?');
 
 let alive = 0, gone = 0, unknown = 0, dup = 0, revived = 0, gatedCount = 0, redirected = 0;
+let pendingFlush = 0;
+/** 掲載終了を確定したら記録して、10件ごとにディスクへ落とす (途中で殺されても成果を失わない) */
+function markClosed(id) {
+  confirmedClosed[id] = new Date().toISOString();
+  if (opts.apply && ++pendingFlush >= 10) { saveConfirmed(confirmedClosed); pendingFlush = 0; }
+}
 const aliveList = [];
+
+// timeout の SIGTERM でも記録を残す。exit ハンドラは同期処理しか走らないので writeFileSync のみ。
+if (opts.apply) {
+  process.on('exit', () => { try { saveConfirmed(confirmedClosed); } catch {} });
+  for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { try { saveConfirmed(confirmedClosed); } catch {} ; process.exit(143); });
+}
 
 const bf = opts.browser ? await makeBrowserFetcher() : null;
 if (bf) console.log('  取得方法: puppeteer (年齢確認ゲート突破)');
@@ -239,7 +339,7 @@ for (const s of shops) {
   await delay();
 
   if (gated) { gatedCount++; unknown++; continue; }  // 年齢確認ゲート = 判定不能。触らない
-  if (status === 404 || status === 410) { gone++; confirmedClosed[s.id] = new Date().toISOString(); continue; }
+  if (status === 404 || status === 410) { gone++; markClosed(s.id); continue; }
   if (!html) { unknown++; continue; }
 
   // 掲載終了の店がエリア一覧へリダイレクトされると、嬢リンクが大量にあり閉店語も無いため
@@ -252,10 +352,10 @@ for (const s of shops) {
 
   const closed = CLOSED_WORDS.some((w) => html.includes(w));
   const girls = new Set(html.match(src.girlRe) || []).size;
-  if (closed || girls === 0) { gone++; confirmedClosed[s.id] = new Date().toISOString(); continue; }
+  if (closed || girls === 0) { gone++; markClosed(s.id); continue; }
 
   alive++;
-  const d = dupQ.get(s.area_id, s.name, s.id);
+  const d = dupQ.get(s.area_id, s.id, s.name, s.name);
   if (d) {
     dup++;
     console.log(`  [重複のため据え置き] #${s.id} ${s.name} (同エリアに稼働中の #${d.id} あり)`);
@@ -286,5 +386,6 @@ if (aliveList.length) {
   if (aliveList.length > 30) console.log(`    … 他 ${aliveList.length - 30} 件`);
 }
 if (opts.apply) saveConfirmed(confirmedClosed);
+// browser.close() は壊れた Chrome 相手に解決しないことがある。15秒で見切って SIGKILL する。
 if (bf) await bf.close();
 db.close();

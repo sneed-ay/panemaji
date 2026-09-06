@@ -178,7 +178,7 @@ run_with_stall_watchdog() {
   start_epoch=$(/bin/date +%s)
 
   # 子プロセスを background 起動
-  ( $TIMEOUT "$hard_timeout" "$@" >> "$LOG_FILE" 2>&1 ) &
+  ( run_timeout "$hard_timeout" "$@" >> "$LOG_FILE" 2>&1 ) &
   local pid=$!
 
   local last_lines=$pre_lines
@@ -347,28 +347,32 @@ else log "  [1-4] スキップ (既定OFF: 時間枠が無い)"; fi
 #   打ち切られていたため回復していなかった。毎晩少しずつ洗って戻す。
 #   古い last_seen_at 順に見るので、放置が長い店から順に回復していく。
 #   復帰は「掲載元が200を返し・閉店語が無く・嬢リンクがあり・URLが転送されていない」時のみ。
-log "  [1-4c] 誤閉店の洗い直し (cityheaven 300店)..."
-$TIMEOUT 2400 node scripts/recheck-closed-shops.mjs --source cityheaven --limit 300 --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops がタイムアウト"
+log "  [1-4c] 誤閉店の洗い直し (cityheaven 150店)..."
+run_timeout 3000 node scripts/recheck-closed-shops.mjs --source cityheaven --limit 150 --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops がタイムアウト"
 
 #   他ソースも同様に誤閉店を抱えている (2026-09-06 抜き取り30店の実測):
 #     fuzoku     3,144店が閉店扱い / うち 22店 (73%) が営業中
 #     purelovers 1,384店が閉店扱い / うち 27店 (90%) が営業中
 #     ranking-deli は判定不能のため対象外 (嬢一覧が店トップに無い / 詳細は recheck-closed-shops.mjs)
 #   年齢確認ゲートが無いので --no-browser (fetch のみ) で速い。
-#   一度に全部戻すと「嬢0人の店」が数千件生まれ、在籍を埋める側が追いつかない。
-#   毎晩少しずつに絞って、refetch-girls / refresh-source-girls が埋められる速度に合わせる。
+#
+#   🚨 件数を 60 に絞ってある理由 (2026-09-06):
+#     [1-5] refetch-girls は cityheaven 専用なので、ここで戻した fuzoku/purelovers の店は
+#     [1-1b] refresh-source-girls だけが埋められる。その枠は fuzoku 200 / purelovers 150 しかない。
+#     150件ずつ戻すと復帰分だけで枠の大半を食い、既存店の在籍更新が止まる。
+#     復帰の速度は「埋められる速度」を超えてはいけない。
 for _src in fuzoku purelovers; do
-  log "  [1-4d] 誤閉店の洗い直し ($_src 150店)..."
-  $TIMEOUT 1200 node scripts/recheck-closed-shops.mjs --source "$_src" --limit 150 --no-browser --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops ($_src) がタイムアウト"
+  log "  [1-4d] 誤閉店の洗い直し ($_src 60店)..."
+  run_timeout 1200 node scripts/recheck-closed-shops.mjs --source "$_src" --limit 60 --no-browser --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops ($_src) がタイムアウト"
 done
 
 # 1-5: 0人店・100人上限店の再取得
 log "  [1-5] 0人/100人上限店の再取得..."
-$TIMEOUT 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] refetch-girls がタイムアウト"
+run_timeout 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] refetch-girls がタイムアウト"
 
 # 1-6: 画像URL補完
 log "  [1-6] 画像URL補完..."
-$TIMEOUT 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
+run_timeout 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
 
 # ============================================================================
 # Phase 2: データ品質メンテナンス

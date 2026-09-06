@@ -869,12 +869,16 @@ async function main() {
     // 指標は「店ごとの最新在籍日」の中央値。
     // 県内の MAX だと 1店でも新しければ県全体が新鮮に見えてしまい、
     // 実際には 3月から放置されている店を抱えた東京都が最後尾になってしまう。
+    // 🚨 LEFT JOIN であること。INNER JOIN だと「在籍0人の店」が集計から丸ごと消える。
+    //    2026-09-06 に誤閉店から戻した 1,081 店はまさに在籍0人なので、
+    //    INNER JOIN のままだと「一番手当てが要る店」が優先度計算に一切現れなかった。
     const rows = db.prepare(`
-      SELECT s.source_url AS url, MAX(g.last_seen_at) AS newest
-        FROM shops s JOIN girls g ON g.shop_id = s.id
-       WHERE s.is_active = 1 AND g.is_active = 1
-         AND s.source_url LIKE '%cityheaven.net/%'
-       GROUP BY s.id`).all();
+      SELECT s.source_url AS url,
+             (SELECT MAX(g.last_seen_at) FROM girls g
+               WHERE g.shop_id = s.id AND g.is_active = 1) AS newest
+        FROM shops s
+       WHERE s.is_active = 1
+         AND s.source_url LIKE '%cityheaven.net/%'`).all();
     const buckets = new Map();
     for (const r of rows) {
       const m = /cityheaven\.net\/([a-z]+)\//.exec(r.url || '');
@@ -882,16 +886,31 @@ async function main() {
       if (!buckets.has(m[1])) buckets.set(m[1], []);
       buckets.get(m[1]).push(r.newest || '');
     }
+    // 指標は「店ごとの在籍の古さ(日数)の平均」。大きいほど手当てが要る。
+    //
+    //   分位点 (中央値・第1四分位) は同値が大量に出て使えなかった:
+    //   在籍0人の店を抱える県が12個あると先頭12県が全部「未取得」で並び、
+    //   同値の中では元の定義順 = 北海道スタートに戻ってしまう (直したはずの飢餓が再発する)。
+    //   平均なら県ごとに必ず違う値になり、同値による並び戻りが起きない。
+    //
+    //   在籍が1人もいない店は NEVER_DAYS 日として最悪に振る。
+    //   実際そういう店 (誤閉店から戻した1,081店) が今まさに一番手当てを必要としている。
+    const NEVER_DAYS = 400;
+    const nowMs = Date.now();
     const key = new Map();
     for (const [code] of targetPrefs) {
       const v = buckets.get(code);
-      if (!v || v.length === 0) { key.set(code, ''); continue; } // 未取得は最優先
-      v.sort();
-      key.set(code, v[Math.floor(v.length / 2)]);
+      if (!v || v.length === 0) { key.set(code, NEVER_DAYS + 1); continue; } // 店ごと未取得は最優先
+      let sum = 0;
+      for (const d of v) {
+        const t = d ? Date.parse(d) : NaN;
+        sum += Number.isNaN(t) ? NEVER_DAYS : Math.min(NEVER_DAYS, (nowMs - t) / 86400000);
+      }
+      key.set(code, sum / v.length);
     }
-    targetPrefs.sort((a, b) => (key.get(a[0]) < key.get(b[0]) ? -1 : key.get(a[0]) > key.get(b[0]) ? 1 : 0));
-    console.log('巡回順 (在籍が古い県から / 店ごと最新在籍日の中央値):');
-    console.log('  ' + targetPrefs.slice(0, 8).map(([c, i]) => `${i.name}(${(key.get(c) || '未取得').slice(0, 10)})`).join(' → ') + ' → …');
+    targetPrefs.sort((a, b) => key.get(b[0]) - key.get(a[0])); // 古い(=数値が大きい)県から
+    console.log('巡回順 (在籍が古い県から / 店ごと在籍の古さの平均日数):');
+    console.log('  ' + targetPrefs.slice(0, 8).map(([c, i]) => `${i.name}(${Math.round(key.get(c))}日)`).join(' → ') + ' → …');
   }
 
   const { browser, page } = await setupBrowser();
