@@ -851,6 +851,49 @@ async function main() {
   console.log(`対象: ${targetPrefs.length} 都道府県\n`);
 
   const db = openDb();
+
+  // 🚨 巡回順は「在籍が古い県から」(2026-09-06)
+  //
+  //   これまでは PREFECTURES の定義順 = 必ず北海道スタートだった。
+  //   1県あたり実測 30分前後 (2026-09-06: 北海道 1947s / 千葉 1827s) かかる一方、
+  //   夜間バッチが update-all に割ける枠は 4時間しかない。
+  //   結果、毎晩 13県ほどで打ち切られ、東京より後ろの 34県は
+  //   「一度も嬢の在籍が更新されない」状態が続いていた。
+  //     実例: レッドベリル(東京) の在籍は 2026-03-19 のまま 123人が居座り、
+  //           「退店した嬢が残っている」という会員フィードバックになっていた。
+  //
+  //   → 毎晩、在籍情報が一番古い県から回す。打ち切られても次の晩は続きから始まるので、
+  //     固定順では永久に到達しなかった県にも必ず順番が回ってくる。
+  //   県を明示している場合 (--pref / --region) は指定順を尊重して並べ替えない。
+  if (!opts.pref && !opts.region && targetPrefs.length > 1) {
+    // 指標は「店ごとの最新在籍日」の中央値。
+    // 県内の MAX だと 1店でも新しければ県全体が新鮮に見えてしまい、
+    // 実際には 3月から放置されている店を抱えた東京都が最後尾になってしまう。
+    const rows = db.prepare(`
+      SELECT s.source_url AS url, MAX(g.last_seen_at) AS newest
+        FROM shops s JOIN girls g ON g.shop_id = s.id
+       WHERE s.is_active = 1 AND g.is_active = 1
+         AND s.source_url LIKE '%cityheaven.net/%'
+       GROUP BY s.id`).all();
+    const buckets = new Map();
+    for (const r of rows) {
+      const m = /cityheaven\.net\/([a-z]+)\//.exec(r.url || '');
+      if (!m) continue;
+      if (!buckets.has(m[1])) buckets.set(m[1], []);
+      buckets.get(m[1]).push(r.newest || '');
+    }
+    const key = new Map();
+    for (const [code] of targetPrefs) {
+      const v = buckets.get(code);
+      if (!v || v.length === 0) { key.set(code, ''); continue; } // 未取得は最優先
+      v.sort();
+      key.set(code, v[Math.floor(v.length / 2)]);
+    }
+    targetPrefs.sort((a, b) => (key.get(a[0]) < key.get(b[0]) ? -1 : key.get(a[0]) > key.get(b[0]) ? 1 : 0));
+    console.log('巡回順 (在籍が古い県から / 店ごと最新在籍日の中央値):');
+    console.log('  ' + targetPrefs.slice(0, 8).map(([c, i]) => `${i.name}(${(key.get(c) || '未取得').slice(0, 10)})`).join(' → ') + ' → …');
+  }
+
   const { browser, page } = await setupBrowser();
 
   const totals = {
