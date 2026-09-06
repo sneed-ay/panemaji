@@ -339,6 +339,16 @@ $TIMEOUT 7200 node scripts/refetch-girls.mjs >> "$LOG_FILE" 2>&1 || log "  [warn
 log "  [1-6] 画像URL補完..."
 $TIMEOUT 3600 node scripts/scrape-images.mjs >> "$LOG_FILE" 2>&1 || log "  [warn] scrape-images がタイムアウト"
 
+# 1-7: 誤閉店の洗い直し
+#   deactivateStaleShops の県単位絞り (2026-09-06 に修正) で作られた誤閉店が
+#   cityheaven だけで 1,914 店たまっており、抜き取り20店中18店が実際には営業中だった。
+#   「日曜のフル巡回で自動回復する」と考えていたが、その巡回自体が13県で
+#   打ち切られていたため回復していなかった。毎晩少しずつ洗って戻す。
+#   古い last_seen_at 順に見るので、放置が長い店から順に回復していく。
+#   復帰は「掲載元が200を返し・閉店語が無く・嬢リンクがあり・URLが転送されていない」時のみ。
+log "  [1-7] 誤閉店の洗い直し (cityheaven 300店)..."
+$TIMEOUT 2400 node scripts/recheck-closed-shops.mjs --source cityheaven --limit 300 --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops がタイムアウト"
+
 # ============================================================================
 # Phase 2: データ品質メンテナンス
 # ============================================================================

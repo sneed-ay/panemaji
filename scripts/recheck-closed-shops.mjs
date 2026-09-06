@@ -33,6 +33,7 @@ import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
 import { withChromePath } from './lib/chrome-path.mjs';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -137,6 +138,42 @@ async function makeBrowserFetcher() {
   return { get, close: () => browser.close() };
 }
 
+
+/**
+ * 「掲載元でも本当に終わっていた」と確定した店の記録。
+ *
+ * 本スクリプトは is_active=0 の店を last_seen_at の古い順に見る。
+ * 本当に閉店した店は復帰しないので last_seen_at も変わらず、毎晩ずっと行列の先頭に居座る。
+ * 夜間バッチで毎回 300店ずつ流すと、数日で先頭が確定済みの閉店店で埋まり前に進めなくなる。
+ * → 確定した店は 30日間スキップして、未確認の店に順番を回す。
+ *   取得できなかった店 (unknown/ゲート/転送) は記録しない。次回また見る。
+ */
+const STATE_FILE = path.join(ROOT, 'logs', '.recheck-confirmed-closed.json');
+const CONFIRM_TTL_DAYS = 30;
+
+function loadConfirmed() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    const cutoff = Date.now() - CONFIRM_TTL_DAYS * 86400000;
+    const keep = {};
+    for (const [id, iso] of Object.entries(raw)) {
+      if (Date.parse(iso) >= cutoff) keep[id] = iso;
+    }
+    return keep;
+  } catch {
+    return {};
+  }
+}
+
+function saveConfirmed(map) {
+  try {
+    fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+    fs.writeFileSync(STATE_FILE, JSON.stringify(map, null, 1));
+  } catch (e) {
+    console.log('  [warn] 確定済みリストを保存できませんでした:', e.message);
+  }
+}
+
 const opts = parseArgs();
 const src = SOURCES[opts.source];
 if (!src) {
@@ -149,6 +186,7 @@ db.pragma('journal_mode = WAL');
 db.pragma('busy_timeout = 30000');
 
 // 対象: そのソースの is_active=0 の店。誤閉店は古い last_seen_at に集中するので古い順。
+const confirmedClosed = loadConfirmed();
 const shops = db
   .prepare(
     `SELECT id, name, area_id, source_url, last_seen_at
@@ -157,7 +195,9 @@ const shops = db
       ORDER BY last_seen_at ASC
       LIMIT ?`
   )
-  .all(src.match, opts.limit);
+  .all(src.match, opts.limit + Object.keys(confirmedClosed).length)
+  .filter((r) => !confirmedClosed[r.id])
+  .slice(0, opts.limit);
 
 const totalClosed = db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active = 0 AND source_url LIKE ?').get(src.match).c;
 console.log(`\n=== 誤閉店の洗い直し (${opts.source}) ===`);
@@ -181,7 +221,7 @@ for (const s of shops) {
   await delay();
 
   if (gated) { gatedCount++; unknown++; continue; }  // 年齢確認ゲート = 判定不能。触らない
-  if (status === 404 || status === 410) { gone++; continue; }
+  if (status === 404 || status === 410) { gone++; confirmedClosed[s.id] = new Date().toISOString(); continue; }
   if (!html) { unknown++; continue; }
 
   // 掲載終了の店がエリア一覧へリダイレクトされると、嬢リンクが大量にあり閉店語も無いため
@@ -194,7 +234,7 @@ for (const s of shops) {
 
   const closed = CLOSED_WORDS.some((w) => html.includes(w));
   const girls = new Set(html.match(src.girlRe) || []).size;
-  if (closed || girls === 0) { gone++; continue; }
+  if (closed || girls === 0) { gone++; confirmedClosed[s.id] = new Date().toISOString(); continue; }
 
   alive++;
   const d = dupQ.get(s.area_id, s.name, s.id);
@@ -226,5 +266,6 @@ if (aliveList.length) {
   for (const a of aliveList.slice(0, 30)) console.log(`    #${String(a.id).padStart(6)} ${a.name.slice(0, 34).padEnd(36)} 嬢${String(a.girls).padStart(3)}人  最終${a.last}`);
   if (aliveList.length > 30) console.log(`    … 他 ${aliveList.length - 30} 件`);
 }
+if (opts.apply) saveConfirmed(confirmedClosed);
 if (bf) await bf.close();
 db.close();
