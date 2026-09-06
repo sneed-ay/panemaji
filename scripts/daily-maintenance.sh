@@ -352,11 +352,11 @@ $TIMEOUT 2400 node scripts/recheck-closed-shops.mjs --source cityheaven --limit 
 #   他ソースも同様に誤閉店を抱えている (2026-09-06 抜き取り30店の実測):
 #     fuzoku     3,144店が閉店扱い / うち 22店 (73%) が営業中
 #     purelovers 1,384店が閉店扱い / うち 27店 (90%) が営業中
-#     ranking-deli 405店が閉店扱い
+#     ranking-deli は判定不能のため対象外 (嬢一覧が店トップに無い / 詳細は recheck-closed-shops.mjs)
 #   年齢確認ゲートが無いので --no-browser (fetch のみ) で速い。
 #   一度に全部戻すと「嬢0人の店」が数千件生まれ、在籍を埋める側が追いつかない。
 #   毎晩少しずつに絞って、refetch-girls / refresh-source-girls が埋められる速度に合わせる。
-for _src in fuzoku purelovers ranking-deli; do
+for _src in fuzoku purelovers; do
   log "  [1-7b] 誤閉店の洗い直し ($_src 150店)..."
   $TIMEOUT 1200 node scripts/recheck-closed-shops.mjs --source "$_src" --limit 150 --no-browser --apply >> "$LOG_FILE" 2>&1 || log "  [warn] recheck-closed-shops ($_src) がタイムアウト"
 done

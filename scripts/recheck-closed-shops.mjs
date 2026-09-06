@@ -51,7 +51,13 @@ const SOURCES = {
     // 嬢の個別リンク。1件も無ければ「店ページとして生きていない」とみなす
     girlRe: /girlid-\d+/g,
   },
-  'ranking-deli': { match: '%ranking-deli%', girlRe: /class="girls-name/g },
+  // 🚨 ranking-deli は本スクリプトでは判定できないので外してある (2026-09-06)。
+  //    嬢一覧は店トップではなく {shop_url}/girlslist/ にあり、店トップには嬢の要素が1つも無い。
+  //    そのため girlRe が何であれ全店「嬢0人 = 掲載終了」になる (抜き取り30店が全滅した)。
+  //    girlslist/ を見ても class="data-name" が営業中・閉店扱いの双方で100件出てしまい、
+  //    店自身の在籍なのかサイト共通のウィジェットなのか切り分けられなかった。
+  //    復帰させるには refresh-source-girls.mjs の rd アダプタ相当の解析が要る。
+  //    誤って営業中の店を「閉店のまま」にする分には害が無いので、判定できるまで対象外とする。
   fuzoku: { match: '%fuzoku.jp%', girlRe: /\/girl\/\d+\//g },
   purelovers: { match: '%purelovers%', girlRe: /\/girl\/\d+\//g },
 };
@@ -92,7 +98,7 @@ async function fetchPage(url) {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const html = await r.text();
       if (isAgeGate(r.url, html)) return { status: r.status, html: null, gated: true };
-      return { status: r.status, html, gated: false };
+      return { status: r.status, html, gated: false, finalUrl: r.url };
     } catch {
       if (i === 2) return { status: 0, html: null, gated: false };
       await sleep(2000 * (i + 1));
