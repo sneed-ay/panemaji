@@ -199,7 +199,18 @@ function fixOldYears(articles, issues) {
     const article = articles.find(a => a.slug === issue.slug);
     if (!article) continue;
 
-    let content = article.content;
+    // 🚨 article.content は getAllArticles() 時点のスナップショット。
+    //    直前の fixDeadLinks が同じファイルを書き換えている場合、
+    //    ここで古いスナップショットから書き戻すとリンク修正が消える。
+    //    (両方に該当する記事だけで起きる。しかも dateModified は更新されるので
+    //     「修正済み」に見えたまま自動 commit+push される)
+    //    → 必ずディスクから読み直す。
+    let content;
+    try {
+      content = fs.readFileSync(article.path, 'utf-8');
+    } catch {
+      content = article.content;
+    }
     let changed = false;
 
     // 「2023年」「2024年」→ 「2026年」（ただしメタデータ日付は触らない）

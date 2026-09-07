@@ -144,6 +144,7 @@ db.close();
 # 🚨 サニティガード用 (2026-06-03): 開始時の active girls 数を記録。
 #    Phase 4 で「大量減」を検知したら db-latest 上書きを止め、破損データの伝播を防ぐ。
 BEFORE_GIRLS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
+BEFORE_SHOPS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
 log "  [guard] 開始時 active girls = $BEFORE_GIRLS"
 
 # ============================================================================
@@ -545,7 +546,23 @@ db.close();
 AFTER_GIRLS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
 MIN_GIRLS=$(( ${BEFORE_GIRLS:-0} * 80 / 100 ))
 ABS_FLOOR=300000   # 🚨 絶対下限: 破損した基準値でも 30万未満なら必ず中止。相対閾値(80%)だけだと "破損base→破損" が素通りして db-latest を汚す欠陥(2026-06-10判明)を塞ぐ。
+
+# 🚨 逆側のガード (2026-09-07 追加): 「店が異常に増えた」を見る。
+#    従来のガードは active girls の下限しか見ていなかった。
+#    店を is_active 0→1 に戻す操作は girls を1件も減らさないので、
+#    誤閉店の洗い直しが壊れて (掲載元のレイアウト変更で嬢リンク判定が別ページにも当たる、
+#    閉店ページが 200 で汎用テンプレを返す等) 数千店を誤復帰させても
+#    ガードを全て素通りし、Phase 4 が db-latest を上書きして本番へ自動反映してしまう。
+#    1晩の正常な増分は多くても数百店 (実測: 2026-09-07 は +39)。
+#    +1000 を超えたら判定が壊れたとみなして伝播を止める。
+AFTER_SHOPS=$(node -e "const db=require('better-sqlite3')('$DB_PATH',{readonly:true});console.log(db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active=1').get().c);db.close();" 2>/dev/null || echo 0)
+SHOP_SURGE_CAP=1000
+
 DB_OK=true
+if [ "${BEFORE_SHOPS:-0}" -gt 1000 ] && [ $(( AFTER_SHOPS - ${BEFORE_SHOPS:-0} )) -gt "$SHOP_SURGE_CAP" ]; then
+  log "  [GUARD-ABORT] active shops ${BEFORE_SHOPS}→${AFTER_SHOPS} (+$(( AFTER_SHOPS - BEFORE_SHOPS )) > ${SHOP_SURGE_CAP}) = 誤復帰の疑い。db-latest 上書き/backup を中止。"
+  DB_OK=false
+fi
 if [ "$AFTER_GIRLS" -lt "$ABS_FLOOR" ]; then
   log "  [GUARD-ABORT] active girls=${AFTER_GIRLS} が絶対下限 ${ABS_FLOOR} 未満 = 破損とみなし db-latest 上書き/backup を中止。"
   DB_OK=false

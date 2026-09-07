@@ -576,7 +576,7 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
 
   if (shops.length === 0) return { newGirls: 0, updatedGirls: 0, deactivated: 0, images: 0 };
 
-  const getGirlBySourceId = db.prepare('SELECT id, name, age, height, bust, cup, waist, hip FROM girls WHERE source_id = ?');
+  const getGirlBySourceId = db.prepare('SELECT id, shop_id, name, age, height, bust, cup, waist, hip FROM girls WHERE source_id = ?');
   /**
  * 🚨 口コミが付いている行は「名前一致」で再利用しない (2026-09-06)。
  *
@@ -597,7 +597,7 @@ const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND sh
   const updateGirlImage = db.prepare("UPDATE girls SET image_url = ? WHERE source_id = ? AND (image_url IS NULL OR image_url = '')");
   const markSeen = db.prepare('UPDATE girls SET is_active = 1, last_seen_at = ? WHERE id = ?');
 
-  let totalNew = 0, totalUpdated = 0, totalDeactivated = 0, totalImages = 0;
+  let totalNew = 0, totalUpdated = 0, totalDeactivated = 0, totalImages = 0, totalForeign = 0;
   let shopsDone = 0;
 
   for (const shop of shops) {
@@ -646,7 +646,7 @@ const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND sh
       }
 
       const seenIds = new Set();
-      let sNew = 0, sUpd = 0, sImg = 0;
+      let sNew = 0, sUpd = 0, sImg = 0, sForeign = 0;
 
       const tx = db.transaction(() => {
         for (const girl of allScraped) {
@@ -654,6 +654,13 @@ const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND sh
           const imageUrl = allImages[girl.sourceId] || null;
 
           const ex = getGirlBySourceId.get(girl.sourceId);
+          // 🚨 source_id はグローバル UNIQUE なので、別店の行に当たることがある
+          //    (嬢が移籍した場合など)。その行を markSeen すると
+          //    「B店で見つけた嬢が A店の在籍として復活し、B店には登録されない」ことになる。
+          //    退店処理は shop_id で絞るので A店側では落ちず、誤表示が残り続ける。
+          //    refresh-source-girls は findSourceIdAnywhere で同じ状況を明示的に飛ばしている。
+          //    ここも合わせて、別店の行なら今回は触らない。
+          if (ex && ex.shop_id !== undefined && ex.shop_id !== shop.id) { sForeign++; continue; }
           if (ex) {
             const changed = ex.name !== girl.name || ex.age !== girl.age || ex.height !== girl.height ||
               ex.bust !== girl.bust || ex.cup !== girl.cup || ex.waist !== girl.waist || ex.hip !== girl.hip;
@@ -694,6 +701,7 @@ const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND sh
 
       const deact = tx();
       totalNew += sNew;
+      totalForeign += sForeign;
       totalUpdated += sUpd;
       totalDeactivated += deact;
       totalImages += sImg;
@@ -719,7 +727,7 @@ const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND sh
     await delay();
   }
 
-  console.log(`    => 新規: ${totalNew} | 更新: ${totalUpdated} | 退店: ${totalDeactivated} | 画像: ${totalImages}`);
+  console.log(`    => 新規: ${totalNew} | 更新: ${totalUpdated} | 退店: ${totalDeactivated} | 画像: ${totalImages}${totalForeign ? ` | 別店の行のため見送り: ${totalForeign}` : ''}`);
   return { newGirls: totalNew, updatedGirls: totalUpdated, deactivated: totalDeactivated, images: totalImages };
 }
 
@@ -875,7 +883,12 @@ async function main() {
   //   → 毎晩、在籍情報が一番古い県から回す。打ち切られても次の晩は続きから始まるので、
   //     固定順では永久に到達しなかった県にも必ず順番が回ってくる。
   //   県を明示している場合 (--pref / --region) は指定順を尊重して並べ替えない。
-  if (!opts.pref && !opts.region && targetPrefs.length > 1) {
+  // 🚨 --resume 中は並べ替えない。
+  //    progress は currentPref / currentShopId を1組しか持たないので、
+  //    中断した県が並べ替えで後方へ飛ぶと、先に走った別の県が currentShopId を上書きし、
+  //    中断県の再開位置が失われる (--resume --force だと7日スキップも効かず全件取り直しになる)。
+  //    再開時は progress を記録したときの順序をそのまま使う。
+  if (!opts.pref && !opts.region && !opts.resume && targetPrefs.length > 1) {
     // 指標は「店ごとの最新在籍日」の中央値。
     // 県内の MAX だと 1店でも新しければ県全体が新鮮に見えてしまい、
     // 実際には 3月から放置されている店を抱えた東京都が最後尾になってしまう。

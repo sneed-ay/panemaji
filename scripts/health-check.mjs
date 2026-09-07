@@ -107,5 +107,26 @@ const dupShops = db.prepare(`
 `).get().c;
 console.log(`\n🚫 店舗重複候補グループ: ${fmt(dupShops)} ${status(dupShops === 0)}`);
 
+
+// 🚨 参照が壊れた行の検出 (2026-09-07 追加)
+//    2026-06-28 の破損復旧で girls 7,175 行が lost_and_found に取り残され、
+//    reviews 44,072 件のうち 15,470 件 (35%) が存在しない girl_id を指していた。
+//    嬢ページからも店の口コミ集計 (reviews JOIN girls) からも消えるが、
+//    どのチェックにも引っかからないので 3か月近く気づかれなかった。
+const orphanReviews = db
+  .prepare(
+    'SELECT COUNT(*) c FROM reviews r WHERE r.girl_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM girls g WHERE g.id = r.girl_id)'
+  )
+  .get().c;
+console.log(`\n🔗 参照先の無い口コミ: ${fmt(orphanReviews)} ${status(orphanReviews === 0)}`);
+const fkViolations = db.prepare('PRAGMA foreign_key_check').all().length;
+console.log(`🔗 外部キー違反: ${fmt(fkViolations)} ${status(fkViolations === 0)}`);
+const lostRows = db
+  .prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='table' AND name='lost_and_found'")
+  .get().c
+  ? db.prepare('SELECT COUNT(*) c FROM lost_and_found').get().c
+  : 0;
+if (lostRows) console.log(`   (lost_and_found に ${fmt(lostRows)} 行。破損復旧の残骸で、girls へ戻し済み)`);
+
 console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 db.close();
