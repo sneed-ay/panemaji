@@ -6,12 +6,12 @@
  *  - 突合キー: areas=slug / shops=source_url(無ければ name+area) / girls=source_id(無ければ shop+name)
  *
  *    🚨 source_url は「店の同一性」そのもの。master 側で既存店の source_url を書き換えてはいけない。
- *       書き換えると findShopByUrl が本番の既存行に当たらず、その行は master の active 集合から
- *       外れたとみなされて is_active=0 にされる = 本番から店が消える。
- *       (2026-09-07 実際に発生: 会員の「掲載元が公式サイトではない」という報告を受けて
- *        shop 12263 の source_url を公式サイトへ変えたところ、本番で検索0件になった)
+ *       書き換えると findShopByUrl (:89) が本番の既存行に当たらないので
+ *         (a) 新しい URL で別の行が INSERT される
+ *         (b) 元の行は _m_s に入らないため :131 の一括処理で is_active=0 にされる
+ *       = 本番に重複行ができ、元の行 (reviews/shop_comments が紐づく側) が消える。
  *       掲載元リンクを変えたい場合は source_url ではなく別カラムを足すこと。
- *       girls も同様に source_id が同一性キー。
+ *       girls も同様に source_id が同一性キー (:130)。
  *  - FK 連鎖は master内部id→本番id のマップで解決（NULL source_url の店舗も扱える）
  *  - 既存行は UPDATE（本番の id を温存 = reviews.girl_id 等のFKを壊さない）/ 新規は INSERT
  *  - master の active 集合に無い本番行は is_active=0（★DELETE は絶対にしない）
