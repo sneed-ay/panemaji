@@ -120,6 +120,7 @@ async function openBrowser() {
   );
   browserPage = await browser.newPage();
   await browserPage.setUserAgent(UA);
+  await browserPage.setExtraHTTPHeaders({ 'Accept-Language': 'ja,en;q=0.9' });
 }
 async function fetchPageBrowser(url, retries = 2) {
   for (let i = 0; i < retries; i++) {
@@ -128,6 +129,11 @@ async function fetchPageBrowser(url, retries = 2) {
       if (!r) throw new Error('no response');
       if (r.status() === 404 || r.status() === 410) return null;
       if (r.status() >= 400) throw new Error(`HTTP ${r.status()}`);
+      // 🚨 domcontentloaded 直後だと本文が入っていないことがある。
+      //    men-esthe.jp は Cloudflare のチャレンジを挟むため、待たずに content() を取ると
+      //    セラピスト一覧が1件も入っておらず「取得0でスキップ」になっていた
+      //    (2026-09-07 判明。この源は 1,493 店が対象で 2026-05-20 から更新が止まっていた)。
+      await sleep(2500);
       return await browserPage.content();
     } catch (e) {
       if (i === retries - 1) return null;
@@ -238,17 +244,31 @@ const ADAPTERS = {
     parse(html) {
       const out = [];
       const seen = new Set();
-      const re = /<li therapist_id="(\d+)"[\s\S]{0,900}?class="th-name">([^<]+)</g;
-      let m;
-      while ((m = re.exec(html))) {
+      // 一覧は JS がページ内で組み立てる (therapistlist.php?id=..&more の JSON を fetch する)。
+      // その JSON を直接叩くと Cloudflare に 403 で弾かれるので、
+      // 組み立て終わった DOM をそのまま読む (fetchPageBrowser が 2.5 秒待つ)。
+      //
+      // 🚨 一覧には退店者も混ざる。JS が status==2 の項目にだけ
+      //    <div class="cond"><img ... alt="退店"> (cond-02.png) を付けるので、それで除外する。
+      //    除外しないと退店者を在籍として復活させ、一番多い苦情を自分で作ることになる。
+      const items = html.matchAll(/<li therapist_id="(\d+)"([\s\S]*?)<\/li>/g);
+      for (const m of items) {
         const id = m[1];
+        const body = m[2];
         if (seen.has(id)) continue;
         seen.add(id);
-        const name = cleanGirlName(m[2]);
+        if (body.includes('cond-02')) continue; // 退店バッジ付き
+        const nm = body.match(/class="th-name">([^<]+)</);
+        if (!nm) continue;
+        const name = cleanGirlName(nm[1]);
         if (!name) continue;
-        const ctx = html.slice(m.index, m.index + 900);
-        const im = ctx.match(/data-src="([^"]+\.(?:jpg|jpeg|png|webp))"/);
-        const img = im ? (im[1].startsWith('http') ? im[1] : `https://men-esthe.jp/${im[1].replace(/^\//, '')}`) : null;
+        const im = body.match(/data-src="([^"]+\.(?:jpg|jpeg|png|webp))"/);
+        const img =
+          im && !/common\/img\//.test(im[1])
+            ? im[1].startsWith('http')
+              ? im[1]
+              : `https://men-esthe.jp/${im[1].replace(/^\//, '')}`
+            : null;
         out.push({ name, imageUrl: img, sourceId: `menesthe_${id}` });
       }
       return out;

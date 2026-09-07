@@ -294,13 +294,20 @@ run_timeout 14400 node scripts/update-all.mjs $FORCE_FLAG $UPDATE_ALL_MODE >> "$
 #   fues.jp        214店 ÷ 7 ≒  31   (約2分)
 #   aromaesthe      83店 ÷ 7 ≒  12   (約1分)
 # 対象は「嬢の最終取得が古い順」なので、毎晩自然に巡回する。
-log "  [1-1b] 他ソース在籍更新 (駅ちか/風俗じゃぱん/ぴゅあらば/エステ図鑑/フーズ/アロマエステ)..."
+log "  [1-1b] 他ソース在籍更新 (駅ちか/風俗じゃぱん/ぴゅあらば/エステ図鑑/フーズ/アロマエステ/メンエス)..."
 run_timeout 5400 node scripts/refresh-source-girls.mjs --source rd     --limit 400 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh rd 失敗/タイムアウト"
 run_timeout 1800 node scripts/refresh-source-girls.mjs --source fuzoku --limit 200 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh fuzoku 失敗/タイムアウト"
 run_timeout 1200 node scripts/refresh-source-girls.mjs --source pl     --limit 150 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh pl 失敗/タイムアウト"
 run_timeout  900 node scripts/refresh-source-girls.mjs --source ez     --limit 100 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh ez 失敗/タイムアウト"
 run_timeout  600 node scripts/refresh-source-girls.mjs --source fues   --limit  50 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh fues 失敗/タイムアウト"
 run_timeout  600 node scripts/refresh-source-girls.mjs --source ar     --limit  20 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh ar 失敗/タイムアウト"
+# men-esthe.jp (active 1,493店) — 2026-05-20 から更新が止まっていた源。
+#   fetch では Cloudflare に 403 で弾かれるため「WAF で断念」と判断していたが、
+#   実ブラウザ (puppeteer) なら通る。ただし一覧は JS が組み立てるので
+#   domcontentloaded 直後に content() を取ると空になる (fetchPageBrowser が 2.5 秒待つ)。
+#   一覧には退店者も混ざるので、退店バッジ (cond-02) の付いた項目は除外している。
+#   ブラウザを使う分だけ遅いので件数は控えめにする (実測 1店あたり約10秒)。
+run_timeout 1800 node scripts/refresh-source-girls.mjs --source me     --limit  60 >> "$LOG_FILE" 2>&1 || log "  [warn] refresh me 失敗/タイムアウト"
 
 # 1-2: ソープ・ヘルス・ホテヘル・エステ（主要都道府県）— puppeteer 系
 # stall watchdog 経由で hang 自動回避

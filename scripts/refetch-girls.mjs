@@ -260,8 +260,13 @@ async function main() {
       }
 
       // DB書き込み
+      let sDeact = 0;
       if (allScraped.length > 0) {
         let sNew = 0, sUpd = 0, sImg = 0;
+        const seenRowIds = new Set();
+        const existingActive = db
+          .prepare('SELECT COUNT(*) c FROM girls WHERE shop_id = ? AND is_active = 1')
+          .get(shop.id).c;
         const tx = db.transaction(() => {
           for (const girl of allScraped) {
             const imageUrl = allImages[girl.sourceId] || null;
@@ -270,6 +275,7 @@ async function main() {
               const changed = ex.name !== girl.name || ex.age !== girl.age || ex.height !== girl.height;
               if (changed) updateGirl.run(girl.name, girl.age, girl.height, girl.bust, girl.cup, girl.waist, girl.hip, now, ex.id);
               else markSeen.run(now, ex.id);
+              seenRowIds.add(ex.id);
               if (imageUrl) { const r = updateGirlImage.run(imageUrl, girl.sourceId); if (r.changes > 0) sImg++; }
               sUpd++;
               continue;
@@ -278,12 +284,39 @@ async function main() {
             if (seed) {
               db.prepare('UPDATE girls SET source_id = ?, age = ?, height = ?, bust = ?, cup = ?, waist = ?, hip = ?, image_url = COALESCE(image_url, ?), is_active = 1, last_seen_at = ? WHERE id = ?')
                 .run(girl.sourceId, girl.age, girl.height, girl.bust, girl.cup, girl.waist, girl.hip, imageUrl, now, seed.id);
+              seenRowIds.add(seed.id);
               sUpd++;
               continue;
             }
-            insertGirl.run(girl.name, shop.id, girl.age, girl.height, girl.bust, girl.cup, girl.waist, girl.hip, imageUrl, girl.sourceId, now);
+            const ins = insertGirl.run(girl.name, shop.id, girl.age, girl.height, girl.bust, girl.cup, girl.waist, girl.hip, imageUrl, girl.sourceId, now);
+            seenRowIds.add(Number(ins.lastInsertRowid));
             sNew++;
             if (imageUrl) sImg++;
+          }
+
+          // 退店処理は --shop 指定のときだけ行う。
+          //
+          //   このスクリプトは元々「嬢0人の店を埋める」「100人上限で止まった店を取り直す」用で、
+          //   追加と更新しかしていなかった。そのため --shop で名指しの店を直そうとすると
+          //   新人が増えるだけで退店嬢が残り、「退店した嬢がそのまま」という
+          //   フィードバックそのものを悪化させる (2026-09-07 に萌えラブスクールで実際にそうなった)。
+          //
+          //   一方、夜間の一括実行 (1,000店超) で退店処理まで走らせるのは危険:
+          //   対象が「100人上限で止まった店」= まさにページを読み切れていない可能性がある店なので、
+          //   取り違えると実在の嬢を大量に消す。cityheaven の退店処理は update-all が担当しており、
+          //   巡回順を直した結果 全47県に順番が回るようになったのでそちらで足りる。
+          //
+          //   安全弁: 既存が3人以上いるのに3割も照合できない店は「取得が壊れている」とみなして見送る。
+          if (shopIds.length && seenRowIds.size > 0) {
+            const poorMatch = existingActive >= 3 && seenRowIds.size / existingActive < 0.34;
+            if (poorMatch) {
+              console.log(`    [warn] ${shop.name}: 既存 ${existingActive} 人中 ${seenRowIds.size} 人しか照合できず → 退店処理を見送り`);
+            } else {
+              const ph = [...seenRowIds].map(() => '?').join(',');
+              sDeact = db
+                .prepare(`UPDATE girls SET is_active = 0 WHERE shop_id = ? AND is_active = 1 AND id NOT IN (${ph})`)
+                .run(shop.id, ...seenRowIds).changes;
+            }
           }
         });
         tx();
@@ -293,7 +326,7 @@ async function main() {
       }
 
       if (totalProcessed % 50 === 0 || allScraped.length > 0) {
-        console.log(`  [${totalProcessed}/${shops.length}] ${shop.name}: ${allScraped.length}人取得 (新規${totalNew} 更新${totalUpdated})`);
+        console.log(`  [${totalProcessed}/${shops.length}] ${shop.name}: ${allScraped.length}人取得 (新規${totalNew} 更新${totalUpdated}${sDeact ? ` 退店${sDeact}` : ''})`);
       }
 
       // 進捗保存
