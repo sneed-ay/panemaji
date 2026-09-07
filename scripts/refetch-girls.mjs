@@ -126,13 +126,27 @@ async function main() {
   const minId = minIdArg ? parseInt(minIdArg.split('=')[1]) : 0;
   const maxId = maxIdArg ? parseInt(maxIdArg.split('=')[1]) : Infinity;
 
+  // --shop 1071,2320 … 特定の店だけ再取得する。
+  //   会員フィードバック (「退店した嬢が残っている」「新人が入っていない」) は
+  //   店を名指しで届く。夜間の全体巡回を待たずにその店だけ直せるようにしておく。
+  //   is_active も見ない (誤閉店から戻した直後の店を確認したいことがあるため)。
+  const shopArg = args.find((a) => a.startsWith('--shop='));
+  const shopIds = shopArg
+    ? shopArg.split('=')[1].split(',').map((x) => parseInt(x.trim(), 10)).filter(Number.isInteger)
+    : [];
+
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('busy_timeout = 10000');
 
   // 対象店舗を取得
   let query;
-  if (fetchAll) {
+  if (shopIds.length) {
+    query = `SELECT id, name, source_url FROM shops
+             WHERE id IN (${shopIds.map(() => '?').join(',')})
+               AND source_url LIKE '%cityheaven.net%'
+             ORDER BY id`;
+  } else if (fetchAll) {
     query = `SELECT id, name, source_url FROM shops
              WHERE is_active = 1 AND source_url LIKE '%cityheaven.net%'
              ORDER BY id`;
@@ -146,7 +160,7 @@ async function main() {
                )
              ORDER BY s.id`;
   }
-  let shops = db.prepare(query).all();
+  let shops = shopIds.length ? db.prepare(query).all(...shopIds) : db.prepare(query).all();
 
   // ID範囲フィルタ（並列実行用）
   if (minId > 0 || maxId < Infinity) {
@@ -165,7 +179,7 @@ async function main() {
   if (resumeId > 0) shops = shops.filter(s => s.id > resumeId);
 
   console.log(`=== 嬢データ再取得 ===`);
-  console.log(`対象: ${shops.length} 店舗 (${fetchAll ? '全店舗' : '嬢0人 + 100人上限'})`);
+  console.log(`対象: ${shops.length} 店舗 (${shopIds.length ? '--shop 指定' : fetchAll ? '全店舗' : '嬢0人 + 100人上限'})`);
   console.log('');
 
   const browser = await puppeteer.launch(withChromePath({
@@ -179,7 +193,17 @@ async function main() {
 
   const now = new Date().toISOString();
   const getGirlBySourceId = db.prepare('SELECT id, name, age, height, bust, cup, waist, hip FROM girls WHERE source_id = ?');
-  const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND shop_id = ? AND source_id IS NULL');
+  /**
+   * 🚨 口コミが付いている行は「名前一致」で再利用しない (2026-09-06)。
+   *
+   *   この経路は「source_id を持たない古い行」を新しく掲載元に出た同名の嬢に割り当てて
+   *   復活させる。行を再利用するので、その行に紐づく reviews もそのまま新しい嬢に付く。
+   *   同名は珍しくないので、別人の口コミを継承させてしまう。
+   *   (対象になりうる行は source_id NULL が 207,545 行、うち口コミ付きが 603 行 / 733 件)
+   *   → 口コミが付いている行は再利用せず、新しい行として INSERT する。
+   *     古い行は退店嬢として残り、口コミは書かれた本人に付いたままになる。
+   */
+  const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND shop_id = ? AND source_id IS NULL AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.girl_id = girls.id)');
   const insertGirl = db.prepare('INSERT INTO girls (name, shop_id, age, height, bust, cup, waist, hip, image_url, source_id, is_active, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)');
   const updateGirl = db.prepare('UPDATE girls SET name = ?, age = ?, height = ?, bust = ?, cup = ?, waist = ?, hip = ?, is_active = 1, last_seen_at = ? WHERE id = ?');
   const updateGirlImage = db.prepare("UPDATE girls SET image_url = ? WHERE source_id = ? AND (image_url IS NULL OR image_url = '')");

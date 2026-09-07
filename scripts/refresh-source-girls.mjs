@@ -22,6 +22,7 @@
  * 使い方:
  *   node scripts/refresh-source-girls.mjs --source rd     --limit 300
  *   node scripts/refresh-source-girls.mjs --source fuzoku --limit 300
+ *   node scripts/refresh-source-girls.mjs --source fuzoku --shop 7086,9640   # 名指しの店だけ
  *   node scripts/refresh-source-girls.mjs --source pl     --dry-run
  *
  * 安全設計 (update-all.mjs の実績ある作りに合わせる):
@@ -78,6 +79,13 @@ function parseArgs() {
     source: val('--source'),
     staleDays: Number(val('--stale-days') || 7),
     limit: Number(val('--limit') || 0),
+    // --shop 9640,861 … 特定の店だけ更新する。
+    //   会員フィードバックは店を名指しで届くので、夜間の全体巡回を待たずに直せるようにする。
+    //   鮮度フィルタ (staleDays) も is_active も無視する。
+    shops: (val('--shop') || '')
+      .split(',')
+      .map((x) => parseInt(x.trim(), 10))
+      .filter(Number.isInteger),
     dryRun: a.includes('--dry-run'),
   };
 }
@@ -373,7 +381,16 @@ db.pragma('busy_timeout = 30000');
 const threshold = new Date(Date.now() - opts.staleDays * 86400000).toISOString();
 
 // 対象: そのソースの active shop で、嬢が0人 または 嬢の最終取得が閾値より古い
-let sql = `
+let sql;
+let params;
+if (opts.shops.length) {
+  // 名指しされた店だけ。鮮度も is_active も見ない。
+  sql = `SELECT s.id, s.name, s.source_url FROM shops s
+          WHERE s.id IN (${opts.shops.map(() => '?').join(',')}) AND s.source_url LIKE ?
+          ORDER BY s.id`;
+  params = [...opts.shops, ad.match];
+} else {
+  sql = `
   SELECT s.id, s.name, s.source_url
   FROM shops s
   WHERE s.is_active = 1 AND s.source_url LIKE ?
@@ -382,15 +399,16 @@ let sql = `
       OR COALESCE((SELECT MAX(g2.last_seen_at) FROM girls g2 WHERE g2.shop_id = s.id AND g2.is_active = 1), '') < ?
     )
   ORDER BY COALESCE((SELECT MAX(g3.last_seen_at) FROM girls g3 WHERE g3.shop_id = s.id AND g3.is_active = 1), '') ASC`;
-const params = [ad.match, threshold];
-if (opts.limit > 0) { sql += ' LIMIT ?'; params.push(opts.limit); }
+  params = [ad.match, threshold];
+  if (opts.limit > 0) { sql += ' LIMIT ?'; params.push(opts.limit); }
+}
 const shops = db.prepare(sql).all(...params);
 
 if (ad.browser) await openBrowser();
 
 const totalShops = db.prepare('SELECT COUNT(*) c FROM shops WHERE is_active = 1 AND source_url LIKE ?').get(ad.match).c;
 console.log(`\n=== ${ad.label} 在籍更新 ===`);
-console.log(`  対象 ${shops.length} 店 / active ${totalShops} 店  (${opts.staleDays}日以上未更新${opts.limit ? ` / 上限${opts.limit}` : ''})${opts.dryRun ? '  [DRY-RUN]' : ''}`);
+console.log(`  対象 ${shops.length} 店 / active ${totalShops} 店  (${opts.shops.length ? '--shop 指定' : `${opts.staleDays}日以上未更新${opts.limit ? ` / 上限${opts.limit}` : ''}`})${opts.dryRun ? '  [DRY-RUN]' : ''}`);
 
 // その店の既存の嬢を一括で読み、JS 側で照合表を作る。
 //   DB に保存されている名前自体が汚れている場合がある (過去の cityheaven 取込由来で
@@ -409,7 +427,7 @@ const insertGirl = db.prepare('INSERT INTO girls (name, shop_id, image_url, sour
 //   ここで更新しても他ソースの店が巻き込まれて消えることはない。
 const markShopSeen = db.prepare('UPDATE shops SET last_seen_at = ? WHERE id = ?');
 
-let nShops = 0, nNew = 0, nSeen = 0, nDeact = 0, nSkip = 0, nImg = 0, nTrunc = 0, nPoor = 0, nForeign = 0;
+let nShops = 0, nNew = 0, nSeen = 0, nDeact = 0, nSkip = 0, nImg = 0, nTrunc = 0, nPoor = 0, nForeign = 0, nFail = 0;
 
 for (const shop of shops) {
   nShops++;
@@ -475,8 +493,14 @@ for (const shop of shops) {
         nSeen++;
       } else {
         if (g.sourceId) {
+          // idx_girls_source_id は source_id 全体に UNIQUE。既に誰かが持っていれば INSERT は必ず落ちる。
+          // 🚨 以前は「別店にある場合」しか弾いていなかったが、同じ店の行でも落ちる。
+          //    掲載元の一覧に同じ嬢が2回出ると、1回目で seenRowIds に入った行が
+          //    2回目に「二重割当を防ぐ」で row=null にされ、この INSERT 分岐に落ちてくる。
+          //    2026-09-07 の夜間バッチで実際に発生し、fuzoku の在籍更新が 75/200 で
+          //    プロセスごと死んで残り125店が失われた。
           const elsewhere = findSourceIdAnywhere.get(g.sourceId);
-          if (elsewhere && elsewhere.shop_id !== shop.id) { nForeign++; continue; }
+          if (elsewhere) { if (elsewhere.shop_id !== shop.id) nForeign++; continue; }
         }
         const r = insertGirl.run(g.name, shop.id, g.imageUrl, g.sourceId, now);
         seenRowIds.add(Number(r.lastInsertRowid));
@@ -508,7 +532,14 @@ for (const shop of shops) {
         .run(shop.id, ...seenRowIds).changes;
     }
   });
-  tx();
+  // 🚨 1店の失敗でプロセスごと死なせない。
+  //    トランザクションは巻き戻るのでその店だけ無傷でスキップされ、残りの店は処理が続く。
+  try {
+    tx();
+  } catch (e) {
+    nFail++;
+    console.log(`  [error] ${shop.name}: ${e.message.slice(0, 120)}`);
+  }
   if (truncated) nTrunc++;
 
   if (nShops % 25 === 0) {
@@ -517,6 +548,6 @@ for (const shop of shops) {
 }
 
 console.log(`\n  完了: ${nShops} 店`);
-console.log(`  新規 ${nNew} | 在籍確認 ${nSeen} | 退店 ${nDeact} | 画像補完 ${nImg} | 取得0でスキップ ${nSkip}`);
+console.log(`  新規 ${nNew} | 在籍確認 ${nSeen} | 退店 ${nDeact} | 画像補完 ${nImg} | 取得0でスキップ ${nSkip}${nFail ? ` | 失敗 ${nFail}` : ''}`);
 if (browser) { try { await browser.close(); } catch { /* 終了時のみ */ } }
 db.close();

@@ -577,7 +577,17 @@ async function scrapeGirls(db, page, prefCode, areas, opts = {}) {
   if (shops.length === 0) return { newGirls: 0, updatedGirls: 0, deactivated: 0, images: 0 };
 
   const getGirlBySourceId = db.prepare('SELECT id, name, age, height, bust, cup, waist, hip FROM girls WHERE source_id = ?');
-  const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND shop_id = ? AND source_id IS NULL');
+  /**
+ * 🚨 口コミが付いている行は「名前一致」で再利用しない (2026-09-06)。
+ *
+ *   この経路は「source_id を持たない古い行」を新しく掲載元に出た同名の嬢に割り当てて
+ *   復活させる。行を再利用するので、その行に紐づく reviews もそのまま新しい嬢に付く。
+ *   同名は珍しくないので、別人の口コミを継承させてしまう。
+ *   (対象になりうる行は source_id NULL が 207,545 行、うち口コミ付きが 603 行 / 733 件)
+ *   → 口コミが付いている行は再利用せず、新しい行として INSERT する。
+ *     古い行は退店嬢として残り、口コミは書かれた本人に付いたままになる。
+ */
+const getGirlByNameShop = db.prepare('SELECT id FROM girls WHERE name = ? AND shop_id = ? AND source_id IS NULL AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.girl_id = girls.id)');
   const insertGirl = db.prepare(
     'INSERT INTO girls (name, shop_id, age, height, bust, cup, waist, hip, image_url, source_id, is_active, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
   );
