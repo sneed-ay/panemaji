@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getMe } from '@/lib/client-fetch';
+import { trackEvent } from '@/lib/analytics';
 
 type Props = {
   girlId: number;
@@ -43,6 +44,11 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
   useEffect(() => {
     getMe().then((d) => setIsMember(!!d?.user));
   }, []);
+
+  // 未会員に登録誘導を出したら記録 (src/lib/analytics.ts)
+  useEffect(() => {
+    if (isMember === false) trackEvent('gate_view_vote');
+  }, [isMember]);
 
   const handleVote = useCallback(async (rating: string) => {
     if (submitting) return;
@@ -119,11 +125,16 @@ export default function OneTabVote({ girlId, alreadyVoted, onSuccess }: Props) {
         </p>
         <a
           href={`/signup?next=${next}`}
+          onClick={() => trackEvent('gate_click_signup', { gate: 'vote' })}
           className="block w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg no-underline transition-colors"
         >
           無料で会員登録 (30秒)
         </a>
-        <a href={`/login?next=${next}`} className="block text-xs text-pink-600 hover:underline">
+        <a
+          href={`/login?next=${next}`}
+          onClick={() => trackEvent('gate_click_login', { gate: 'vote' })}
+          className="block text-xs text-pink-600 hover:underline"
+        >
           既に会員の方はログイン
         </a>
       </div>

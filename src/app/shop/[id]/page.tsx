@@ -8,6 +8,7 @@ import FeedbackButton from '@/components/FeedbackButton';
 import AdBanner from '@/components/AdBanner';
 import RelatedGuides from '@/components/RelatedGuides';
 import RelatedAreas from '@/components/RelatedAreas';
+import TrackedLink from '@/components/TrackedLink';
 import { generateAlternateNames } from '@/lib/altNames';
 import type { Metadata } from 'next';
 import { latestContentDate } from '@/lib/content-date';
@@ -338,9 +339,14 @@ export default function ShopPage({ params, searchParams }: { params: { id: strin
           </div>
           {bakusaiComments.length > 5 && (
             <div className="mt-4 pt-3 border-t border-gray-100 text-center">
-              <a href={`/signup?next=/shop/${shopId}`} className="inline-block text-sm text-pink-600 font-medium hover:underline">
+              <TrackedLink
+                href={`/signup?next=/shop/${shopId}`}
+                event="gate_click_signup"
+                params={{ gate: 'shop_bakusai' }}
+                className="inline-block text-sm text-pink-600 font-medium hover:underline"
+              >
                 残り{bakusaiComments.length - 5}件の掲示板の声を見る（無料会員登録）→
-              </a>
+              </TrackedLink>
             </div>
           )}
         </div>

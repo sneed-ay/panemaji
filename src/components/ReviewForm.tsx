@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getMe } from '@/lib/client-fetch';
+import { trackEvent } from '@/lib/analytics';
 
 type Props = {
   girlId: number;
@@ -34,6 +35,11 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
     getMe().then(d => setIsMember(!!d?.user));
   }, [girlId]);
 
+  // 未会員に登録誘導を出したら記録 (src/lib/analytics.ts)
+  useEffect(() => {
+    if (isMember === false && !alreadyReviewed) trackEvent('gate_view_review');
+  }, [isMember, alreadyReviewed]);
+
   if (alreadyReviewed) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-500">
@@ -64,11 +70,16 @@ export default function ReviewForm({ girlId, girlName, onSuccess }: Props) {
         </p>
         <a
           href={`/signup?next=${next}`}
+          onClick={() => trackEvent('gate_click_signup', { gate: 'review' })}
           className="block w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg no-underline transition-colors"
         >
           無料で会員登録して投稿 (30秒)
         </a>
-        <a href={`/login?next=${next}`} className="block text-xs text-pink-600 hover:underline">
+        <a
+          href={`/login?next=${next}`}
+          onClick={() => trackEvent('gate_click_login', { gate: 'review' })}
+          className="block text-xs text-pink-600 hover:underline"
+        >
           既に会員の方はログイン
         </a>
       </div>

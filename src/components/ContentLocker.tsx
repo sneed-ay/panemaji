@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { getMe } from '@/lib/client-fetch';
+import { trackEvent } from '@/lib/analytics';
 
 /**
  * 口コミ閲覧ゲート。
  * 2026-05-31: 「短い広告を見る」方式を廃止し、無料会員登録(ログイン)のみで閲覧可能にする方針へ変更。
  * - 会員(ログイン中) or 口コミ0件 → そのまま表示
  * - 未会員 → 会員登録/ログイン誘導 (広告ゲートは廃止)
+ * 2026-09-13: ロックの表示と誘導のクリックを GA に送る (イベント名は src/lib/analytics.ts)。
  */
 
 interface ContentLockerProps {
@@ -51,6 +53,13 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
     });
   }, []);
 
+  // ロックが実際に出たときだけ記録する (口コミ0件ならロックは出ない)
+  useEffect(() => {
+    if (reviewCount > 0 && gate !== 'open') {
+      trackEvent(gate === 'guest' ? 'gate_view_locker' : 'gate_view_locker_stale');
+    }
+  }, [gate, reviewCount]);
+
   // 口コミ0件 or open → そのまま表示
   if (reviewCount === 0 || gate === 'open') {
     return <>{children}</>;
@@ -82,12 +91,17 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
               </p>
               <a
                 href={`/signup?next=${encodeURIComponent(currentPath)}`}
+                onClick={() => trackEvent('gate_click_signup', { gate: 'locker' })}
                 className="block w-full mb-2 py-3 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg transition-colors no-underline"
               >
                 ✨ 無料会員登録（30秒）
               </a>
               <p className="text-[10px] text-gray-400 mb-3">メアド + パスワードだけ・メアド認証なし</p>
-              <a href={`/login?next=${encodeURIComponent(currentPath)}`} className="block text-xs text-pink-600 hover:underline">
+              <a
+                href={`/login?next=${encodeURIComponent(currentPath)}`}
+                onClick={() => trackEvent('gate_click_login', { gate: 'locker' })}
+                className="block text-xs text-pink-600 hover:underline"
+              >
                 既に会員の方はログイン
               </a>
             </>
@@ -98,7 +112,10 @@ export default function ContentLocker({ children, reviewCount }: ContentLockerPr
                 直近1ヶ月の口コミ投稿がありません。どの嬢でも評価（パネル通り/盛りすぎ 等）を1件入れると、サイト全体の口コミがまた見放題になります（毎月1件でOK）。
               </p>
               <button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                onClick={() => {
+                  trackEvent('gate_click_vote', { gate: 'locker_stale' });
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className="block w-full mb-1 py-3 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg transition-colors"
               >
                 ⬆ このページ上部の「評価」から入れる

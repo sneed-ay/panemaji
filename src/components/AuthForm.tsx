@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { trackEvent } from '@/lib/analytics';
 
 interface Props {
   mode: 'login' | 'signup';
@@ -30,6 +31,12 @@ export default function AuthForm({ mode }: Props) {
     setError(null);
     setEmailTaken(false);
     setLoading(true);
+    // 2026-09-13: 送信 → 成功/失敗 を GA に送る。
+    //   8/16〜9/4 はサイトが遅く、登録ボタンを押しても完了しない人が大量にいたが気付けなかった。
+    //   auth_submit に対して sign_up / auth_error が返ってこない分 = 待ちきれずに離脱した人。
+    //   elapsed_ms で API の応答の遅さも見える。
+    const startedAt = Date.now();
+    trackEvent('auth_submit', { mode });
     try {
       const url = isSignup ? '/api/auth/register' : '/api/auth/login';
       const r = await fetch(url, {
@@ -48,14 +55,25 @@ export default function AuthForm({ mode }: Props) {
           : data.error === 'invalid_password' ? 'パスワードは8文字以上にしてください'
           : data.error === 'rate_limit' ? '試行回数が多すぎます。少し時間を空けて再度お試しください'
           : data.message || `エラー (${r.status})`;
+        trackEvent('auth_error', {
+          mode,
+          code: typeof data.error === 'string' ? data.error : `http_${r.status}`,
+          elapsed_ms: Date.now() - startedAt,
+        });
         setError(msg);
         return;
       }
       // 成功 → リダイレクト先 (?next=) があれば優先、なければ /mypage
       const params = new URLSearchParams(window.location.search);
       const next = params.get('next');
+      trackEvent(isSignup ? 'sign_up' : 'login', {
+        method: 'email',
+        elapsed_ms: Date.now() - startedAt,
+        ...(isSignup ? { ad_opt_in: adOptIn } : {}),
+      });
       window.location.href = next || '/mypage';
     } catch {
+      trackEvent('auth_error', { mode, code: 'network', elapsed_ms: Date.now() - startedAt });
       setError('通信エラー');
     } finally {
       setLoading(false);
