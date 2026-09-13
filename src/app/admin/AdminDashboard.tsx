@@ -76,6 +76,62 @@ function jstShort(s: string | null | undefined): string {
   return full === '—' ? full : full.replace(/^\d{4}\//, '');
 }
 
+interface DailySignup {
+  date: string; // 日本時間の YYYY-MM-DD
+  count: number;
+}
+
+const DOW = '日月火水木金土';
+
+/**
+ * 日別の新規登録 (日本時間)。直近14日の棒と、7日合計の前週比。
+ * 2026-09-13: 8月中旬〜9月初に登録が3割減っていたのに、ここに推移が無く気付けなかったため追加。
+ */
+function SignupTrend({ daily }: { daily: DailySignup[] }) {
+  // 末尾は今日 (途中)。今日を入れると常に少なく見えるので、7日合計は昨日までで比べる
+  const done = daily.slice(0, -1);
+  const last7 = done.slice(-7).reduce((a, d) => a + d.count, 0);
+  const prev7 = done.slice(-14, -7).reduce((a, d) => a + d.count, 0);
+  const diff = prev7 > 0 ? Math.round(((last7 - prev7) / prev7) * 100) : null;
+  const recent = daily.slice(-14).reverse(); // 新しい日が上
+  const max = Math.max(1, ...recent.map((d) => d.count));
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-3 mb-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 mb-2">
+        <h2 className="text-sm font-bold text-gray-700">新規登録（日本時間）</h2>
+        <div className="text-xs text-gray-500">
+          昨日までの7日 <span className="font-bold text-gray-800">{last7}</span>人
+          {diff !== null && (
+            <span className={diff >= 0 ? 'text-green-600' : 'text-red-600'}>
+              （前の7日比 {diff >= 0 ? '+' : ''}{diff}%）
+            </span>
+          )}
+        </div>
+      </div>
+      <ul className="space-y-1">
+        {recent.map((d, i) => {
+          const dow = DOW[new Date(`${d.date}T00:00:00Z`).getUTCDay()];
+          return (
+            <li key={d.date} className="flex items-center gap-2 text-xs">
+              <span className="w-20 shrink-0 text-gray-500 tabular-nums">
+                {d.date.slice(5).replace('-', '/')}({dow}){i === 0 ? ' 途中' : ''}
+              </span>
+              <span className="flex-1 bg-gray-100 rounded h-3 overflow-hidden">
+                <span
+                  className={`block h-3 rounded ${i === 0 ? 'bg-pink-300' : 'bg-pink-500'}`}
+                  style={{ width: `${(d.count / max) * 100}%` }}
+                />
+              </span>
+              <span className="w-8 text-right tabular-nums text-gray-800">{d.count}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [state, setState] = useState<'loading' | 'forbidden' | 'ok'>('loading');
   const [tab, setTab] = useState<'members' | 'feedback'>('members');
@@ -84,6 +140,7 @@ export default function AdminDashboard() {
   const [query, setQuery] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
   const [totals, setTotals] = useState<Totals | null>(null);
+  const [daily, setDaily] = useState<DailySignup[] | null>(null);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [openCount, setOpenCount] = useState(0);
   const [onlyOpen, setOnlyOpen] = useState(true);
@@ -99,6 +156,7 @@ export default function AdminDashboard() {
       setMembers((prev) => (offset === 0 ? list : [...prev, ...list]));
       setMatched(d.matched || 0);
       if (d.totals) setTotals(d.totals as Totals);
+      if (Array.isArray(d.daily_signups)) setDaily(d.daily_signups as DailySignup[]);
     } catch { /* noop */ }
   }, []);
 
@@ -177,6 +235,8 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
+
+        {daily && daily.length >= 15 && <SignupTrend daily={daily} />}
 
         {/* タブ (スマホでは横幅いっぱいに) */}
         <div className="flex gap-1 mb-3 bg-white rounded-lg p-1 border border-gray-200">

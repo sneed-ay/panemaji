@@ -62,5 +62,27 @@ export async function GET(req: NextRequest) {
     favorites: (db.prepare('SELECT COUNT(*) c FROM favorites').get() as { c: number }).c,
   };
 
-  return NextResponse.json({ members, totals, matched, limit, offset }, { headers: NO_STORE });
+  // 日別の新規登録 (日本時間・直近60日、末尾が今日)。管理画面の初回表示でだけ返す。
+  // 2026-09-13: 推移を見るには全会員を500件ずつ取得して手元で集計するしかなかったため追加。
+  //   created_at は datetime('now') = UTC なので、+9時間してから日付にする。
+  let daily_signups: { date: string; count: number }[] | undefined;
+  if (offset === 0 && !q) {
+    const rows = db
+      .prepare(
+        `SELECT date(created_at, '+9 hours') AS d, COUNT(*) AS c
+           FROM users
+          WHERE created_at >= datetime('now', '-61 days')
+          GROUP BY d`
+      )
+      .all() as { d: string; c: number }[];
+    const byDate = new Map(rows.map((r) => [r.d, r.c]));
+    const nowJst = Date.now() + 9 * 3600 * 1000;
+    daily_signups = [];
+    for (let i = 59; i >= 0; i--) {
+      const date = new Date(nowJst - i * 86400 * 1000).toISOString().slice(0, 10);
+      daily_signups.push({ date, count: byDate.get(date) ?? 0 });
+    }
+  }
+
+  return NextResponse.json({ members, totals, matched, limit, offset, daily_signups }, { headers: NO_STORE });
 }
