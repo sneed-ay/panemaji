@@ -171,7 +171,11 @@ const nextConfig = {
       //    public キャッシュされ (Vary: Cookie も無いため) ログアウト状態の
       //    {user:null} がブラウザ/CDN にキャッシュ汚染され、会員ログインが
       //    永久に成立しなくなる (login → /mypage → /api/me=cached null → /login ループ)。
-      source: '/((?!api/).*)',
+      // 🚨 /_next/ も除外する。同じヘッダーは後ろのルールが勝つので、除外しないと
+      //    上の /_next/static の「1年 immutable」がここで max-age=60 に上書きされる
+      //    (2026-09-13 本番で JS チャンクが max-age=60 になっていたのを確認)。
+      //    /_next/image も Next 自身の Cache-Control (minimumCacheTTL) に任せる。
+      source: '/((?!api/|_next/).*)',
       headers: [
         { key: 'Cache-Control', value: 'public, max-age=60, stale-while-revalidate=3600' },
       ],

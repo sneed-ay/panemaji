@@ -157,11 +157,11 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
-      // OG image は同 query で同 image なので長期キャッシュ可能
-      // - browser cache: 1日 / CDN: 7日 / 古くてもまず stale で配信
-      headers: {
-        'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000',
-      },
+      // Cache-Control は ImageResponse の既定 (public, immutable, no-transform, max-age=31536000) に任せる。
+      // 同じ query なら同じ画像なので長期キャッシュで問題ない。
+      // 2026-09-13: ここで独自の Cache-Control を渡すと既定値に「追記」され、本番で
+      //   `public, immutable, no-transform, max-age=31536000, public, max-age=86400, ...` と
+      //   max-age が2つ並ぶ矛盾したヘッダーになっていた (キャッシュ側で解釈が割れる)。
     },
   );
 }
