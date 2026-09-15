@@ -242,7 +242,8 @@ export default function GirlPage({ params }: { params: { id: string } }) {
                 <p className="text-gray-500 mt-1 text-xs">
                   {girl.area_name}
                 </p>
-              {girl.twitter_url && (
+              {/* 不正に書き込まれたリンクを出さないよう、x.com / twitter.com のアカウント URL だけ表示する */}
+              {girl.twitter_url && /^https:\/\/(x|twitter)\.com\/[A-Za-z0-9_]{1,15}$/.test(girl.twitter_url) && (
                 <a
                   href={girl.twitter_url}
                   target="_blank"
