@@ -137,11 +137,6 @@ export function prefectureSlugToName(slug: string): string {
   return PREFECTURE_MAP[slug]?.name || '東京';
 }
 
-export function prefectureNameToSlug(name: string): string {
-  const entry = Object.entries(PREFECTURE_MAP).find(([, v]) => v.name === name);
-  return entry ? entry[0] : 'tokyo';
-}
-
 // Areas
 export function getAllAreas(): Area[] {
   return db.prepare('SELECT * FROM areas ORDER BY id').all() as Area[];
@@ -509,32 +504,6 @@ export function addReview(girlId: number, panelRating: string, comment: string |
   ).run(girlId, now, panelRating, comment, browserId, userId);
 }
 
-// Update review comment (add comment after voting)
-export function updateReviewComment(girlId: number, browserId: string, comment: string) {
-  return db.prepare(
-    'UPDATE reviews SET comment = ? WHERE girl_id = ? AND browser_id = ?'
-  ).run(comment, girlId, browserId);
-}
-
-// Get other girls in the same shop (for post-vote recommendations)
-// Prioritizes girls with fewer reviews, excludes the current girl
-export function getOtherGirlsInShop(shopId: number, excludeGirlId: number, limit: number = 3): Girl[] {
-  return db.prepare(`
-    SELECT g.*, s.name as shop_name, ${GIRL_STATS_COLS_SUB}
-    FROM girls g
-    JOIN shops s ON g.shop_id = s.id
-    WHERE g.shop_id = ? AND g.id != ? AND g.is_active = 1
-    ORDER BY ${GIRL_REVIEW_COUNT} ASC, g.name
-    LIMIT ?
-  `).all(shopId, excludeGirlId, limit) as Girl[];
-}
-
-// Update girl's twitter URL (only if not already set, or allow override)
-export function updateGirlTwitter(girlId: number, twitterUrl: string) {
-  // Always update with latest submission (newest wins)
-  db.prepare('UPDATE girls SET twitter_url = ? WHERE id = ?').run(twitterUrl, girlId);
-}
-
 // Stats (only active) - single query instead of 3
 // プロセス起動時 1 回だけ計算して memo (DB 内容は deploy 単位で 固定なので 安全)
 let _statsMemo: { shopCount: number; girlCount: number; reviewCount: number } | null = null;
@@ -628,14 +597,6 @@ const GIRL_QUALITY_FILTER = `
     OR EXISTS (SELECT 1 FROM reviews r WHERE r.girl_id=girls.id)
   )`;
 
-export function getAllShopIds(): { id: number; last_seen_at: string | null }[] {
-  return db.prepare(`SELECT id, last_seen_at FROM shops WHERE is_active = 1 ${SHOP_QUALITY_FILTER} ORDER BY id`).all() as { id: number; last_seen_at: string | null }[];
-}
-
-export function getGirlIdsPaginated(offset: number, limit: number): { id: number; last_seen_at: string | null }[] {
-  return db.prepare(`SELECT id, last_seen_at FROM girls WHERE is_active = 1 ${GIRL_QUALITY_FILTER} ORDER BY id LIMIT ? OFFSET ?`).all(limit, offset) as { id: number; last_seen_at: string | null }[];
-}
-
 // メモリ効率版: 50k 行を全部 array で持たずに iterator で逐次返す
 // (Render Starter 512MB sitemap 用 + GSC 質シグナル向上)
 export function iterateAllShopIds(): IterableIterator<{ id: number; last_seen_at: string | null }> {
@@ -690,10 +651,6 @@ export function getPrefectureLastModMap(): Map<string, string | null> {
   const map = new Map<string, string | null>();
   for (const r of rows) map.set(r.p, r.m);
   return map;
-}
-
-export function getActiveGirlCount(): number {
-  return (db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active = 1').get() as { c: number }).c;
 }
 
 export function getPrefectureSlugs(): string[] {
@@ -751,19 +708,6 @@ export function getTopRealShops(prefectureSlug: string, limit: number = 20): Sho
   `).all(prefectureSlug, limit) as Shop[]);
 }
 
-// Shops with many girls but few reviews (review-seeking shops)
-export function getShopsSeekingReviews(prefectureSlug: string, limit: number = 10): Shop[] {
-  return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
-    FROM shops s
-    JOIN areas a ON s.area_id = a.id
-    ${SHOP_STATS_JOIN}
-    WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(gc.girl_count, 0) >= 5 AND COALESCE(rc.review_count, 0) < 5
-    ORDER BY gc.girl_count DESC
-    LIMIT ?
-  `).all(prefectureSlug, limit) as Shop[];
-}
-
 // Check if a prefecture slug is valid
 export function isValidPrefecture(slug: string): boolean {
   return slug in PREFECTURE_MAP;
@@ -802,33 +746,6 @@ export function getOtherGirlsInShopExpanded(shopId: number, excludeGirlId: numbe
 export function getShopAreaId(shopId: number): number | undefined {
   const row = db.prepare('SELECT area_id FROM shops WHERE id = ?').get(shopId) as { area_id: number } | undefined;
   return row?.area_id;
-}
-
-// Recently reviewed girls (for top page)
-// 画像あり girl のみ表示 (UX: TOP ページの最近の口コミ枠の見栄え向上 / placeholder 撲滅)
-export function getRecentlyReviewedGirls(limit = 8, prefectureSlug?: string) {
-  const prefClause = prefectureSlug ? 'AND a.prefecture = ?' : '';
-  const args: (string | number)[] = prefectureSlug ? [prefectureSlug, limit] : [limit];
-  return db.prepare(`
-    SELECT
-      g.id, g.name, g.image_url,
-      s.name as shop_name,
-      a.name as area_name,
-      r.panel_rating,
-      r.created_at as review_date,
-      ${GIRL_STATS_COLS}
-    FROM reviews r
-    JOIN girls g ON r.girl_id = g.id
-    JOIN shops s ON g.shop_id = s.id
-    JOIN areas a ON s.area_id = a.id
-    ${GIRL_STATS_JOIN}
-    WHERE g.is_active = 1 AND s.is_active = 1
-      AND g.image_url IS NOT NULL AND g.image_url != ''
-      ${prefClause}
-    GROUP BY g.id
-    ORDER BY MAX(r.created_at) DESC
-    LIMIT ?
-  `).all(...args) as (Girl & { shop_name: string; area_name: string; panel_rating: string; review_date: string })[];
 }
 
 // Popular girls in area for area page (no exclusion)
@@ -891,31 +808,6 @@ export function getRecentlyAddedShops(limit = 6, prefectureSlug?: string): Shop[
   `).all(limit) as Shop[]);
 }
 
-// Top shops by real_pct for any prefecture or nationwide
-export function getTopShopsForPrefecture(prefectureSlug: string | null, limit = 5): Shop[] {
-  if (!prefectureSlug) {
-    // Nationwide
-    return db.prepare(`
-      SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
-      FROM shops s
-      JOIN areas a ON s.area_id = a.id
-      ${SHOP_STATS_JOIN}
-      WHERE s.is_active = 1 AND COALESCE(rc.review_count, 0) >= 5
-      ORDER BY real_pct DESC, rc.review_count DESC
-      LIMIT ?
-    `).all(limit) as Shop[];
-  }
-  return db.prepare(`
-    SELECT s.*, a.name as area_name, a.slug as area_slug, ${SHOP_STATS_COLS}
-    FROM shops s
-    JOIN areas a ON s.area_id = a.id
-    ${SHOP_STATS_JOIN}
-    WHERE s.is_active = 1 AND a.prefecture = ? AND COALESCE(rc.review_count, 0) >= 5
-    ORDER BY real_pct DESC, rc.review_count DESC
-    LIMIT ?
-  `).all(prefectureSlug, limit) as Shop[];
-}
-
 // --- Shop Comments (BBS) ---
 
 export function getShopComments(shopId: number, limit: number = 20): ShopComment[] {
@@ -925,17 +817,6 @@ export function getShopComments(shopId: number, limit: number = 20): ShopComment
     ORDER BY created_at ASC
     LIMIT ?
   `).all(shopId, limit) as ShopComment[];
-}
-
-export function addShopComment(shopId: number, comment: string, browserId: string | null): ShopComment {
-  const result = db.prepare(
-    'INSERT INTO shop_comments (shop_id, comment, browser_id) VALUES (?, ?, ?)'
-  ).run(shopId, comment, browserId);
-  return db.prepare('SELECT * FROM shop_comments WHERE id = ?').get(result.lastInsertRowid) as ShopComment;
-}
-
-export function getShopCommentCount(shopId: number): number {
-  return (db.prepare('SELECT COUNT(*) as c FROM shop_comments WHERE shop_id = ?').get(shopId) as { c: number }).c;
 }
 
 // ext-bakusai 由来の掲示板コメント件数 (店舗ページの「掲示板の声」用)
@@ -982,13 +863,6 @@ export function getShopsByBakusaiComments(opts: { areaId?: number; prefectureSlu
     ORDER BY bc.bakusai_count DESC, real_pct DESC
     LIMIT ?
   `).all(arg, limit) as (Shop & { bakusai_count: number })[];
-}
-
-export function getLastShopCommentTime(shopId: number, browserId: string): string | null {
-  const row = db.prepare(
-    'SELECT created_at FROM shop_comments WHERE shop_id = ? AND browser_id = ? ORDER BY created_at DESC LIMIT 1'
-  ).get(shopId, browserId) as { created_at: string } | undefined;
-  return row?.created_at || null;
 }
 
 // --- Shop Article Queries ---

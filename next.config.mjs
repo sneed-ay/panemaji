@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['better-sqlite3', 'twitter-api-v2'],
+    serverComponentsExternalPackages: ['better-sqlite3'],
     // src/instrumentation.ts (memory-watchdog 起動) を有効化
     instrumentationHook: true,
   },

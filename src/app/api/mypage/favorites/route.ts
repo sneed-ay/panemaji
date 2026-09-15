@@ -14,7 +14,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'login_required' }, { status: 401, headers: NO_STORE });
   const rows = db.prepare(`
-    SELECT g.id AS girl_id, g.name AS girl_name, g.image_url AS girl_image_url,
+    SELECT g.id AS girl_id, g.name AS girl_name,
            s.id AS shop_id, s.name AS shop_name,
            a.name AS area_name,
            f.created_at AS favorited_at

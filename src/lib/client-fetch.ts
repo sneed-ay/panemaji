@@ -45,12 +45,6 @@ export function sharedGet<T>(url: string, ttlMs: number = DEFAULT_TTL_MS): Promi
   return promise;
 }
 
-/** 認証状態を変えたあとなど、明示的に捨てたいとき。 */
-export function invalidateShared(url?: string): void {
-  if (url) cache.delete(url);
-  else cache.clear();
-}
-
 /** GET /api/me のレスポンス (src/app/api/me/route.ts と対応) */
 export interface MeResponse {
   user: { id: number; email: string; is_admin?: boolean } | null;

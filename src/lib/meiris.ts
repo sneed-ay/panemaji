@@ -106,11 +106,6 @@ async function post(body: unknown): Promise<MeirisOutcome> {
   }
 }
 
-/** 1件登録 */
-export function sendContact(contact: MeirisContact): Promise<MeirisOutcome> {
-  return post(toPayload(contact));
-}
-
 /** まとめて登録。呼び出し側で MEIRIS_MAX_BATCH 以下に分割しておくこと。 */
 export function sendContacts(contacts: MeirisContact[]): Promise<MeirisOutcome> {
   return post({ contacts: contacts.map(toPayload) });

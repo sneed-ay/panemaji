@@ -50,44 +50,11 @@ export const AD_CONFIG = {
     defaultFloor: 'videoa',
   },
 
-  // adstir SSP広告 — 2026-05-09 撤去: CPM がゴミカス低 (¥2.71) で収益貢献ゼロ。
-  // 比率は note + FANZA に再配分。 設定は残置するが enabled: false で完全停止。
-  adstir: {
-    enabled: false,
-    appId: 'MEDIA-da9880ba',
-    spot: 1,
-    scriptUrl: 'https://js.ad-stir.com/js/adstir.js',
-  },
-
   // Adsterra（Social Barのみ。Popunderは現代ブラウザで機能しないため廃止）
   adsterra: {
     enabled: true,
     socialBarZoneId: '29042260',
   },
-
-  // AdMaven コンテンツロッカー（CPM）
-  adMaven: {
-    enabled: true,
-    scriptUrl: '//dcbbwymp1bhlf.cloudfront.net/?wbbcd=1253022',
-  },
-
-  // CPALead コンテンツロッカー（CPA/CPC）- 登録後にappId設定
-  cpaLead: {
-    enabled: false, // appId取得後にtrueに変更
-    appId: '',      // アプリID
-    subId: 'panemaji_locker', // トラッキング用サブID
-  },
-
-  // fam.（オーバーレイ広告）- 審査通過後に設定
-  fam: {
-    enabled: false,
-    zoneId: '',
-  },
-
-  // 旧外部ネットワークは全て無効
-  ninjaAdmax: { enabled: false, zoneId: '229417' },
-  exoclick: { enabled: false, zoneId: '5884574', scriptUrl: 'https://a.magsrv.com/ad-provider.js' },
-  juicyads: { enabled: false, zoneId: '1114086', scriptUrl: 'https://poweredby.jads.co/js/jads.js' },
 
   // バナー配信比率
   // 2026-04-23: adstir CPM ¥2.71 で低迷 → FANZA 比重 up
@@ -108,10 +75,6 @@ export const AD_CONFIG = {
   merokanoRatio: 0,
   fanzaRatio: 1,
   parallyRatio: 0,
-  adstirRatio: 0,
-  ninjaRatio: 0,
-  exoclickRatio: 0,
-  juicyadsRatio: 0,
 };
 
 /** Build the full ad link with UTM parameters (めろカノ) */

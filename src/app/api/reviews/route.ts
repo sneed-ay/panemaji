@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { girl_id, panel_rating, comment, twitter_url, browser_id } = body;
+    const { girl_id, panel_rating, comment, browser_id } = body;
 
     if (!girl_id || !panel_rating || !browser_id) {
       return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
@@ -121,15 +121,6 @@ export async function POST(request: NextRequest) {
     // 会員投稿として記録 (user_id 付与)
     addReview(girl_id, panel_rating, comment || null, browser_id, currentUser.id);
 
-    // Save twitter URL if provided
-    if (twitter_url) {
-      const cleanHandle = twitter_url.replace(/^@/, '').replace(/^https?:\/\/(twitter\.com|x\.com)\//, '').trim();
-      if (cleanHandle && /^[a-zA-Z0-9_]{1,15}$/.test(cleanHandle)) {
-        const { updateGirlTwitter } = await import('@/lib/queries');
-        updateGirlTwitter(girl_id, `https://x.com/${cleanHandle}`);
-      }
-    }
-
     // Revalidate related pages after review submission
     revalidatePath(`/girl/${girl_id}`);
     const girl = getGirlById(girl_id);
@@ -139,7 +130,7 @@ export async function POST(request: NextRequest) {
     revalidatePath('/'); // Latest reviews on homepage
 
     // X (Twitter) 投稿は廃止: 旧 @aichan_ura_ai アカウントは停止 + 運用しないため。
-    // girls.twitter_url フィールドは引き続き保存・表示用に存在 (上記 line 33 で記録)。
+    // girls.twitter_url は嬢ページの表示用に残している (口コミ投稿からの更新は 2026-09-16 に廃止)。
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (err) {
