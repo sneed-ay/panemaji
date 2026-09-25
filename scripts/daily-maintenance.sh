@@ -624,6 +624,15 @@ if [ -e .git ]; then
   fi
 fi
 
+# IndexNow: まだ知らせていない URL を Bing 等に1日1万件まで知らせる (2026-09-25)。
+#   URL は本番サイトマップから拾う (手元DBと本番では嬢の id が違う)。失敗してもメンテ全体は止めない。
+#   ~/panemaji-data/.indexnow-hold があれば送らない (本番の id が変わる作業の前後で止めるため)。
+if [ -f "$HOME/panemaji-data/.indexnow-hold" ]; then
+  log "  [indexnow] 一時停止中 (~/panemaji-data/.indexnow-hold)"
+else
+  timeout 900 node scripts/indexnow-submit.mjs --max 10000 2>&1 | tail -3 | while read -r l; do log "  $l"; done || log "  [warn] indexnow 失敗"
+fi
+
 log ""
 log "=========================================="
 log "  日次メンテナンス完了"
