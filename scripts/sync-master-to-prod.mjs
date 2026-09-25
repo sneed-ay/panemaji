@@ -26,7 +26,6 @@
  * exit:  0=成功 / 1=引数不足 / 2=master異常でABORT / 3=会員データ減少を検知(要調査)
  */
 import Database from 'better-sqlite3';
-import { registerNormalizeUdf } from './lib/normalize-shop-name.mjs';
 
 const PROD = process.argv[2];
 const MASTER = process.argv[3];
@@ -36,7 +35,6 @@ if (!PROD || !MASTER) {
 }
 
 const db = new Database(PROD);                          // 本番 (read-write)
-registerNormalizeUdf(db);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = OFF');
 const mdb = new Database(MASTER, { readonly: true });   // master (read-only / 別コネクション)
@@ -137,14 +135,21 @@ db.pragma('wal_checkpoint(TRUNCATE)');
   const findGirlByIdName = db.prepare("SELECT id FROM girls WHERE id = ? AND name = ? AND (source_id IS NULL OR source_id = '') AND shop_id NOT IN (SELECT id FROM _m_sid)");
   const insGirl = db.prepare('INSERT INTO girls (name, shop_id, age, height, bust, waist, hip, cup, image_url, source_id, is_active, last_seen_at, twitter_url) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?)');
   const updGirl = db.prepare('UPDATE girls SET name=?, shop_id=?, age=?, height=?, bust=?, waist=?, hip=?, cup=?, image_url=COALESCE(image_url,?), is_active=1, last_seen_at=? WHERE id=?');
-  let gNew = 0, gUpd = 0, gSkip = 0;
+  let gNew = 0, gUpd = 0, gSkip = 0, gAdopt = 0;
+  const adoptGirl = db.prepare("UPDATE girls SET source_id = ? WHERE id = ? AND (source_id IS NULL OR source_id = '')");
   const applyGirls = db.transaction((rows) => {
     for (const g of rows) {
       const shopId = shopIdByMid.get(g.mShopId);
       if (!shopId) { gSkip++; continue; }
       const hasSrc = !!(g.source_id && g.source_id !== '');
       if (hasSrc) insMG.run(g.source_id);
-      const ex = hasSrc ? findGirlBySrc.get(g.source_id) : (findGirlByName.get(shopId, g.name) || findGirlByIdName.get(g.mid, g.name));
+      let ex = hasSrc ? findGirlBySrc.get(g.source_id) : (findGirlByName.get(shopId, g.name) || findGirlByIdName.get(g.mid, g.name));
+      // master で後から source_id が付いた嬢は、本番の source_id 無しの行に当たらず新しい行ができ、古い行
+      // (口コミ・URL が付いている) が退店扱いになる。同じ店・同じ名前の source_id 無しの行があれば引き継ぐ。
+      if (hasSrc && !ex) {
+        const byName = findGirlByName.get(shopId, g.name);
+        if (byName) { adoptGirl.run(g.source_id, byName.id); ex = byName; gAdopt++; }
+      }
       let pid;
       if (ex) { updGirl.run(g.name, shopId, g.age, g.height, g.bust, g.waist, g.hip, g.cup, g.image_url, g.last_seen_at, ex.id); pid = ex.id; gUpd++; }
       else { pid = insGirl.run(g.name, shopId, g.age, g.height, g.bust, g.waist, g.hip, g.cup, g.image_url, hasSrc ? g.source_id : null, g.last_seen_at, g.twitter_url).lastInsertRowid; gNew++; }
@@ -158,22 +163,27 @@ db.pragma('wal_checkpoint(TRUNCATE)');
   }
   if (batch.length) applyGirls(batch);
   db.pragma('wal_checkpoint(TRUNCATE)');
-  console.log(`girls: new=${gNew} upd=${gUpd} skip=${gSkip}`);
+  console.log(`girls: new=${gNew} upd=${gUpd} skip=${gSkip} (source_id を引き継いだ ${gAdopt})`);
 }
 
 db.transaction(() => {
   // ── 4. 退店/退店嬢: master(active) に無い本番行を is_active=0（DELETEはしない / source 無し行は対象外）──
   const deG = db.prepare("UPDATE girls SET is_active=0 WHERE is_active=1 AND source_id IS NOT NULL AND source_id <> '' AND source_id NOT IN (SELECT source_id FROM _m_g)").run().changes;
   const deS = db.prepare("UPDATE shops SET is_active=0 WHERE is_active=1 AND source_url IS NOT NULL AND source_url <> '' AND source_url NOT IN (SELECT source_url FROM _m_s)").run().changes;
-  // 店名がそのまま「嬢」として取り込まれた行 (例: 店「Dolce ドルチェ」の嬢「Dolce ドルチェ」) を止める。
-  // source_id の無い嬢は上の source_id 判定に掛からないので、master で止めても本番に残り続けていた。
-  // 対象は「店名と正規化して同じ名前」かつ「今回 master のアクティブな嬢として当たらなかった」行だけ。
-  // ⚠️ source_id の無い退店嬢全般 (master で約5万) はここでは扱わない (本番で一度に大量に消えるため別途判断)。
-  const deJunk = db.prepare(`UPDATE girls SET is_active=0 WHERE is_active=1 AND (source_id IS NULL OR source_id = '')
-      AND shop_id IN (SELECT id FROM _m_sid) AND id NOT IN (SELECT id FROM _m_gid)
-      AND length(normalize_shop(name)) >= 2
-      AND normalize_shop(name) = (SELECT normalize_shop(s.name) FROM shops s WHERE s.id = girls.shop_id)`).run().changes;
-  console.log(`deactivated(店名と同じ名前の嬢): girls=${deJunk}`);
+  // source_id の無い嬢 (駅ちか等) は上の source_id 判定に掛からず、master で退店しても本番では在籍のままだった
+  // (2026-09-26 時点で本番の在籍嬢が master より約2.4万人多かった)。今回 master の在籍嬢として当たった行
+  // (_m_gid) 以外を止める。DELETE はしないので口コミは残り、店ページの「退店した可能性のある女性」に出る。
+  // 突き合わせの不具合で一度に大量に止めないよう、本番の在籍嬢の 15% を超える場合はこの処理だけ見送る。
+  const staleWhere = "is_active=1 AND (source_id IS NULL OR source_id = '') AND id NOT IN (SELECT id FROM _m_gid)";
+  const staleN = db.prepare(`SELECT COUNT(*) c FROM girls WHERE ${staleWhere}`).get().c;
+  const activeN = db.prepare('SELECT COUNT(*) c FROM girls WHERE is_active=1').get().c;
+  let deStale = 0;
+  if (staleN > activeN * 0.15) {
+    console.error(`[skip] source_id 無しの退店嬢 ${staleN}件 は在籍 ${activeN}件の15%超 → 突き合わせ異常の疑いで今回は止めない`);
+  } else {
+    deStale = db.prepare(`UPDATE girls SET is_active=0 WHERE ${staleWhere}`).run().changes;
+  }
+  console.log(`deactivated(source_id 無しで master に在籍していない嬢): girls=${deStale}`);
   // 同じ URL で master が選ばなかった本番行 (過去の同期で誤って復活させた行) を止める。DELETE はしない。
   //   その店に残った source_id の無い嬢も止める (source_id がある嬢は上で正しい店へ移っている)。
   const dupShops = "SELECT id FROM shops WHERE is_active=1 AND source_url IN (SELECT source_url FROM _m_s) AND id NOT IN (SELECT id FROM _m_sid)";

@@ -40,8 +40,10 @@ const DECOR_REPEAT_RE = /[★☆♡♥◆◇♪♬◇◆]{2,}/g;
 const LEADING_AT_TAG_RE = /^@[぀-ヿ一-鿿]{2,8}[\s☆★・]/;
 
 // ─── 末尾の販促コピー（dash/dash付きキャッチコピー） ───
+// 英数字に挟まれたハイフン (「High-Level」「U-NOTE」) は区切りではないので対象外 (2026-09-26:
+// 「High-Levelデリヘル～Jewel Star～…」が「High」になっていた)。
 const TRAILING_AD_DASH_RE =
-  /\s*[-―—]\s*[^-―—]*(評判|人気|デリヘル|ソープ|ヘルス|無料|予約|クーポン|割引|激安|キャンペーン|オススメ|おすすめ|当店|新人|大特価|早朝|営業中|オープン|急募|24時間|24[H]+|地域最安)[^-―—]*\s*[-―—]?$/;
+  /(?<![A-Za-z0-9])\s*[-―—]\s*[^-―—]*(評判|人気|デリヘル|ソープ|ヘルス|無料|予約|クーポン|割引|激安|キャンペーン|オススメ|おすすめ|当店|新人|大特価|早朝|営業中|オープン|急募|24時間|24[H]+|地域最安)[^-―—]*\s*[-―—]?$/;
 
 // ─── 末尾のキャッチコピー（句読点 + 〇〇で〇〇 / 〇〇です！等） ───
 const TRAILING_COPY_RE =
@@ -113,6 +115,10 @@ export function cleanShopName(raw) {
   // 先頭の「-」やスペース除去
   name = name.replace(/^[-\s]+/, '');
 
+  // 「デリヘル　60分　10,000円～◆◇◆GALAXY◆◇◆」: 料金・時間の宣伝文の後ろに、装飾で囲んだ本当の店名がある
+  const wrapped = name.match(/^(.*?)[★☆♡♥◆◇♪♬]{2,}\s*([^★☆♡♥◆◇♪♬]{2,30}?)\s*[★☆♡♥◆◇♪♬]{2,}\s*$/);
+  if (wrapped && /\d[\d,]*\s*(?:円|分)/.test(wrapped[1])) name = wrapped[2];
+
   // 多段剥がし
   for (let i = 0; i < 5; i++) {
     const before = name;
@@ -141,7 +147,8 @@ export function cleanShopName(raw) {
 
     // 7. 末尾のエリア羅列（過剰削除を避けるため、結果が4文字以上残る場合のみ適用）
     const areaMatch = name.match(TRAILING_AREA_LIST_RE);
-    if (areaMatch) {
+    // 「【可児・美濃加茂・関店】」「美濃加茂・可児・関店」のように「店」で終わるものは支店名なので残す
+    if (areaMatch && !/店[\]】\-―—]?\s*$/.test(areaMatch[0])) {
       const head = name.slice(0, -areaMatch[0].length).trim();
       if (head.length >= 4) name = head;
     }
@@ -162,6 +169,13 @@ export function cleanShopName(raw) {
     name = name.replace(/^[\s｜|：:、,!！]+/, '').trim();
 
     if (name === before) break;
+  }
+
+  // 削った結果、開き括弧だけが残った (「かりゆしOLの秘密【20代沖縄美女多数在籍」) → その括弧から後ろを落とす
+  //   「HighClass(ハイクラス）鹿児島店」のように半角と全角が混ざった組も閉じているとみなす
+  for (const [o, closes] of [['【', '】'], ['（', '）)'], ['(', ')）'], ['[', ']'], ['「', '」']]) {
+    const lastOpen = name.lastIndexOf(o);
+    if (lastOpen > 0 && ![...closes].some((c) => name.indexOf(c, lastOpen) !== -1)) name = name.slice(0, lastOpen).trim();
   }
 
   // 過度に削った結果が短すぎる/空 → 元に戻す（破壊回避）

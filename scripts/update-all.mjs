@@ -29,6 +29,7 @@
 import Database from 'better-sqlite3';
 import puppeteer from 'puppeteer';
 import { withChromePath } from './lib/chrome-path.mjs';
+import { cleanShopName } from './lib/clean-shop-name.mjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -279,7 +280,11 @@ function parseShopList(html) {
     }
 
     const fullHref = href.startsWith('http') ? href : BASE + href;
-    shops.push({ name: rawName, href: fullHref, category });
+    // 店名は全ソース共通の cleanShopName で整える (CLAUDE.md の必須ルール)。整えないと日曜の店舗巡回のたびに
+    // 「CLUBクラウン東京　史上最高レベル！東京NO1デリヘル」のような掲載元の表記へ書き戻される (2026-09-26 に431店を統一)
+    const name = cleanShopName(rawName);
+    if (!name || name.length < 2) continue;
+    shops.push({ name, href: fullHref, category });
   }
   return shops;
 }
