@@ -177,17 +177,20 @@ node scripts/restore-members.mjs 2>&1 || echo "[warn] member data restore failed
 # 失敗時は起動時 backup へ即復元。本番DBが在る時(=2回目以降のデプロイ)だけ走る。
 SYNC_VER_FILE="scripts/.master-sync-version"
 APPLIED_FILE="$DB_DIR/.applied-sync-version"
-# 同期は1トランザクションで数十万行を UPDATE するので、WAL が DB と同じくらいまで膨らみ得る。
-# 1GB ディスクで空きが足りないまま走らせると SQLITE_FULL で失敗する (9/24 の破損の発端とみられる)。
-# 空きが「DBサイズ + 100MB」未満なら今回は見送る (適用済み版を更新しないので、次の起動で再挑戦)。
-DB_KB=$(du -k "$DB_PATH" 2>/dev/null | cut -f1)
+# 1GB ディスクで空きが足りないまま同期すると SQLITE_FULL で失敗する (9/24 の破損の発端とみられる)。
+# 同期は嬢を2万件ずつコミットするので WAL は最大 30MB 程度 (実測。全件1トランザクションだった頃は 116MB)。
+# 以前は「DBサイズ + 100MB」を要求していたが、復元で DB が 420MB になると 1GB では満たせず、
+# 毎回見送り = サイトのデータが凍結する状態になっていた (2026-09-25)。必要量は DB サイズに比例しない。
+# 空きが 150MB 未満なら今回は見送る (適用済み版を更新しないので、次の起動で再挑戦)。
+SYNC_MIN_FREE_MB=150
 FREE_KB=$(df -Pk "$DB_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
 SYNC_ROOM=true
-if [ -n "$DB_KB" ] && [ -n "$FREE_KB" ] && [ "$FREE_KB" -lt $((DB_KB + 100 * 1024)) ] 2>/dev/null; then
+if [ -n "$FREE_KB" ] && [ "$FREE_KB" -lt $((SYNC_MIN_FREE_MB * 1024)) ] 2>/dev/null; then
   SYNC_ROOM=false
 fi
+echo "💾 ディスク空き $((${FREE_KB:-0} / 1024))MB (DB $(du -m "$DB_PATH" 2>/dev/null | cut -f1)MB)"
 if [ "$SYNC_ROOM" = false ]; then
-  echo "⏸  master-sync 見送り: ディスク空き $((FREE_KB / 1024))MB < DB $((DB_KB / 1024))MB + 100MB"
+  echo "⏸  master-sync 見送り: ディスク空き $((FREE_KB / 1024))MB < ${SYNC_MIN_FREE_MB}MB"
 elif [ "$DB_EXISTS" = true ] && [ "$DB_HEALTHY" = true ] && [ -f "$SYNC_VER_FILE" ]; then
   WANT_VER=$(tr -d '[:space:]' < "$SYNC_VER_FILE" 2>/dev/null)
   HAVE_VER=$(tr -d '[:space:]' < "$APPLIED_FILE" 2>/dev/null || echo "none")
