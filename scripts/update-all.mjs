@@ -254,6 +254,10 @@ async function fetchPageWithPuppeteer(page, url) {
 }
 
 // ─── パーサー ───────────────────────────────────────
+function decodeEntities(s) {
+  return s.replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
 function parseShopList(html) {
   const shops = [];
   const shopRegex = /<a[^>]*class="shop_title_shop"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
@@ -263,7 +267,9 @@ function parseShopList(html) {
 
   for (let i = 0; i < shopMatches.length; i++) {
     const href = shopMatches[i][1];
-    const rawName = shopMatches[i][2].replace(/<[^>]*>/g, '').split('\n').map(s => s.trim()).filter(s => s)[0] || '';
+    // 掲載元の HTML は「&」を「&amp;」で書くので戻す。戻さないと店名が「You&amp;Me」のまま保存され、
+    // 日曜の店舗巡回のたびに上書きされていた (2026-09-25 に70店を直した)。
+    const rawName = decodeEntities(shopMatches[i][2].replace(/<[^>]*>/g, '').split('\n').map(s => s.trim()).filter(s => s)[0] || '');
     if (!rawName) continue;
 
     let category = '';
