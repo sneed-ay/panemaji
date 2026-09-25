@@ -113,6 +113,74 @@ for (const t of tables) {
   log(`${name}: 期待=${expected ?? '不明'} 救出=${copied} 欠損=${lost ?? '不明'}${badRanges ? ` (読めない範囲 ${badRanges})` : ''}`);
 }
 
+// ── 読めなかった行の埋め戻し ──
+// 表のページが壊れても、索引のページは別の場所にあって読めることが多い (9/24 は girls 109行・reviews 63行)。
+//  1. 表の各索引を「索引だけで」読み (covering scan)、新DBに無い rowid の列値を集める (id はそのまま)
+//  2. 足りない列は master(db-latest) の同じ行で埋める。girls は source_id、reviews は id で引き、
+//     索引から読めた列 (girl_id/browser_id 等) と master の値が食い違う行は使わない
+//  → id を変えずに戻すので reviews.girl_id 等のひも付けは切れない
+const MASTER = process.env.SALVAGE_MASTER;
+const FILL_KEYS = { girls: 'source_id', reviews: 'id' };
+let mdb = null;
+if (MASTER && fs.existsSync(MASTER)) {
+  try { mdb = new Database(MASTER, { readonly: true, fileMustExist: true }); mdb.defaultSafeIntegers(true); }
+  catch (e) { log(`master open 失敗: ${e.message}`); }
+}
+for (const r of report) {
+  if (!(r.lost > 0)) continue;
+  const name = r.name;
+  const dstCols = dst.pragma(`table_info(${q(name)})`).map((c) => c.name);
+  const pkCol = dst.pragma(`table_info(${q(name)})`).find((c) => c.pk === 1)?.name;
+  const exists = dst.prepare(`SELECT 1 FROM ${q(name)} WHERE rowid = ?`).pluck();
+  const miss = new Map();
+  for (const ix of schema.filter((s) => s.type === 'index' && s.tbl_name === name)) {
+    const icols = src.pragma(`index_info(${q(ix.name)})`).map((c) => c.name);
+    if (icols.some((c) => c == null)) continue;
+    const where = /\bWHERE\b([\s\S]*)$/i.exec(ix.sql)?.[1];
+    try {
+      const it = src.prepare(`SELECT rowid, ${icols.map(q).join(',')} FROM ${q(name)} INDEXED BY ${q(ix.name)}${where ? ` WHERE ${where}` : ''}`).raw(true).iterate();
+      for (const [rid, ...vals] of it) {
+        if (exists.get(rid)) continue;
+        const k = String(rid);
+        const m = miss.get(k) || { __rid: rid };
+        icols.forEach((c, i) => { if (!(c in m)) m[c] = vals[i]; });
+        miss.set(k, m);
+      }
+    } catch (e) { log(`  ${name}: 索引 ${ix.name} は読めない (${e.code || e.message})`); }
+  }
+  const key = FILL_KEYS[name];
+  let filled = 0, mismatch = 0, noMaster = 0;
+  const mCols = mdb ? (() => { try { return mdb.pragma(`table_info(${q(name)})`).map((c) => c.name); } catch { return []; } })() : [];
+  const mget = mdb && key && mCols.includes(key) ? mdb.prepare(`SELECT * FROM ${q(name)} WHERE ${q(key)} = ?`) : null;
+  const fillTx = dst.transaction(() => {
+    for (const m of miss.values()) {
+      const keyVal = key === pkCol || key === 'id' ? m.__rid : m[key];
+      const mr = mget && keyVal != null ? mget.get(keyVal) : null;
+      if (!mr) { noMaster++; continue; }
+      // 索引から読めた本番の値と master の値が食い違う = 別の行。使わない (shop_id/is_active は本番側を優先)
+      const PROD_WINS = new Set(['shop_id', 'is_active', 'last_seen_at', 'user_id', 'name']);
+      const conflict = Object.keys(m).some((c) => c !== '__rid' && !PROD_WINS.has(c) && c in mr && mr[c] != null && m[c] != null && String(mr[c]) !== String(m[c]));
+      if (conflict) { mismatch++; continue; }
+      const row = {};
+      for (const c of dstCols) {
+        if (c in m) row[c] = m[c];
+        else if (c in mr) row[c] = mr[c];
+      }
+      if (pkCol) row[pkCol] = m.__rid;
+      const cs = Object.keys(row);
+      const insCols = pkCol ? cs : ['rowid', ...cs];
+      const vals = pkCol ? cs.map((c) => row[c]) : [m.__rid, ...cs.map((c) => row[c])];
+      try { dst.prepare(`INSERT INTO ${q(name)} (${insCols.map(q).join(',')}) VALUES (${insCols.map(() => '?').join(',')})`).run(vals); filled++; }
+      catch (e) { log(`  ${name} rowid=${m.__rid} 埋め戻し失敗: ${e.message}`); }
+    }
+  });
+  fillTx();
+  r.copied += filled;
+  r.lost = r.expected == null ? null : Math.max(0, r.expected - r.copied);
+  log(`${name}: 索引から ${miss.size}行を特定 → master で埋め戻し ${filled} (不一致 ${mismatch} / master に無い ${noMaster}) → 残り欠損 ${r.lost ?? '不明'}`);
+}
+if (mdb) mdb.close();
+
 // sqlite_sequence (AUTOINCREMENT の採番) を元の値で上書き
 try {
   const seq = src.prepare('SELECT name, seq FROM sqlite_sequence').all();

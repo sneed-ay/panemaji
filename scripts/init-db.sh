@@ -26,15 +26,23 @@ if [ -f "$DB_PATH" ]; then
   # REINDEX で直らない破損 (9/24 は索引ページが0埋めで REINDEX 自体が落ちた) は、
   # 読める行を全部新しいDBに写して差し替える。全表で欠損0のときだけ差し替え、元DBは .corrupt-* に残す。
   # 版ごとに1回だけ試す (失敗時に毎回の再起動で数分かかるのを避ける)。
-  SALVAGE_VER="1"
+  # v2: 表のページも壊れていた (girls 109 / reviews 63 行が読めない) ので、索引 + db-latest で id のまま埋め戻す
+  SALVAGE_VER="2"
   if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ] && \
      [ "$(tr -d '[:space:]' 2>/dev/null < "$DB_DIR/.salvage-attempted")" != "$SALVAGE_VER" ]; then
     echo "$SALVAGE_VER" > "$DB_DIR/.salvage-attempted"
     echo "🩹 破損DBの救出を開始 (salvage v$SALVAGE_VER)"
-    if node scripts/salvage-db.mjs "$DB_PATH" 2>&1; then
+    SALVAGE_MASTER=""
+    if curl -sL "$DB_URL" -o /tmp/_salvage_master.gz && gunzip -f /tmp/_salvage_master.gz; then
+      SALVAGE_MASTER=/tmp/_salvage_master
+    else
+      echo "⚠️ db-latest 取得失敗 → 埋め戻しなしで救出を試す"
+    fi
+    if SALVAGE_MASTER="$SALVAGE_MASTER" node scripts/salvage-db.mjs "$DB_PATH" 2>&1; then
       rm -f "$DB_DIR/.repair-db-version"
       node scripts/repair-db.mjs "$DB_PATH" 2>&1 || true
     fi
+    rm -f /tmp/_salvage_master /tmp/_salvage_master.gz /tmp/_salvage_master-wal /tmp/_salvage_master-shm
   fi
   if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ]; then
     DB_HEALTHY=false
