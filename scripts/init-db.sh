@@ -60,11 +60,12 @@ if [ -f "$DB_PATH" ]; then
   try {
     const Database = require('better-sqlite3');
     const db = new Database('$DB_PATH');
+    db.pragma('busy_timeout = 15000');
     const r = db.prepare('SELECT COUNT(*) as c FROM girls WHERE is_active=1').get();
     console.log(r.c);
     db.close();
-  } catch(e) { console.log('0'); }
-  " 2>/dev/null || echo "0")
+  } catch(e) { console.log('0'); process.stderr.write('[init-db] girls を数えられない: ' + (e.code || '') + ' ' + e.message + '\\n'); }
+  " || echo "0")
 
   if [ "$GIRL_COUNT" -gt 1000 ] 2>/dev/null; then
     DB_EXISTS=true
@@ -113,10 +114,12 @@ if [ "$DB_EXISTS" = true ]; then
   } catch(e) { console.log('verify skip:', e.message); }
   " 2>/dev/null || true
 
-elif [ -f "$DB_PATH" ] && [ "$DB_HEALTHY" = false ]; then
-  # 破損DBで girls の COUNT が落ちると上の判定が false になり、下の「初回DL」で本番DBを
-  # 丸ごと上書きしてしまう (= 会員・口コミ全消失)。壊れていても本番DBは絶対に上書きしない。
-  echo "🚨 本番DBは存在するが破損 — 上書きせずそのまま起動 (復旧は手動で)"
+elif [ -f "$DB_PATH" ]; then
+  # 🚨 本番DBのファイルがある限り、理由が何であれ「初回DL」で上書きしてはいけない。
+  # 2026-09-20 17:36 のメモリ監視による再起動で girls の COUNT が失敗 (原因不明) → この下の
+  # 初回DLに落ちて db-latest で本番DBが丸ごと上書きされ、会員 3,770人・会員口コミ・お気に入りが消えた。
+  # 数えられない = 壊れている or 一時的に開けない のどちらでも、そのまま起動して人間が調べる。
+  echo "🚨 本番DBは存在するが girls を数えられない (count=$GIRL_COUNT, healthy=$DB_HEALTHY) — 絶対に上書きせずそのまま起動"
   DB_EXISTS=true
 
 else
