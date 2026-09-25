@@ -5,9 +5,13 @@
  * 今の会員データを取り出し (GET)、戻した後に書き戻す (POST)。中身は AES-256-GCM で暗号化したまま
  * 受け渡すので、取り出した側 (作業者の手元) では読めない。処理本体は scripts/lib/carryover.mjs。
  *
- * 認証: ヘッダー x-carryover-token = 環境変数 CARRYOVER_TOKEN。暗号鍵は CARRYOVER_KEY。
- *       どちらかが未設定なら 404 (public リポジトリなので fail-closed)。復旧が終わったら env を消す。
+ * 認証: ヘッダー x-carryover-token の SHA-256 が下の TOKEN_SHA256 と一致すること (public リポジトリなので
+ *       ハッシュだけを置く。元の値は作業者の手元にしか無い)。
+ * 暗号鍵: 本番にだけある環境変数 MEIRIS_API_KEY からサーバー内で導出する (スナップショットに戻しても
+ *       環境変数は残るので、戻す前後で同じ鍵になる)。未設定なら 404。
+ * 期限: EXPIRES_AT を過ぎたら常に 404 (復旧が終わったらこのファイルごと消す)。
  */
+import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { buildPackage, encrypt, decrypt, mergePackage, summarize } from '../../../../../scripts/lib/carryover.mjs';
@@ -15,10 +19,19 @@ import { buildPackage, encrypt, decrypt, mergePackage, summarize } from '../../.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const TOKEN_SHA256 = '2505d279f1f7c6baf1b23c74cb82769ed74f9f3b36a9359fe17974310cf23c5c';
+const EXPIRES_AT = Date.parse('2026-09-28T00:00:00+09:00');
+
+function secret(): string | null {
+  const base = process.env.MEIRIS_API_KEY;
+  return base ? `panemaji-carryover-v1:${base}` : null;
+}
+
 function authorized(req: NextRequest): boolean {
-  const token = process.env.CARRYOVER_TOKEN;
-  const key = process.env.CARRYOVER_KEY;
-  return !!token && !!key && token.length >= 32 && req.headers.get('x-carryover-token') === token;
+  if (Date.now() > EXPIRES_AT || !secret()) return false;
+  const token = req.headers.get('x-carryover-token') || '';
+  const h = crypto.createHash('sha256').update(token).digest('hex');
+  return token.length >= 32 && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(TOKEN_SHA256));
 }
 
 export async function GET(req: NextRequest) {
@@ -26,7 +39,7 @@ export async function GET(req: NextRequest) {
   const since = req.nextUrl.searchParams.get('since') || '2026-09-20 08:36:00';
   const pkg = buildPackage(db, since);
   return NextResponse.json(
-    { summary: summarize(pkg), blob: encrypt(pkg, process.env.CARRYOVER_KEY) },
+    { summary: summarize(pkg), blob: encrypt(pkg, secret()) },
     { headers: { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } },
   );
 }
@@ -36,7 +49,7 @@ export async function POST(req: NextRequest) {
   let pkg;
   try {
     const body = await req.json();
-    pkg = decrypt(body.blob ?? body, process.env.CARRYOVER_KEY);
+    pkg = decrypt(body.blob ?? body, secret());
   } catch (e) {
     return NextResponse.json({ error: 'decrypt failed', message: (e as Error).message }, { status: 400 });
   }
