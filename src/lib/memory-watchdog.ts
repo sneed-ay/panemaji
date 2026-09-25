@@ -41,11 +41,20 @@ export function startMemoryWatchdog(): void {
     `[memory-watchdog] started — interval=${CHECK_INTERVAL_MS}ms warn=${WARN_PCT}% critical=${CRITICAL_PCT}% rss_limit=${RSS_LIMIT_MB}MB`,
   );
 
+  // 30分ごとに内訳を記録する (2026-09-25)。RSS が時間とともに増える原因を、
+  // heap (JS) / external (Buffer 等) / それ以外 (SQLite・malloc 等のネイティブ) のどれが増えているかで切り分けるため。
+  let tick = 0;
   const timer = setInterval(() => {
     try {
       const mem = process.memoryUsage();
       const rssMB = Math.round(mem.rss / 1024 / 1024);
       const pct = Math.round((rssMB / RSS_LIMIT_MB) * 100);
+      if (++tick % 30 === 0) {
+        const mb = (n: number) => Math.round(n / 1024 / 1024);
+        console.log(
+          `[memory-watchdog] INFO up=${Math.round(process.uptime() / 60)}m rss=${rssMB} heapTotal=${mb(mem.heapTotal)} heapUsed=${mb(mem.heapUsed)} external=${mb(mem.external)} arrayBuffers=${mb(mem.arrayBuffers)} native≈${rssMB - mb(mem.heapTotal) - mb(mem.external)}`,
+        );
+      }
 
       if (pct >= CRITICAL_PCT) {
         const externalMB = Math.round(mem.external / 1024 / 1024);

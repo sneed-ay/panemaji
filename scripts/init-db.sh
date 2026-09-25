@@ -265,5 +265,8 @@ fi
 # - UV_THREADPOOL_SIZE=2      ... libuv worker pool を縮小 (デフォルト 4 → 2)
 export NODE_OPTIONS="--max-old-space-size=400 --expose-gc"
 export UV_THREADPOOL_SIZE=2
+# - MALLOC_ARENA_MAX=2        ... glibc malloc のアリーナをスレッドごとに増やさない。Node on Linux の定番で、
+#                                ネイティブ側 (SQLite・libuv スレッド) の断片化による RSS の漸増を抑える (2026-09-25)
+export MALLOC_ARENA_MAX=2
 
 exec npm run start

@@ -48,13 +48,10 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
   // ⚠️ 「掲示板」は最大流入クエリ語。数値前方化の際に description から完全に消してしまい、
   //    クリックの47.6%・CTR最良(19.4%)の嬢ページで最大の検索語を落としていた (2026-08-27 修正)。
   const description = `${girl.name}さん（${girl.shop_name}・${categoryStr}）の口コミ掲示板・パネマジ度。${facts ? `${facts}。` : ''}実際に行った人の投稿で、パネル写真と実物の一致度を確認できます。`;
-  const ogParams = new URLSearchParams({
-    name: girl.name,
-    shop: girl.shop_name || '',
-    ...(realPct !== null ? { score: String(realPct) } : {}),
-    category: shop?.category || '',
-  });
-  const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
+  // 共有用画像は全ページ共通の固定画像。/api/og (next/og の ImageResponse) は日本語フォントを
+  // 名前ごとに Google Fonts から取ってモジュール内の Map に溜め続け、捨てない (@vercel/og の assetCache)。
+  // 嬢・店は名前が全部違うので、呼ばれるたびにメモリが増え、1日2〜3回のメモリ監視再起動の原因だった (2026-09-25)。
+  const ogImage = 'https://panemaji.com/ogp-banner.png';
   // thin content girl は noindex (GSC indexing 改善):
   //   - image_url なし AND reviews = 0 → 107,213 件 (26%) を de-prioritize
   //   - sitemap からも除外済 (queries.ts GIRL_QUALITY_FILTER)

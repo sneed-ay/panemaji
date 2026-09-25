@@ -29,6 +29,7 @@ export async function GET() {
     rss_limit_mb: rssLimitMB,
     rss_pct: rssPct,
     heap_used_mb: heapUsedMB,
+    heap_total_mb: Math.round(mem.heapTotal / 1024 / 1024),
     heap_limit_mb: heapLimitMB,
     heap_pct: heapPct,
     external_mb: Math.round(mem.external / 1024 / 1024),

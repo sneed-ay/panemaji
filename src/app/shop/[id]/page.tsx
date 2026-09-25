@@ -48,13 +48,10 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
     `在籍${girlCountLabel}人`,
   ].filter(Boolean).join('・');
   const description = `${shop.name}${areaName ? `(${areaName})` : ''}の口コミ掲示板。${stats}。実際に行った人の投稿で、パネル写真と実物の一致度をチェックできます。`;
-  const ogParams = new URLSearchParams({
-    name: shop.name,
-    shop: shop.area_name || '',
-    ...(realPct !== null ? { score: String(realPct) } : {}),
-    category: shop.category || '',
-  });
-  const ogImage = `https://panemaji.com/api/og?${ogParams.toString()}`;
+  // 共有用画像は全ページ共通の固定画像。/api/og (next/og の ImageResponse) は日本語フォントを
+  // 名前ごとに Google Fonts から取ってモジュール内の Map に溜め続け、捨てない (@vercel/og の assetCache)。
+  // 嬢・店は名前が全部違うので、呼ばれるたびにメモリが増え、1日2〜3回のメモリ監視再起動の原因だった (2026-09-25)。
+  const ogImage = 'https://panemaji.com/ogp-banner.png';
   // thin content shop は noindex (GSC indexing 改善):
   //   - girls < 3 AND reviews = 0 → 8,335 件 (44%) を de-prioritize
   //   - sitemap からも除外済 (queries.ts SHOP_QUALITY_FILTER)
