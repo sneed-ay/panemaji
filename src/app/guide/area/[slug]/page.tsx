@@ -63,7 +63,7 @@ export default function AreaGuidePage({ params }: { params: { slug: string } }) 
       `
       SELECT s.id, s.name, s.description,
         (SELECT COUNT(*) FROM girls g WHERE g.shop_id=s.id AND g.is_active=1) AS girl_count,
-        (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id=g.id WHERE g.shop_id=s.id) AS review_count,
+        (SELECT COUNT(*) FROM reviews r JOIN girls g ON r.girl_id=g.id WHERE g.shop_id=s.id) AS review_count
       FROM shops s
       JOIN areas a ON s.area_id=a.id
       WHERE s.is_active=1 AND a.slug=? AND s.category=?
