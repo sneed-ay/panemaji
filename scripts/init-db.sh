@@ -17,6 +17,18 @@ DB_URL="https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaj
 
 mkdir -p "$DB_DIR"
 
+# ── 破損検知 + 自動修復 (2026-09-25) ──────────────────────────────────────
+# 9/24 のデプロイ後に本番DBが SQLITE_CORRUPT になり、主要ページが25時間 500 だった。
+# 起動毎に軽い probe を走らせ、壊れていれば REINDEX で直す。直らない間は下の書き込み系を止める。
+DB_HEALTHY=true
+if [ -f "$DB_PATH" ]; then
+  node scripts/repair-db.mjs "$DB_PATH" 2>&1 || true
+  if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ]; then
+    DB_HEALTHY=false
+    echo "🚨 本番DBが破損したまま — master-sync / feedback / 爆サイ取り込みを止めて起動する"
+  fi
+fi
+
 # Check if DB exists and is valid (girls > 1000 = 正常な本番DBとみなす)
 DB_EXISTS=false
 if [ -f "$DB_PATH" ]; then
@@ -41,7 +53,15 @@ if [ "$DB_EXISTS" = true ]; then
   echo "✅ Existing production DB found ($GIRL_COUNT girls) — preserving AS-IS. No download / no overwrite / no merge."
 
   # 起動直前の本番DBスナップショットをローカル退避 (安全網)
-  cp "$DB_PATH" "${DB_PATH}.bak" 2>/dev/null || true
+  # WAL モードなので本体ファイルだけ cp すると -wal 側の未反映分が抜ける。先に本体へ統合してからコピー。
+  # 壊れている間は退避しない (唯一まともかもしれない .bak を壊れたDBで上書きしないため)。
+  if [ "$DB_HEALTHY" = true ]; then
+    node -e "
+    try { const D = require('better-sqlite3'); const db = new D('$DB_PATH'); db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); }
+    catch (e) { console.log('[warn] checkpoint 失敗:', e.message); }
+    " 2>&1 || true
+    cp "$DB_PATH" "${DB_PATH}.bak" 2>/dev/null || true
+  fi
 
   # 現状をログ出力 (データが保持されていることの可視化)
   node -e "
@@ -56,6 +76,12 @@ if [ "$DB_EXISTS" = true ]; then
     db.close();
   } catch(e) { console.log('verify skip:', e.message); }
   " 2>/dev/null || true
+
+elif [ -f "$DB_PATH" ] && [ "$DB_HEALTHY" = false ]; then
+  # 破損DBで girls の COUNT が落ちると上の判定が false になり、下の「初回DL」で本番DBを
+  # 丸ごと上書きしてしまう (= 会員・口コミ全消失)。壊れていても本番DBは絶対に上書きしない。
+  echo "🚨 本番DBは存在するが破損 — 上書きせずそのまま起動 (復旧は手動で)"
+  DB_EXISTS=true
 
 else
   # 初回デプロイ専用 (DBが無い時だけ db-latest を初期データとして取得)
@@ -112,7 +138,12 @@ node scripts/restore-members.mjs 2>&1 || echo "[warn] member data restore failed
 # 失敗時は起動時 backup へ即復元。本番DBが在る時(=2回目以降のデプロイ)だけ走る。
 SYNC_VER_FILE="scripts/.master-sync-version"
 APPLIED_FILE="$DB_DIR/.applied-sync-version"
-if [ "$DB_EXISTS" = true ] && [ -f "$SYNC_VER_FILE" ]; then
+# scripts/.master-sync-paused があれば同期しない。1GB ディスクに DB+.bak(各~275MB) が載っていて、
+# 48万行 UPDATE の WAL で満杯→同期失敗→復元、の経路が 9/24 の破損を招いた疑いがあるため、
+# 容量の手当てが済むまで止める (2026-09-25)。
+if [ -f scripts/.master-sync-paused ]; then
+  echo "⏸  master-sync は一時停止中 (scripts/.master-sync-paused)"
+elif [ "$DB_EXISTS" = true ] && [ "$DB_HEALTHY" = true ] && [ -f "$SYNC_VER_FILE" ]; then
   WANT_VER=$(tr -d '[:space:]' < "$SYNC_VER_FILE" 2>/dev/null)
   HAVE_VER=$(tr -d '[:space:]' < "$APPLIED_FILE" 2>/dev/null || echo "none")
   if [ -n "$WANT_VER" ] && [ "$WANT_VER" != "$HAVE_VER" ]; then
@@ -123,6 +154,9 @@ if [ "$DB_EXISTS" = true ] && [ -f "$SYNC_VER_FILE" ]; then
         echo "✅ master-sync v$WANT_VER 適用完了"
       else
         echo "❌ master-sync 失敗 → 起動時 backup へ復元 (本番データ保護)"
+        # 本体だけ戻して失敗した同期の -wal/-shm を残すと、別状態のWALが古い本体に重なって
+        # "database disk image is malformed" になる (9/24 の破損の最有力原因)。必ず一緒に消す。
+        rm -f "${DB_PATH}-wal" "${DB_PATH}-shm"
         cp "${DB_PATH}.bak" "$DB_PATH" 2>/dev/null && echo "  復元完了" || echo "  [warn] backup 復元失敗"
       fi
       rm -f /tmp/_sync
@@ -138,7 +172,7 @@ fi
 # 自由記述(wrong_info/other)は内容ログのみ open維持。reviews/会員テーブルは不可侵。
 FB_VER_FILE="scripts/.feedback-process-version"
 FB_APPLIED="$DB_DIR/.applied-feedback-version"
-if [ "$DB_EXISTS" = true ] && [ -f "$FB_VER_FILE" ]; then
+if [ "$DB_EXISTS" = true ] && [ "$DB_HEALTHY" = true ] && [ -f "$FB_VER_FILE" ]; then
   FB_WANT=$(tr -d '[:space:]' < "$FB_VER_FILE" 2>/dev/null)
   FB_HAVE=$(tr -d '[:space:]' < "$FB_APPLIED" 2>/dev/null || echo "none")
   if [ -n "$FB_WANT" ] && [ "$FB_WANT" != "$FB_HAVE" ]; then
@@ -159,7 +193,7 @@ fi
 # 会員データ(users/favorites/会員review=user_id付)は不可侵・DELETEなし。import側が会員数減を検知したら異常終了。
 BK_VER_FILE="scripts/.bakusai-import-version"
 BK_APPLIED="$DB_DIR/.applied-bakusai-version"
-if [ "$DB_EXISTS" = true ] && [ -f "$BK_VER_FILE" ]; then
+if [ "$DB_EXISTS" = true ] && [ "$DB_HEALTHY" = true ] && [ -f "$BK_VER_FILE" ]; then
   BK_WANT=$(tr -d '[:space:]' < "$BK_VER_FILE" 2>/dev/null)
   BK_HAVE=$(tr -d '[:space:]' < "$BK_APPLIED" 2>/dev/null || echo "none")
   if [ -n "$BK_WANT" ] && [ "$BK_WANT" != "$BK_HAVE" ]; then
