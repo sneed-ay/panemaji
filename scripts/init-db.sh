@@ -14,6 +14,7 @@
 DB_PATH="${DB_PATH:-./panemaji.db}"
 DB_DIR=$(dirname "$DB_PATH")
 DB_URL="https://github.com/sneed-ay/panemaji/releases/download/db-latest/panemaji.db.gz"
+STARTUP_BAK="/tmp/panemaji-startup.bak"
 
 mkdir -p "$DB_DIR"
 
@@ -81,16 +82,19 @@ if [ "$DB_EXISTS" = true ]; then
     try { const D = require('better-sqlite3'); const db = new D('$DB_PATH'); db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); }
     catch (e) { console.log('[warn] checkpoint 失敗:', e.message); }
     " 2>&1 || true
-    # 1GB ディスクで DB と .bak (各 ~400MB) が並ぶと空きが無くなり、次の書き込みが失敗する。
-    # 空きが「DBサイズ + 150MB」未満なら退避しない (途中まで書いた .bak でディスクを埋めない)。
-    DB_KB=$(du -k "$DB_PATH" | cut -f1)
+    # 退避先は /tmp (インスタンスのローカル・数十GB空き)。/data は 1GB しか無く、DB と .bak が並ぶと
+    # 同期の WAL を書く余地が無くなる (9/24 の破損の遠因)。.bak が要るのは「同じ起動中に同期が失敗した
+    # とき」だけなので、再起動で消える /tmp で足りる。日をまたぐ復旧は Render の日次スナップショットで。
     rm -f "${DB_PATH}.bak"
-    FREE_KB=$(df -Pk "$DB_DIR" | awk 'NR==2 {print $4}')
-    if [ -n "$FREE_KB" ] && [ "$FREE_KB" -gt $((DB_KB + 150 * 1024)) ] 2>/dev/null; then
-      cp "$DB_PATH" "${DB_PATH}.bak" 2>/dev/null || { rm -f "${DB_PATH}.bak"; echo "[warn] .bak 退避失敗"; }
-    else
-      echo "⚠️ ディスク空き不足で .bak 退避をスキップ (空き $((FREE_KB / 1024))MB / DB $((DB_KB / 1024))MB)"
-    fi
+    rm -f "$STARTUP_BAK"
+    cp "$DB_PATH" "$STARTUP_BAK" 2>/dev/null || { rm -f "$STARTUP_BAK"; echo "[warn] 起動時退避 (/tmp) 失敗"; }
+  fi
+
+  # 救出で差し替えた後の元の破損DB (.corrupt-*) は、1日たったら消す (1GB ディスクの空きを戻す)。
+  # 救出は全表で欠損0のときしか差し替えないので、1日動いて問題が出なければ持っておく理由は無い。
+  if [ "$DB_HEALTHY" = true ]; then
+    find "$DB_DIR" -maxdepth 1 -name "$(basename "$DB_PATH").corrupt-*" -mtime +0 -print -delete 2>/dev/null \
+      | sed 's/^/🧹 古い破損DBを削除: /'
   fi
 
   # 現状をログ出力 (データが保持されていることの可視化)
@@ -168,11 +172,17 @@ node scripts/restore-members.mjs 2>&1 || echo "[warn] member data restore failed
 # 失敗時は起動時 backup へ即復元。本番DBが在る時(=2回目以降のデプロイ)だけ走る。
 SYNC_VER_FILE="scripts/.master-sync-version"
 APPLIED_FILE="$DB_DIR/.applied-sync-version"
-# scripts/.master-sync-paused があれば同期しない。1GB ディスクに DB+.bak(各~275MB) が載っていて、
-# 48万行 UPDATE の WAL で満杯→同期失敗→復元、の経路が 9/24 の破損を招いた疑いがあるため、
-# 容量の手当てが済むまで止める (2026-09-25)。
-if [ -f scripts/.master-sync-paused ]; then
-  echo "⏸  master-sync は一時停止中 (scripts/.master-sync-paused)"
+# 同期は1トランザクションで数十万行を UPDATE するので、WAL が DB と同じくらいまで膨らみ得る。
+# 1GB ディスクで空きが足りないまま走らせると SQLITE_FULL で失敗する (9/24 の破損の発端とみられる)。
+# 空きが「DBサイズ + 100MB」未満なら今回は見送る (適用済み版を更新しないので、次の起動で再挑戦)。
+DB_KB=$(du -k "$DB_PATH" 2>/dev/null | cut -f1)
+FREE_KB=$(df -Pk "$DB_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
+SYNC_ROOM=true
+if [ -n "$DB_KB" ] && [ -n "$FREE_KB" ] && [ "$FREE_KB" -lt $((DB_KB + 100 * 1024)) ] 2>/dev/null; then
+  SYNC_ROOM=false
+fi
+if [ "$SYNC_ROOM" = false ]; then
+  echo "⏸  master-sync 見送り: ディスク空き $((FREE_KB / 1024))MB < DB $((DB_KB / 1024))MB + 100MB"
 elif [ "$DB_EXISTS" = true ] && [ "$DB_HEALTHY" = true ] && [ -f "$SYNC_VER_FILE" ]; then
   WANT_VER=$(tr -d '[:space:]' < "$SYNC_VER_FILE" 2>/dev/null)
   HAVE_VER=$(tr -d '[:space:]' < "$APPLIED_FILE" 2>/dev/null || echo "none")
@@ -186,8 +196,15 @@ elif [ "$DB_EXISTS" = true ] && [ "$DB_HEALTHY" = true ] && [ -f "$SYNC_VER_FILE
         echo "❌ master-sync 失敗 → 起動時 backup へ復元 (本番データ保護)"
         # 本体だけ戻して失敗した同期の -wal/-shm を残すと、別状態のWALが古い本体に重なって
         # "database disk image is malformed" になる (9/24 の破損の最有力原因)。必ず一緒に消す。
-        rm -f "${DB_PATH}-wal" "${DB_PATH}-shm"
-        cp "${DB_PATH}.bak" "$DB_PATH" 2>/dev/null && echo "  復元完了" || echo "  [warn] backup 復元失敗"
+        # ただし退避が無いのに WAL だけ消すと、確定済みの変更を捨てて本体が半端になり、それ自体が破損を生む。
+        # 退避が無ければ何も触らない (SQLite が WAL を正しく扱う)。
+        if [ -f "$STARTUP_BAK" ]; then
+          rm -f "${DB_PATH}-wal" "${DB_PATH}-shm"
+          cp "$STARTUP_BAK" "${DB_PATH}.restore-tmp" && mv -f "${DB_PATH}.restore-tmp" "$DB_PATH" \
+            && echo "  復元完了" || { rm -f "${DB_PATH}.restore-tmp"; echo "  [warn] backup 復元失敗"; }
+        else
+          echo "  [warn] 起動時退避が無いので復元せずそのまま (DBファイルには触らない)"
+        fi
       fi
       rm -f /tmp/_sync
     else
