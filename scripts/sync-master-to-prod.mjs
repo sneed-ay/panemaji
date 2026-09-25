@@ -160,6 +160,14 @@ db.transaction(() => {
   const deDupG = db.prepare(`UPDATE girls SET is_active=0 WHERE is_active=1 AND (source_id IS NULL OR source_id = '') AND shop_id IN (${dupShops})`).run().changes;
   const deDup = db.prepare(`UPDATE shops SET is_active=0 WHERE id IN (${dupShops})`).run().changes;
   console.log(`deactivated(同じURLの選ばれなかった行): shops=${deDup} girls=${deDupG}`);
+  // 以前の同期が書き換えてしまった店名を戻す: master で非アクティブな店のうち、本番に id と source_url が
+  // 両方一致する行があれば master の店名にする (本番 /shop/12915 が「ミサキ」のままだった)。
+  const fixName = db.prepare("UPDATE shops SET name=? WHERE id=? AND source_url=? AND is_active=0 AND name<>?");
+  let sRenamed = 0;
+  for (const s of mdb.prepare("SELECT id, name, source_url FROM shops WHERE is_active=0 AND source_url IS NOT NULL AND source_url <> ''").iterate()) {
+    sRenamed += fixName.run(s.name, s.id, s.source_url, s.name).changes;
+  }
+  console.log(`店名を master に戻した非アクティブ店: ${sRenamed}`);
   db.exec('DROP TABLE _m_g; DROP TABLE _m_s; DROP TABLE _m_sid');
   console.log(`deactivated(本番のみ・master退店分): girls=${deG} shops=${deS}`);
 })();

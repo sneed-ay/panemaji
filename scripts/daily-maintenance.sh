@@ -630,7 +630,7 @@ fi
 if [ -f "$HOME/panemaji-data/.indexnow-hold" ]; then
   log "  [indexnow] 一時停止中 (~/panemaji-data/.indexnow-hold)"
 else
-  timeout 900 node scripts/indexnow-submit.mjs --max 10000 2>&1 | tail -3 | while read -r l; do log "  $l"; done || log "  [warn] indexnow 失敗"
+  run_timeout 900 node scripts/indexnow-submit.mjs --max 10000 2>&1 | tail -3 | while read -r l; do log "  $l"; done || log "  [warn] indexnow 失敗"
 fi
 
 log ""
