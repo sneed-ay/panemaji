@@ -6,6 +6,11 @@ const PREFS = 'hokkaido|aomori|iwate|miyagi|akita|yamagata|fukushima|ibaraki|toc
 const CATS = 'deriheru|menesu|soap|health|esthe|hotelhel|sekkyaba';
 const q = (key, name, values) => ({ type: 'query', key, value: `(?<${name}>${values})` });
 const nextConfig = {
+  // ISR で保持したページをメモリ (LRU・既定 50MB 分) に持たず、ディスク (.next/server/app) からだけ返す。
+  // LRU は文字数で数えるので日本語の一覧ページだと実際は約2倍食い、一覧ページを ISR 化 (cc7ae79) した後
+  // 本番の heap が 60→180MB・RSS 398MB (再起動の閾値 410MB 目前) になった。手元で一覧 3,070 URL×2周:
+  // LRU あり heap 170MB / RSS 373MB、なし heap 48MB / RSS 210MB、速度は同等 (p50 12ms vs 11ms)。(2026-09-25)
+  cacheMaxMemorySize: 0,
   experimental: {
     serverComponentsExternalPackages: ['better-sqlite3'],
     // src/instrumentation.ts (memory-watchdog 起動) を有効化
