@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+// 一覧ページの ?pref= / ?cat= を静的なパスに振り分ける (2026-09-25)。ページ側が searchParams を読むと
+// Next.js が毎リクエスト SSR にして revalidate が効かない (/tokyo 0.5〜6秒)。外から見える URL と canonical は
+// 変えず、中身だけ ISR 化したルートで返す。値は正規の県・業種に限る (任意の値で ISR キャッシュを増やさせない)。
+const PREFS = 'hokkaido|aomori|iwate|miyagi|akita|yamagata|fukushima|ibaraki|tochigi|gunma|saitama|chiba|tokyo|kanagawa|niigata|toyama|ishikawa|fukui|yamanashi|nagano|gifu|shizuoka|aichi|mie|shiga|kyoto|osaka|hyogo|nara|wakayama|tottori|shimane|okayama|hiroshima|yamaguchi|tokushima|kagawa|ehime|kochi|fukuoka|saga|nagasaki|kumamoto|oita|miyazaki|kagoshima|okinawa';
+const CATS = 'deriheru|menesu|soap|health|esthe|hotelhel|sekkyaba';
+const q = (key, name, values) => ({ type: 'query', key, value: `(?<${name}>${values})` });
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['better-sqlite3'],
@@ -29,6 +35,16 @@ const nextConfig = {
   // - /area/{pref}-fj-XXX                     → 旧 fuzoku-japan 形式
   // - /area/{pref}-ch-XXX                     → 旧 cityheaven (別形式)
   // - /area/{pref}-rd-XXX, -pl-XXX, -meste-XXX, -robin-XXX → 各ソース由来
+  rewrites: async () => ({
+    beforeFiles: [
+      { source: '/', has: [q('pref', 'pref', PREFS), q('cat', 'cat', CATS)], destination: '/home/:pref/:cat' },
+      { source: '/', has: [q('pref', 'pref', PREFS)], destination: '/home/:pref/all' },
+      { source: '/', has: [q('cat', 'cat', CATS)], destination: '/home/tokyo/:cat' },
+      { source: `/:prefecture(${PREFS})`, has: [q('cat', 'cat', CATS)], destination: '/:prefecture/c/:cat' },
+      { source: '/area/:slug', has: [q('cat', 'cat', CATS)], destination: '/area/:slug/c/:cat' },
+      { source: '/ranking', has: [q('pref', 'pref', PREFS)], destination: '/ranking/:pref' },
+    ],
+  }),
   redirects: async () => [
     // ──────────────────────────────────────────────────────────────────
     // v5b マイグレーション (5/4): area slug を compound 化したが、
