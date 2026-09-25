@@ -28,7 +28,8 @@ if [ -f "$DB_PATH" ]; then
   # 読める行を全部新しいDBに写して差し替える。全表で欠損0のときだけ差し替え、元DBは .corrupt-* に残す。
   # 版ごとに1回だけ試す (失敗時に毎回の再起動で数分かかるのを避ける)。
   # v2: 表のページも壊れていた (girls 109 / reviews 63 行が読めない) ので、索引 + db-latest で id のまま埋め戻す
-  SALVAGE_VER="2"
+  # v3: master に無い girls (本番のみの退店嬢 32行) は索引の値 (name/shop_id/is_active/source_id) だけで id のまま作り直す
+  SALVAGE_VER="3"
   if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ] && \
      [ "$(tr -d '[:space:]' 2>/dev/null < "$DB_DIR/.salvage-attempted")" != "$SALVAGE_VER" ]; then
     echo "$SALVAGE_VER" > "$DB_DIR/.salvage-attempted"

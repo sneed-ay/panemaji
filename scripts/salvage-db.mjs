@@ -149,14 +149,28 @@ for (const r of report) {
     } catch (e) { log(`  ${name}: 索引 ${ix.name} は読めない (${e.code || e.message})`); }
   }
   const key = FILL_KEYS[name];
-  let filled = 0, mismatch = 0, noMaster = 0;
+  let filled = 0, mismatch = 0, noMaster = 0, partial = 0;
+  const requiredCols = dst.pragma(`table_info(${q(name)})`)
+    .filter((c) => c.notnull && c.dflt_value == null && c.pk === 0).map((c) => c.name);
   const mCols = mdb ? (() => { try { return mdb.pragma(`table_info(${q(name)})`).map((c) => c.name); } catch { return []; } })() : [];
   const mget = mdb && key && mCols.includes(key) ? mdb.prepare(`SELECT * FROM ${q(name)} WHERE ${q(key)} = ?`) : null;
   const fillTx = dst.transaction(() => {
     for (const m of miss.values()) {
       const keyVal = key === pkCol || key === 'id' ? m.__rid : m[key];
       const mr = mget && keyVal != null ? mget.get(keyVal) : null;
-      if (!mr) { noMaster++; continue; }
+      if (!mr) {
+        // master に無い行 (本番にしか残っていない退店嬢など: 9/24 は girls 32行) は、索引から読めた列だけで
+        // id のまま作り直す。NOT NULL の列 (girls なら name/shop_id) が索引から揃うときだけ。
+        // 年齢等は空になるが、口コミとのひも付けと名前は残る。
+        const have = Object.keys(m).filter((c) => c !== '__rid' && dstCols.includes(c) && m[c] != null);
+        if (requiredCols.every((c) => have.includes(c))) {
+          const cs = pkCol ? [pkCol, ...have.filter((c) => c !== pkCol)] : ['rowid', ...have];
+          const vals = cs.map((c) => (c === pkCol || c === 'rowid' ? m.__rid : m[c]));
+          try { dst.prepare(`INSERT INTO ${q(name)} (${cs.map(q).join(',')}) VALUES (${cs.map(() => '?').join(',')})`).run(vals); filled++; partial++; continue; }
+          catch (e) { log(`  ${name} rowid=${m.__rid} 索引値だけの復元失敗: ${e.message}`); }
+        }
+        noMaster++; continue;
+      }
       // 索引から読めた本番の値と master の値が食い違う = 別の行。使わない (shop_id/is_active は本番側を優先)
       const PROD_WINS = new Set(['shop_id', 'is_active', 'last_seen_at', 'user_id', 'name']);
       const conflict = Object.keys(m).some((c) => c !== '__rid' && !PROD_WINS.has(c) && c in mr && mr[c] != null && m[c] != null && String(mr[c]) !== String(m[c]));
@@ -177,7 +191,7 @@ for (const r of report) {
   fillTx();
   r.copied += filled;
   r.lost = r.expected == null ? null : Math.max(0, r.expected - r.copied);
-  log(`${name}: 索引から ${miss.size}行を特定 → master で埋め戻し ${filled} (不一致 ${mismatch} / master に無い ${noMaster}) → 残り欠損 ${r.lost ?? '不明'}`);
+  log(`${name}: 索引から ${miss.size}行を特定 → 埋め戻し ${filled} (うち索引値のみ ${partial} / 不一致 ${mismatch} / 復元不能 ${noMaster}) → 残り欠損 ${r.lost ?? '不明'}`);
 }
 if (mdb) mdb.close();
 
