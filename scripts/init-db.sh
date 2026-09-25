@@ -29,7 +29,8 @@ if [ -f "$DB_PATH" ]; then
   # 版ごとに1回だけ試す (失敗時に毎回の再起動で数分かかるのを避ける)。
   # v2: 表のページも壊れていた (girls 109 / reviews 63 行が読めない) ので、索引 + db-latest で id のまま埋め戻す
   # v3: master に無い girls (本番のみの退店嬢 32行) は索引の値 (name/shop_id/is_active/source_id) だけで id のまま作り直す
-  SALVAGE_VER="3"
+  # v4: それでも戻せない行は、口コミ・お気に入り・フィードバックから参照されていなければ許容 (同期で入り直す)
+  SALVAGE_VER="4"
   if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ] && \
      [ "$(tr -d '[:space:]' 2>/dev/null < "$DB_DIR/.salvage-attempted")" != "$SALVAGE_VER" ]; then
     echo "$SALVAGE_VER" > "$DB_DIR/.salvage-attempted"

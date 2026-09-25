@@ -150,6 +150,7 @@ for (const r of report) {
   }
   const key = FILL_KEYS[name];
   let filled = 0, mismatch = 0, noMaster = 0, partial = 0;
+  const unresolved = [];
   const requiredCols = dst.pragma(`table_info(${q(name)})`)
     .filter((c) => c.notnull && c.dflt_value == null && c.pk === 0).map((c) => c.name);
   const mCols = mdb ? (() => { try { return mdb.pragma(`table_info(${q(name)})`).map((c) => c.name); } catch { return []; } })() : [];
@@ -169,7 +170,7 @@ for (const r of report) {
           try { dst.prepare(`INSERT INTO ${q(name)} (${cs.map(q).join(',')}) VALUES (${cs.map(() => '?').join(',')})`).run(vals); filled++; partial++; continue; }
           catch (e) { log(`  ${name} rowid=${m.__rid} 索引値だけの復元失敗: ${e.message}`); }
         }
-        noMaster++; continue;
+        noMaster++; unresolved.push(m); continue;
       }
       // 索引から読めた本番の値と master の値が食い違う = 別の行。使わない (shop_id/is_active は本番側を優先)
       const PROD_WINS = new Set(['shop_id', 'is_active', 'last_seen_at', 'user_id', 'name']);
@@ -192,8 +193,38 @@ for (const r of report) {
   r.copied += filled;
   r.lost = r.expected == null ? null : Math.max(0, r.expected - r.copied);
   log(`${name}: 索引から ${miss.size}行を特定 → 埋め戻し ${filled} (うち索引値のみ ${partial} / 不一致 ${mismatch} / 復元不能 ${noMaster}) → 残り欠損 ${r.lost ?? '不明'}`);
+  for (const m of unresolved.slice(0, 5)) {
+    log(`  復元不能の例 rowid=${m.__rid}: ${Object.keys(m).filter((c) => c !== '__rid').map((c) => `${c}=${m[c]}`).join(' ') || '(索引の値なし)'}`);
+  }
+
+  r.unresolved = unresolved;
 }
 if (mdb) mdb.close();
+
+// どうしても戻せない行でも、他の表から一切参照されていなければ、失っても誰のデータも消えない
+// (9/24 は girls 32行: 最後の同期で末尾に足された行で、索引の該当部分も一緒に0埋めされていた)。
+// 欠けた行を全部特定できていて (lost == unresolved)、どれも参照されていないときだけ許容する。
+// 参照側 (reviews 等) の埋め戻しが全部終わってから数える。
+const REFS = { girls: [['reviews', 'girl_id'], ['favorites', 'girl_id'], ['feedback', 'girl_id']],
+               shops: [['girls', 'shop_id'], ['shop_comments', 'shop_id'], ['feedback', 'shop_id']] };
+for (const r of report) {
+  const unresolved = r.unresolved || [];
+  if (!(r.lost > 0) || !REFS[r.name] || unresolved.length !== r.lost) continue;
+  let refCount = 0;
+  for (const [t, c] of REFS[r.name]) {
+    let st; try { st = dst.prepare(`SELECT COUNT(*) FROM ${q(t)} WHERE ${q(c)} = ?`).pluck(); } catch { continue; }
+    for (const m of unresolved) refCount += Number(st.get(m.__rid));
+  }
+  const refLost = report.some((x) => REFS[r.name].some(([t]) => t === x.name) && x.lost > 0);
+  if (refCount === 0 && !refLost) {
+    log(`${r.name}: 残り ${r.lost}行はどの表からも参照されていない → 失っても会員・口コミ等は無傷なので許容 (同期で入り直す)`);
+    r.droppedUnreferenced = r.lost;
+    r.lost = 0;
+  } else {
+    log(`${r.name}: 残り ${r.lost}行に参照が ${refCount}件${refLost ? ' (参照側の表にも欠損あり)' : ''} → 許容しない`);
+  }
+}
+
 
 // sqlite_sequence (AUTOINCREMENT の採番) を元の値で上書き
 try {
