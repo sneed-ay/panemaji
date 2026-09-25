@@ -23,6 +23,19 @@ mkdir -p "$DB_DIR"
 DB_HEALTHY=true
 if [ -f "$DB_PATH" ]; then
   node scripts/repair-db.mjs "$DB_PATH" 2>&1 || true
+  # REINDEX で直らない破損 (9/24 は索引ページが0埋めで REINDEX 自体が落ちた) は、
+  # 読める行を全部新しいDBに写して差し替える。全表で欠損0のときだけ差し替え、元DBは .corrupt-* に残す。
+  # 版ごとに1回だけ試す (失敗時に毎回の再起動で数分かかるのを避ける)。
+  SALVAGE_VER="1"
+  if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ] && \
+     [ "$(tr -d '[:space:]' 2>/dev/null < "$DB_DIR/.salvage-attempted")" != "$SALVAGE_VER" ]; then
+    echo "$SALVAGE_VER" > "$DB_DIR/.salvage-attempted"
+    echo "🩹 破損DBの救出を開始 (salvage v$SALVAGE_VER)"
+    if node scripts/salvage-db.mjs "$DB_PATH" 2>&1; then
+      rm -f "$DB_DIR/.repair-db-version"
+      node scripts/repair-db.mjs "$DB_PATH" 2>&1 || true
+    fi
+  fi
   if [ "$(tr -d '[:space:]' < "$DB_DIR/.db-health" 2>/dev/null)" = "corrupt" ]; then
     DB_HEALTHY=false
     echo "🚨 本番DBが破損したまま — master-sync / feedback / 爆サイ取り込みを止めて起動する"
@@ -60,7 +73,16 @@ if [ "$DB_EXISTS" = true ]; then
     try { const D = require('better-sqlite3'); const db = new D('$DB_PATH'); db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); }
     catch (e) { console.log('[warn] checkpoint 失敗:', e.message); }
     " 2>&1 || true
-    cp "$DB_PATH" "${DB_PATH}.bak" 2>/dev/null || true
+    # 1GB ディスクで DB と .bak (各 ~400MB) が並ぶと空きが無くなり、次の書き込みが失敗する。
+    # 空きが「DBサイズ + 150MB」未満なら退避しない (途中まで書いた .bak でディスクを埋めない)。
+    DB_KB=$(du -k "$DB_PATH" | cut -f1)
+    rm -f "${DB_PATH}.bak"
+    FREE_KB=$(df -Pk "$DB_DIR" | awk 'NR==2 {print $4}')
+    if [ -n "$FREE_KB" ] && [ "$FREE_KB" -gt $((DB_KB + 150 * 1024)) ] 2>/dev/null; then
+      cp "$DB_PATH" "${DB_PATH}.bak" 2>/dev/null || { rm -f "${DB_PATH}.bak"; echo "[warn] .bak 退避失敗"; }
+    else
+      echo "⚠️ ディスク空き不足で .bak 退避をスキップ (空き $((FREE_KB / 1024))MB / DB $((DB_KB / 1024))MB)"
+    fi
   fi
 
   # 現状をログ出力 (データが保持されていることの可視化)
